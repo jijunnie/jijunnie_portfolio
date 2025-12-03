@@ -208,7 +208,6 @@ function ThreeBackground() {
     />
   );
 }
-
 // 3D Avatar Component with seamless animation blending
 function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0] }) {
   const group = useRef();
@@ -459,7 +458,7 @@ Quick facts (share only if relevant to their question):
 - My high school is Marjory Stoneman Douglas High School, I was ranked top 5% of a class size of 850. 
 - I am open to opportunities in supply chain, system engineering, Web development, sales, product management and others along the line. 
 - I am a Christian
-- My favorite artist is Taylor Swift follow by Ariana Grande and Jay Chou. My favorite English song  is ALL too Well(Ten minute version), Chinese song: "起风了“ Favorite album: Red(Taylor's Version)
+- My favorite artist is Taylor Swift follow by Ariana Grande and Jay Chou. My favorite English song  is ALL too Well(Ten minute version), Chinese song: "起风了" Favorite album: Red(Taylor's Version)
 - My favorite cuisine: Chinese and Indian. My favorite Movie: The Eras Tour Movie. My favorite food: Sushi & hotpot. My favorite color: Red
 IMPORTANT RULES:
 - Only answer the specific question asked
@@ -509,11 +508,11 @@ IMPORTANT RULES:
       {/* 3D Background */}
       <ThreeBackground />
       {/* Center Content */}
-      <div className={`max-w-6xl mx-auto text-center relative z-10 w-full transition-all duration-[1500ms] ease-out ${
+      <div className={`max-w-6xl mx-auto text-center relative z-10 w-full transition-all duration-[2500ms] ease-out ${
         showAvatar ? 'pt-20 sm:pt-24' : 'pt-24 sm:pt-32'
       }`}>
         {/* Title with 3D effect */}
-        <h1 className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-3 px-4 transition-all duration-[1500ms] ease-out ${
+        <h1 className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-3 px-4 transition-all duration-[2500ms] ease-out ${
           showTitle ? 'opacity-100 transform-none' : 'opacity-0'
         } ${showAvatar ? '-translate-y-2' : 'translate-y-0'}`}
         style={{
@@ -538,7 +537,7 @@ IMPORTANT RULES:
           </span>
         </h1>
         {/* Subtitle with 3D effect */}
-        <div className={`mb-8 px-4 transition-all duration-[1500ms] ease-out ${
+        <div className={`mb-8 px-4 transition-all duration-[2500ms] ease-out ${
           showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
         } ${showAvatar ? '-translate-y-2' : 'translate-y-0'}`}
         style={{
