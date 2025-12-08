@@ -48,7 +48,7 @@ app.post('/api/chat', async (req, res) => {
     console.log('🤖 Calling Claude API...');
 
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',  // or 'claude-3-haiku-20240307' for faster/cheaper
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 200,
       system: systemPrompt || 'You are a helpful assistant.',
       messages: [
