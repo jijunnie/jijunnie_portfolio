@@ -1,7 +1,9 @@
-const express = require('express');
-const cors = require('cors');
-const Anthropic = require('@anthropic-ai/sdk');
-require('dotenv').config();
+import express from 'express';
+import cors from 'cors';
+import Anthropic from '@anthropic-ai/sdk';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app = express();
 const PORT = 3001;
@@ -46,8 +48,8 @@ app.post('/api/chat', async (req, res) => {
     console.log('🤖 Calling Claude API...');
 
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',  // or 'claude-3-haiku-20240307' for faster/cheaper
-      max_tokens: 200,
+      model: 'claude-3-5-haiku-20241022',  // Fast model for quick responses
+      max_tokens: 150,
       system: systemPrompt || 'You are a helpful assistant.',
       messages: [
         {
