@@ -48,8 +48,8 @@ app.post('/api/chat', async (req, res) => {
     console.log('🤖 Calling Claude API...');
 
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-haiku-20241022',  // Fast model for quick responses
-      max_tokens: 150,
+      model: 'claude-3-5-haiku-20241022',
+      max_tokens: 200,
       system: systemPrompt || 'You are a helpful assistant.',
       messages: [
         {
@@ -72,7 +72,6 @@ app.post('/api/chat', async (req, res) => {
       type: error.type
     });
 
-    // Handle specific errors
     if (error.status === 401) {
       return res.status(401).json({ 
         error: 'Invalid API key',

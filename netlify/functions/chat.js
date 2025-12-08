@@ -1,7 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 
 export default async (req, context) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 200,
@@ -38,17 +37,10 @@ export default async (req, context) => {
       model: 'claude-3-5-haiku-20241022',
       max_tokens: 150,
       system: systemPrompt || 'You are a helpful assistant.',
-      messages: [
-        {
-          role: 'user',
-          content: message,
-        },
-      ],
+      messages: [{ role: 'user', content: message }],
     });
 
-    const responseText = response.content[0].text;
-
-    return new Response(JSON.stringify({ response: responseText }), {
+    return new Response(JSON.stringify({ response: response.content[0].text }), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
@@ -59,20 +51,14 @@ export default async (req, context) => {
     console.error('Error:', error);
     return new Response(
       JSON.stringify({
-        error: 'Failed to get response',
         response: "I'm having trouble right now. Email me at jijun.nie@ufl.edu! 📧",
       }),
       {
         status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       }
     );
   }
 };
 
-export const config = {
-  path: '/api/chat',
-};
+export const config = { path: '/api/chat' };
