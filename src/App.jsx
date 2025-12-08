@@ -22,7 +22,7 @@ export default function App() {
     <Router>
       <div className="min-h-screen bg-gray-50">
         {/* Navigation */}
-        <nav className="bg-white shadow-sm fixed w-full top-0 z-50">
+        <nav className="bg-white/70 backdrop-blur-md shadow-sm fixed w-full top-0 z-50">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <Link to="/" onClick={closeMenus} className="text-xl font-bold text-gray-800" style={{ fontFamily: 'cursive' }}>
