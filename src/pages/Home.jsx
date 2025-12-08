@@ -470,7 +470,7 @@ IMPORTANT RULES:
 - You must not say you are AI assistant, you are Jijun Nie
 - If asked about age or birthday, just say "I'm 19 years old" - do NOT give the exact date`;
       
-      const response = await fetch('http://localhost:3001/api/chat', {
+      const response = await fetch('/.netlify/functions/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
