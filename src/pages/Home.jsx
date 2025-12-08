@@ -565,7 +565,7 @@ const response = await fetch('/api/chat', {
                   <div className="animate-fade-in flex justify-center">
                     <div className="relative inline-block max-w-[90vw]">
                       <div 
-                        className="bg-white/95 backdrop-blur-xl rounded-2xl px-4 sm:px-6 py-3 sm:py-4 shadow-2xl relative overflow-y-auto speech-bubble-scroll"
+                        className="bg-white/95 backdrop-blur-xl rounded-2xl px-4 sm:px-6 py-3 sm:py-4 shadow-2xl relative"
                         style={{
                           minWidth: '120px',
                           maxWidth: '600px',
@@ -718,30 +718,6 @@ const response = await fetch('/api/chat', {
   
   .animate-fade-in {
     animation: fadeIn 0.8s ease-out forwards;
-  }
-  
-  /* Speech bubble scroll - 4 lines mobile, 3 lines desktop */
-  .speech-bubble-scroll {
-    max-height: 120px; /* ~4 lines on mobile */
-  }
-  
-  @media (min-width: 640px) {
-    .speech-bubble-scroll {
-      max-height: 90px; /* ~3 lines on desktop */
-    }
-  }
-  
-  .speech-bubble-scroll::-webkit-scrollbar {
-    width: 4px;
-  }
-  
-  .speech-bubble-scroll::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  .speech-bubble-scroll::-webkit-scrollbar-thumb {
-    background: rgba(139, 92, 246, 0.3);
-    border-radius: 2px;
   }
 `}</style>
     </section>
