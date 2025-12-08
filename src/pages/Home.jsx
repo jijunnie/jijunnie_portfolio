@@ -504,7 +504,7 @@ IMPORTANT RULES:
   };
   
   return (
-    <section className="fixed inset-0 px-4 sm:px-6 lg:px-8 flex items-center justify-center overflow-hidden bg-gradient-to-br from-white via-slate-50 to-blue-50">
+    <section className="fixed inset-0 flex flex-col bg-gradient-to-br from-white via-slate-50 to-blue-50">
       {/* 3D Background */}
       <ThreeBackground />
       {/* Center Content */}
