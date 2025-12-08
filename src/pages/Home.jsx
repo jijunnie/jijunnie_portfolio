@@ -427,7 +427,7 @@ export default function Home() {
     }, 50);
   };
   
-  // Handle chat message with AI-driven responses
+  // Handle chat message with AI-driven responses using Claude API
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
     const userMessage = inputMessage;
@@ -470,27 +470,34 @@ IMPORTANT RULES:
 - You must not say you are AI assistant, you are Jijun Nie
 - If asked about age or birthday, just say "I'm 19 years old" - do NOT give the exact date`;
       
-      const response = await fetch('http://localhost:3001/api/chat', {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: userMessage,
-          systemPrompt: systemPrompt
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: systemPrompt,
+          messages: [
+            {
+              role: 'user',
+              content: userMessage
+            }
+          ]
         })
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('API Error:', errorData);
         throw new Error(`API Error: ${response.status}`);
       }
       
       const data = await response.json();
+      const aiResponse = data.content.find(block => block.type === 'text')?.text || 
+                        "I'm not sure how to respond to that. Feel free to ask me something else!";
       
       setTimeout(() => {
-        typeOutBubble(data.response, true);
+        typeOutBubble(aiResponse, true);
       }, 400);
       
     } catch (error) {
