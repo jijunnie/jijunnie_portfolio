@@ -610,7 +610,7 @@ const response = await fetch('/api/chat', {
               </div>
               
               {/* 3D Model Viewer */}
-              <div className="w-full max-w-lg flex justify-center -mt-4" style={{ height: '380px' }}>
+              <div className="w-full max-w-lg flex justify-center -mt-8" style={{ height: '380px' }}>
                 <Canvas 
                   camera={{ position: [0, 0, 5], fov: 50 }}
                   gl={{ 
