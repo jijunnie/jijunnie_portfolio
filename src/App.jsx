@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Menu, X, ChevronDown } from 'lucide-react';
 import Home from './pages/Home';
 import About from './pages/About';
@@ -8,6 +8,26 @@ import Projects from './pages/Projects';
 import Skills from './pages/Skills';
 import Interests from './pages/Interests';
 import Contact from './pages/Contact';
+
+// Layout component that conditionally shows footer
+function Layout({ children }) {
+  const location = useLocation();
+  const isHomePage = location.pathname === '/';
+  
+  return (
+    <>
+      {children}
+      {/* Footer - hidden on home page since it uses fixed positioning */}
+      {!isHomePage && (
+        <footer className="bg-gray-900 text-white py-8 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-6xl mx-auto text-center">
+            <p>&copy; 2024 Jijun Nie. All rights reserved.</p>
+          </div>
+        </footer>
+      )}
+    </>
+  );
+}
 
 export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -22,7 +42,7 @@ export default function App() {
     <Router>
       <div className="min-h-screen bg-gray-50">
         {/* Navigation */}
-        <nav className="bg-white/70 backdrop-blur-md shadow-sm fixed w-full top-0 z-50">
+        <nav className="bg-white/30 backdrop-blur-sm shadow-sm fixed w-full top-0 z-50">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <Link to="/" onClick={closeMenus} className="text-xl font-bold text-gray-800" style={{ fontFamily: 'cursive' }}>
@@ -99,24 +119,19 @@ export default function App() {
         </nav>
 
         {/* Main Content */}
-        <div className="pt-16">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/resume" element={<Resume />} />
-            <Route path="/projects" element={<Projects />} />
-            <Route path="/skills" element={<Skills />} />
-            <Route path="/interests" element={<Interests />} />
-            <Route path="/contact" element={<Contact />} />
-          </Routes>
-        </div>
-
-        {/* Footer */}
-        <footer className="bg-gray-900 text-white py-8 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-6xl mx-auto text-center">
-            <p>&copy; 2024 Jijun Nie. All rights reserved.</p>
+        <Layout>
+          <div className="pt-16">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/resume" element={<Resume />} />
+              <Route path="/projects" element={<Projects />} />
+              <Route path="/skills" element={<Skills />} />
+              <Route path="/interests" element={<Interests />} />
+              <Route path="/contact" element={<Contact />} />
+            </Routes>
           </div>
-        </footer>
+        </Layout>
       </div>
     </Router>
   );

@@ -504,63 +504,60 @@ IMPORTANT RULES:
   };
   
   return (
-    <section className="fixed inset-0 px-4 sm:px-6 lg:px-8 flex items-center justify-center overflow-hidden bg-gradient-to-br from-white via-slate-50 to-blue-50">
+    <section className="fixed inset-0 flex flex-col bg-gradient-to-br from-white via-slate-50 to-blue-50">
       {/* 3D Background */}
       <ThreeBackground />
-      {/* Center Content */}
-      <div className={`max-w-6xl mx-auto text-center relative z-10 w-full transition-all duration-[2500ms] ease-out ${
-        showAvatar ? 'pt-20 sm:pt-24' : 'pt-24 sm:pt-32'
-      }`}>
-        {/* Title with 3D effect */}
-        <h1 className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-3 px-4 transition-all duration-[2500ms] ease-out ${
-          showTitle ? 'opacity-100 transform-none' : 'opacity-0'
-        } ${showAvatar ? '-translate-y-2' : 'translate-y-0'}`}
-        style={{
-          transform: showTitle ? 'translateZ(50px)' : 'translateZ(0)',
-          textShadow: '0 10px 30px rgba(59, 130, 246, 0.3), 0 20px 60px rgba(139, 92, 246, 0.2)',
-          perspective: '1000px',
-        }}>
-          <span 
-            style={{
-              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              filter: 'drop-shadow(0 0 20px rgba(139, 92, 246, 0.4))',
-              animation: showTitle ? 'floatText 3s ease-in-out infinite' : 'none',
-              display: 'inline',
-              wordBreak: 'keep-all',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            Welcome to Jijun's World
-          </span>
-        </h1>
-        {/* Subtitle with 3D effect */}
-        <div className={`mb-8 px-4 transition-all duration-[2500ms] ease-out ${
-          showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-        } ${showAvatar ? '-translate-y-2' : 'translate-y-0'}`}
-        style={{
-          transform: showSubtitle ? 'translateZ(30px)' : 'translateZ(0)',
-          textShadow: '0 5px 15px rgba(100, 116, 139, 0.2)',
-        }}>
-          <p 
-            className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-600 font-medium"
-            style={{
-              animation: showSubtitle ? 'floatText 3s ease-in-out infinite 0.5s' : 'none',
-              filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1))',
-            }}
-          >
-            Student at University of Florida
-          </p>
+      
+      {/* Main Content Container - uses flex to distribute space */}
+      <div className="relative z-10 flex flex-col h-full pt-16 pb-4">
+        {/* Top Section: Title and Subtitle */}
+        <div className="flex-shrink-0 text-center px-4 pt-4 sm:pt-6">
+          {/* Title with 3D effect */}
+          <h1 className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-2 transition-all duration-[2500ms] ease-out ${
+            showTitle ? 'opacity-100 transform-none' : 'opacity-0'
+          }`}
+          style={{
+            textShadow: '0 10px 30px rgba(59, 130, 246, 0.3), 0 20px 60px rgba(139, 92, 246, 0.2)',
+          }}>
+            <span 
+              style={{
+                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                filter: 'drop-shadow(0 0 20px rgba(139, 92, 246, 0.4))',
+                animation: showTitle ? 'floatText 3s ease-in-out infinite' : 'none',
+                display: 'inline',
+              }}
+            >
+              Welcome to Jijun's World
+            </span>
+          </h1>
+          {/* Subtitle with 3D effect */}
+          <div className={`mb-2 transition-all duration-[2500ms] ease-out ${
+            showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+          }`}
+          style={{
+            textShadow: '0 5px 15px rgba(100, 116, 139, 0.2)',
+          }}>
+            <p 
+              className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 font-medium"
+              style={{
+                animation: showSubtitle ? 'floatText 3s ease-in-out infinite 0.5s' : 'none',
+                filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1))',
+              }}
+            >
+              Student at University of Florida
+            </p>
+          </div>
         </div>
         
-        {/* Avatar and Chat Section */}
-        {showAvatar && (
-          <div className="animate-fade-in">
-            <div className="flex flex-col items-center justify-center">
+        {/* Middle Section: Avatar and Speech Bubble - takes remaining space */}
+        <div className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-hidden px-4">
+          {showAvatar && (
+            <div className="animate-fade-in flex flex-col items-center justify-center h-full w-full max-w-6xl">
               {/* Speech Bubble */}
-              <div className="mb-4 relative px-4" style={{ minHeight: '70px' }}>
+              <div className="flex-shrink-0 mb-2 relative w-full flex justify-center" style={{ minHeight: '60px' }}>
                 {showBubble && (bubbleText || typingBubbleText) && (
                   <div className="animate-fade-in flex justify-center">
                     <div className="relative inline-block max-w-[90vw]">
@@ -609,8 +606,8 @@ IMPORTANT RULES:
                 )}
               </div>
               
-              {/* 3D Model Viewer */}
-              <div className="w-full max-w-lg flex justify-center" style={{ height: '380px' }}>
+              {/* 3D Model Viewer - flexible height */}
+              <div className="flex-1 w-full max-w-lg flex justify-center min-h-0" style={{ maxHeight: '350px' }}>
                 <Canvas 
                   camera={{ position: [0, 0, 5], fov: 50 }}
                   gl={{ 
@@ -644,51 +641,51 @@ IMPORTANT RULES:
                 </Canvas>
               </div>
             </div>
-            
-            {/* Chat Input */}
-            <div className="mt-4 px-4">
-              {showChatInput && (
-                <div className={`max-w-2xl mx-auto transition-all duration-500 ${
-                  showChatInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-                }`}>
-                  <div className="flex space-x-2 sm:space-x-3">
-                    <div className="flex-1 relative">
-                      <input
-                        type="text"
-                        value={inputMessage}
-                        onChange={(e) => setInputMessage(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                        placeholder="Ask me anything..."
-                        disabled={isLoading}
-                        className="w-full bg-white/90 backdrop-blur-xl border-2 border-gray-200 rounded-xl px-4 sm:px-5 py-2 sm:py-3 focus:outline-none focus:border-transparent focus:ring-2 focus:ring-purple-400 text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base shadow-lg transition-all duration-300 hover:shadow-xl"
-                        style={{
-                          backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899)',
-                          backgroundOrigin: 'border-box',
-                          backgroundClip: 'padding-box, border-box',
-                          border: '2px solid transparent',
-                        }}
-                      />
-                    </div>
-                    <button
-                      onClick={handleSendMessage}
-                      disabled={isLoading || !inputMessage.trim()}
-                      className="relative bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:shadow-xl hover:shadow-purple-300/50 hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg group overflow-hidden"
-                    >
-                      <span className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      <span className="relative">
-                        {isLoading ? (
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <Send size={20} />
-                        )}
-                      </span>
-                    </button>
-                  </div>
+          )}
+        </div>
+        
+        {/* Bottom Section: Chat Input - fixed at bottom */}
+        <div className="flex-shrink-0 px-4 pb-2">
+          {showChatInput && (
+            <div className={`max-w-2xl mx-auto transition-all duration-500 ${
+              showChatInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+            }`}>
+              <div className="flex space-x-2 sm:space-x-3">
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                    placeholder="Ask me anything..."
+                    disabled={isLoading}
+                    className="w-full bg-white/90 backdrop-blur-xl border-2 border-gray-200 rounded-xl px-4 sm:px-5 py-2 sm:py-3 focus:outline-none focus:border-transparent focus:ring-2 focus:ring-purple-400 text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base shadow-lg transition-all duration-300 hover:shadow-xl"
+                    style={{
+                      backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899)',
+                      backgroundOrigin: 'border-box',
+                      backgroundClip: 'padding-box, border-box',
+                      border: '2px solid transparent',
+                    }}
+                  />
                 </div>
-              )}
+                <button
+                  onClick={handleSendMessage}
+                  disabled={isLoading || !inputMessage.trim()}
+                  className="relative bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:shadow-xl hover:shadow-purple-300/50 hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg group overflow-hidden"
+                >
+                  <span className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <span className="relative">
+                    {isLoading ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Send size={20} />
+                    )}
+                  </span>
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
       
       <style jsx>{`
