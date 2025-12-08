@@ -462,7 +462,7 @@ Quick facts (share only if relevant to their question):
 - My favorite cuisine: Chinese and Indian. My favorite Movie: The Eras Tour Movie. My favorite food: Sushi & hotpot. My favorite color: Red
 IMPORTANT RULES:
 - Only answer the specific question asked
-- Keep responses to 1-2 sentences maximum, less than 25 words
+- Keep responses to 1-2 sentences maximum
 - Don't volunteer extra information unless directly asked
 - Be conversational and natural
 - Use "I" not "Jijun"
@@ -610,7 +610,7 @@ const response = await fetch('/api/chat', {
               </div>
               
               {/* 3D Model Viewer */}
-              <div className="w-full max-w-lg flex justify-center" style={{ height: '380px' }}>
+              <div className="w-full max-w-lg flex justify-center -mt-8" style={{ height: '380px' }}>
                 <Canvas 
                   camera={{ position: [0, 0, 5], fov: 50 }}
                   gl={{ 
@@ -644,52 +644,52 @@ const response = await fetch('/api/chat', {
                 </Canvas>
               </div>
             </div>
-            
-            {/* Chat Input */}
-            <div className="mt-4 px-4">
-              {showChatInput && (
-                <div className={`max-w-2xl mx-auto transition-all duration-500 ${
-                  showChatInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-                }`}>
-                  <div className="flex space-x-2 sm:space-x-3">
-                    <div className="flex-1 relative">
-                      <input
-                        type="text"
-                        value={inputMessage}
-                        onChange={(e) => setInputMessage(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                        placeholder="Ask me anything..."
-                        disabled={isLoading}
-                        className="w-full bg-white/90 backdrop-blur-xl border-2 border-gray-200 rounded-xl px-4 sm:px-5 py-2 sm:py-3 focus:outline-none focus:border-transparent focus:ring-2 focus:ring-purple-400 text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base shadow-lg transition-all duration-300 hover:shadow-xl"
-                        style={{
-                          backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899)',
-                          backgroundOrigin: 'border-box',
-                          backgroundClip: 'padding-box, border-box',
-                          border: '2px solid transparent',
-                        }}
-                      />
-                    </div>
-                    <button
-                      onClick={handleSendMessage}
-                      disabled={isLoading || !inputMessage.trim()}
-                      className="relative bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:shadow-xl hover:shadow-purple-300/50 hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg group overflow-hidden"
-                    >
-                      <span className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      <span className="relative">
-                        {isLoading ? (
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <Send size={20} />
-                        )}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         )}
       </div>
+
+      {/* Chat Input - Fixed at bottom */}
+      {showChatInput && (
+        <div className="fixed bottom-0 left-0 right-0 z-20 px-4 pb-6 sm:pb-8">
+          <div className={`max-w-2xl mx-auto transition-all duration-500 ${
+            showChatInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+          }`}>
+            <div className="flex space-x-2 sm:space-x-3">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Ask me anything..."
+                  disabled={isLoading}
+                  className="w-full bg-white/90 backdrop-blur-xl border-2 border-gray-200 rounded-xl px-4 sm:px-5 py-2 sm:py-3 focus:outline-none focus:border-transparent focus:ring-2 focus:ring-purple-400 text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base shadow-lg transition-all duration-300 hover:shadow-xl"
+                  style={{
+                    backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899)',
+                    backgroundOrigin: 'border-box',
+                    backgroundClip: 'padding-box, border-box',
+                    border: '2px solid transparent',
+                  }}
+                />
+              </div>
+              <button
+                onClick={handleSendMessage}
+                disabled={isLoading || !inputMessage.trim()}
+                className="relative bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:shadow-xl hover:shadow-purple-300/50 hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg group overflow-hidden"
+              >
+                <span className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <span className="relative">
+                  {isLoading ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Send size={20} />
+                  )}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       <style jsx>{`
   @keyframes blink {
