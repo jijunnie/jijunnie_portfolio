@@ -462,7 +462,7 @@ Quick facts (share only if relevant to their question):
 - My favorite cuisine: Chinese and Indian. My favorite Movie: The Eras Tour Movie. My favorite food: Sushi & hotpot. My favorite color: Red
 IMPORTANT RULES:
 - Only answer the specific question asked
-- Keep responses to 1-2 sentences maximum
+- Keep responses to 1-2 sentences maximum, less than 25 words
 - Don't volunteer extra information unless directly asked
 - Be conversational and natural
 - Use "I" not "Jijun"
@@ -470,7 +470,7 @@ IMPORTANT RULES:
 - You must not say you are AI assistant, you are Jijun Nie
 - If asked about age or birthday, just say "I'm 19 years old" - do NOT give the exact date`;
       
-       const response = await fetch('/api/chat', {
+const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -504,199 +504,191 @@ IMPORTANT RULES:
   };
   
   return (
-    <section className="fixed inset-0 flex flex-col bg-gradient-to-br from-white via-slate-50 to-blue-50">
+    <section className="fixed inset-0 px-4 sm:px-6 lg:px-8 flex items-center justify-center overflow-hidden bg-gradient-to-br from-white via-slate-50 to-blue-50">
       {/* 3D Background */}
       <ThreeBackground />
-      
-      {/* Main Content Container */}
-      <div className="relative z-10 flex flex-col h-full pt-16">
-        
-        {/* Title Section - Centered initially, slides up when avatar appears */}
-        <div 
-          className={`text-center px-4 transition-all duration-1000 ease-out ${
-            showAvatar 
-              ? 'flex-shrink-0 pt-4' 
-              : 'flex-1 flex flex-col items-center justify-center'
-          }`}
-        >
-          {/* Title with fade-in animation */}
-          <h1 
-            className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-2 transition-all duration-1000 ease-out ${
-              showTitle ? 'opacity-100' : 'opacity-0'
-            }`}
+      {/* Center Content */}
+      <div className={`max-w-6xl mx-auto text-center relative z-10 w-full transition-all duration-[2500ms] ease-out ${
+        showAvatar ? 'pt-20 sm:pt-24' : 'pt-24 sm:pt-32'
+      }`}>
+        {/* Title with 3D effect */}
+        <h1 className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-3 px-4 transition-all duration-[2500ms] ease-out ${
+          showTitle ? 'opacity-100 transform-none' : 'opacity-0'
+        } ${showAvatar ? '-translate-y-2' : 'translate-y-0'}`}
+        style={{
+          transform: showTitle ? 'translateZ(50px)' : 'translateZ(0)',
+          textShadow: '0 10px 30px rgba(59, 130, 246, 0.3), 0 20px 60px rgba(139, 92, 246, 0.2)',
+          perspective: '1000px',
+        }}>
+          <span 
             style={{
-              textShadow: '0 10px 30px rgba(59, 130, 246, 0.3), 0 20px 60px rgba(139, 92, 246, 0.2)',
+              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              filter: 'drop-shadow(0 0 20px rgba(139, 92, 246, 0.4))',
+              animation: showTitle ? 'floatText 3s ease-in-out infinite' : 'none',
+              display: 'inline',
+              wordBreak: 'keep-all',
+              whiteSpace: 'nowrap',
             }}
           >
-            <span 
-              style={{
-                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                filter: 'drop-shadow(0 0 20px rgba(139, 92, 246, 0.4))',
-                animation: showAvatar ? 'floatText 3s ease-in-out infinite' : 'none',
-                display: 'inline',
-              }}
-            >
-              Welcome to Jijun's World
-            </span>
-          </h1>
-          
-          {/* Subtitle with fade-in animation */}
-          <div 
-            className={`mb-2 transition-all duration-1000 ease-out ${
-              showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'
-            }`}
+            Welcome to Jijun's World
+          </span>
+        </h1>
+        {/* Subtitle with 3D effect */}
+        <div className={`mb-8 px-4 transition-all duration-[2500ms] ease-out ${
+          showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+        } ${showAvatar ? '-translate-y-2' : 'translate-y-0'}`}
+        style={{
+          transform: showSubtitle ? 'translateZ(30px)' : 'translateZ(0)',
+          textShadow: '0 5px 15px rgba(100, 116, 139, 0.2)',
+        }}>
+          <p 
+            className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-600 font-medium"
             style={{
-              textShadow: '0 5px 15px rgba(100, 116, 139, 0.2)',
+              animation: showSubtitle ? 'floatText 3s ease-in-out infinite 0.5s' : 'none',
+              filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1))',
             }}
           >
-            <p 
-              className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 font-medium"
-              style={{
-                animation: showAvatar ? 'floatText 3s ease-in-out infinite 0.5s' : 'none',
-                filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1))',
-              }}
-            >
-              Student at University of Florida
-            </p>
-          </div>
+            Student at University of Florida
+          </p>
         </div>
         
-        {/* Avatar Section - appears after titles slide up */}
+        {/* Avatar and Chat Section */}
         {showAvatar && (
-          <div className="flex-1 flex flex-col min-h-0 animate-fade-in">
-            {/* Speech Bubble - scrollable, max 4 lines */}
-            <div className="flex-shrink-0 px-4 flex justify-center" style={{ minHeight: '80px', maxHeight: '140px' }}>
-              {showBubble && (bubbleText || typingBubbleText) && (
-                <div className="animate-fade-in flex justify-center w-full">
-                  <div className="relative inline-block max-w-[90vw]">
-                    <div 
-                      className="bg-white/95 backdrop-blur-xl rounded-2xl px-4 sm:px-6 py-3 sm:py-4 shadow-2xl relative overflow-y-auto scrollbar-thin scrollbar-thumb-purple-300 scrollbar-track-transparent"
-                      style={{
-                        minWidth: '120px',
-                        maxWidth: '600px',
-                        maxHeight: '120px',
-                        border: '2px solid transparent',
-                        backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899)',
-                        backgroundOrigin: 'border-box',
-                        backgroundClip: 'padding-box, border-box',
-                      }}
-                    >
-                      <p className="text-gray-800 font-medium text-left whitespace-pre-wrap break-words text-sm sm:text-base">
-                        {typingBubbleText || bubbleText}
-                        {typingBubbleText && typingBubbleText !== bubbleText && (
-                          <span className="animate-blink text-blue-500">|</span>
-                        )}
-                      </p>
+          <div className="animate-fade-in">
+            <div className="flex flex-col items-center justify-center">
+              {/* Speech Bubble */}
+              <div className="mb-4 relative px-4" style={{ minHeight: '70px' }}>
+                {showBubble && (bubbleText || typingBubbleText) && (
+                  <div className="animate-fade-in flex justify-center">
+                    <div className="relative inline-block max-w-[90vw]">
+                      <div 
+                        className="bg-white/95 backdrop-blur-xl rounded-2xl px-4 sm:px-6 py-3 sm:py-4 shadow-2xl relative overflow-y-auto speech-bubble-scroll"
+                        style={{
+                          minWidth: '120px',
+                          maxWidth: '600px',
+                          border: '2px solid transparent',
+                          backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899)',
+                          backgroundOrigin: 'border-box',
+                          backgroundClip: 'padding-box, border-box',
+                        }}
+                      >
+                        <p className="text-gray-800 font-medium text-left whitespace-pre-wrap break-words text-sm sm:text-base">
+                          {typingBubbleText || bubbleText}
+                          {typingBubbleText && typingBubbleText !== bubbleText && (
+                            <span className="animate-blink text-blue-500">|</span>
+                          )}
+                        </p>
+                      </div>
+                      <svg 
+                        className="absolute -bottom-3 left-8" 
+                        width="30" 
+                        height="15" 
+                        viewBox="0 0 30 15"
+                        style={{ overflow: 'visible' }}
+                      >
+                        <defs>
+                          <linearGradient id="bubbleTailGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#3b82f6" />
+                            <stop offset="50%" stopColor="#8b5cf6" />
+                            <stop offset="100%" stopColor="#ec4899" />
+                          </linearGradient>
+                        </defs>
+                        <path 
+                          d="M 0 0 L 15 15 L 30 0 Z" 
+                          fill="rgba(255,255,255,0.95)" 
+                          stroke="url(#bubbleTailGradient)" 
+                          strokeWidth="2"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
                     </div>
-                    <svg 
-                      className="absolute -bottom-3 left-8" 
-                      width="30" 
-                      height="15" 
-                      viewBox="0 0 30 15"
-                      style={{ overflow: 'visible' }}
-                    >
-                      <defs>
-                        <linearGradient id="bubbleTailGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#3b82f6" />
-                          <stop offset="50%" stopColor="#8b5cf6" />
-                          <stop offset="100%" stopColor="#ec4899" />
-                        </linearGradient>
-                      </defs>
-                      <path 
-                        d="M 0 0 L 15 15 L 30 0 Z" 
-                        fill="rgba(255,255,255,0.95)" 
-                        stroke="url(#bubbleTailGradient)" 
-                        strokeWidth="2"
-                        strokeLinejoin="round"
+                  </div>
+                )}
+              </div>
+              
+              {/* 3D Model Viewer */}
+              <div className="w-full max-w-lg flex justify-center" style={{ height: '380px' }}>
+                <Canvas 
+                  camera={{ position: [0, 0, 5], fov: 50 }}
+                  gl={{ 
+                    antialias: true, 
+                    alpha: true,
+                    premultipliedAlpha: false,
+                    powerPreference: "high-performance"
+                  }}
+                  style={{ background: 'transparent', width: '100%', height: '100%' }}
+                >
+                  <ambientLight intensity={1.5} />
+                  <directionalLight position={[5, 8, 5]} intensity={2.5} />
+                  <directionalLight position={[0, 3, 8]} intensity={2} />
+                  <directionalLight position={[-5, 5, -5]} intensity={1.2} color="#a5b4fc" />
+                  <pointLight position={[8, 2, 3]} intensity={1} color="#fbbf24" />
+                  <pointLight position={[-8, 2, 3]} intensity={1} color="#60a5fa" />
+                  <hemisphereLight skyColor="#ffffff" groundColor="#b0b0b0" intensity={1.2} />
+                  
+                  <Suspense fallback={null}>
+                    <Avatar animationPath={currentAnimation} />
+                  </Suspense>
+                  
+                  <OrbitControls 
+                    enableZoom={false}
+                    minPolarAngle={Math.PI / 3}
+                    maxPolarAngle={Math.PI / 2}
+                    enableDamping
+                    dampingFactor={0.05}
+                    enablePan={false}
+                  />
+                </Canvas>
+              </div>
+            </div>
+            
+            {/* Chat Input */}
+            <div className="mt-4 px-4">
+              {showChatInput && (
+                <div className={`max-w-2xl mx-auto transition-all duration-500 ${
+                  showChatInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+                }`}>
+                  <div className="flex space-x-2 sm:space-x-3">
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        value={inputMessage}
+                        onChange={(e) => setInputMessage(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                        placeholder="Ask me anything..."
+                        disabled={isLoading}
+                        className="w-full bg-white/90 backdrop-blur-xl border-2 border-gray-200 rounded-xl px-4 sm:px-5 py-2 sm:py-3 focus:outline-none focus:border-transparent focus:ring-2 focus:ring-purple-400 text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base shadow-lg transition-all duration-300 hover:shadow-xl"
+                        style={{
+                          backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899)',
+                          backgroundOrigin: 'border-box',
+                          backgroundClip: 'padding-box, border-box',
+                          border: '2px solid transparent',
+                        }}
                       />
-                    </svg>
+                    </div>
+                    <button
+                      onClick={handleSendMessage}
+                      disabled={isLoading || !inputMessage.trim()}
+                      className="relative bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:shadow-xl hover:shadow-purple-300/50 hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg group overflow-hidden"
+                    >
+                      <span className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <span className="relative">
+                        {isLoading ? (
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Send size={20} />
+                        )}
+                      </span>
+                    </button>
                   </div>
                 </div>
               )}
             </div>
-            
-            {/* 3D Model Viewer */}
-            <div className="flex-1 w-full max-w-lg mx-auto flex justify-center min-h-0 px-4" style={{ maxHeight: '320px' }}>
-              <Canvas 
-                camera={{ position: [0, 0, 5], fov: 50 }}
-                gl={{ 
-                  antialias: true, 
-                  alpha: true,
-                  premultipliedAlpha: false,
-                  powerPreference: "high-performance"
-                }}
-                style={{ background: 'transparent', width: '100%', height: '100%' }}
-              >
-                <ambientLight intensity={1.5} />
-                <directionalLight position={[5, 8, 5]} intensity={2.5} />
-                <directionalLight position={[0, 3, 8]} intensity={2} />
-                <directionalLight position={[-5, 5, -5]} intensity={1.2} color="#a5b4fc" />
-                <pointLight position={[8, 2, 3]} intensity={1} color="#fbbf24" />
-                <pointLight position={[-8, 2, 3]} intensity={1} color="#60a5fa" />
-                <hemisphereLight skyColor="#ffffff" groundColor="#b0b0b0" intensity={1.2} />
-                
-                <Suspense fallback={null}>
-                  <Avatar animationPath={currentAnimation} />
-                </Suspense>
-                
-                <OrbitControls 
-                  enableZoom={false}
-                  minPolarAngle={Math.PI / 3}
-                  maxPolarAngle={Math.PI / 2}
-                  enableDamping
-                  dampingFactor={0.05}
-                  enablePan={false}
-                />
-              </Canvas>
-            </div>
           </div>
         )}
-        
-        {/* Bottom Section: Chat Input - always at bottom */}
-        <div className="flex-shrink-0 px-4 pb-4">
-          {showChatInput && (
-            <div className={`max-w-2xl mx-auto transition-all duration-500 ${
-              showChatInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-            }`}>
-              <div className="flex space-x-2 sm:space-x-3">
-                <div className="flex-1 relative">
-                  <input
-                    type="text"
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                    placeholder="Ask me anything..."
-                    disabled={isLoading}
-                    className="w-full bg-white/90 backdrop-blur-xl border-2 border-gray-200 rounded-xl px-4 sm:px-5 py-2 sm:py-3 focus:outline-none focus:border-transparent focus:ring-2 focus:ring-purple-400 text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base shadow-lg transition-all duration-300 hover:shadow-xl"
-                    style={{
-                      backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899)',
-                      backgroundOrigin: 'border-box',
-                      backgroundClip: 'padding-box, border-box',
-                      border: '2px solid transparent',
-                    }}
-                  />
-                </div>
-                <button
-                  onClick={handleSendMessage}
-                  disabled={isLoading || !inputMessage.trim()}
-                  className="relative bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:shadow-xl hover:shadow-purple-300/50 hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg group overflow-hidden"
-                >
-                  <span className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <span className="relative">
-                    {isLoading ? (
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <Send size={20} />
-                    )}
-                  </span>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
       
       <style jsx>{`
@@ -727,22 +719,28 @@ IMPORTANT RULES:
     animation: fadeIn 0.8s ease-out forwards;
   }
   
-  /* Custom scrollbar for speech bubble */
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
+  /* Speech bubble scroll - 4 lines mobile, 3 lines desktop */
+  .speech-bubble-scroll {
+    max-height: 120px; /* ~4 lines on mobile */
   }
   
-  .scrollbar-thin::-webkit-scrollbar-track {
+  @media (min-width: 640px) {
+    .speech-bubble-scroll {
+      max-height: 90px; /* ~3 lines on desktop */
+    }
+  }
+  
+  .speech-bubble-scroll::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  .speech-bubble-scroll::-webkit-scrollbar-track {
     background: transparent;
   }
   
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: rgba(139, 92, 246, 0.4);
-    border-radius: 3px;
-  }
-  
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: rgba(139, 92, 246, 0.6);
+  .speech-bubble-scroll::-webkit-scrollbar-thumb {
+    background: rgba(139, 92, 246, 0.3);
+    border-radius: 2px;
   }
 `}</style>
     </section>
