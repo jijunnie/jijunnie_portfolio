@@ -427,6 +427,79 @@ export default function Home() {
     }, 50);
   };
   
+  // Fallback responses when API is unavailable
+  const getFallbackResponse = (message) => {
+    const msg = message.toLowerCase();
+    
+    // Greetings
+    if (msg.match(/^(hi|hello|hey|what'?s up|sup)/)) {
+      return "Hey there! 👋 Nice to meet you! Feel free to ask me anything about myself.";
+    }
+    
+    // Age/Birthday
+    if (msg.match(/age|old|birthday|born/)) {
+      return "I'm 19 years old! 🎂";
+    }
+    
+    // Education/School/Major
+    if (msg.match(/school|university|college|study|major|education|gpa|uf|florida/)) {
+      return "I'm a Junior at the University of Florida studying Industrial & Systems Engineering with a 3.94 GPA! 🐊";
+    }
+    
+    // Work/Experience/Job
+    if (msg.match(/work|job|experience|intern|company/)) {
+      return "I'm currently a Web Design & Product Development Specialist at Variantz Singapore, where I boosted web traffic by 400%! 🚀";
+    }
+    
+    // Skills
+    if (msg.match(/skill|code|program|language|tech/)) {
+      return "I work with JavaScript, Python, SQL, Matlab, R, and SolidWorks. I also do SEO/SEM and digital marketing! 💻";
+    }
+    
+    // Languages spoken
+    if (msg.match(/speak|language|chinese|english|mandarin|cantonese/)) {
+      return "I'm fluent in English, Mandarin, and Cantonese! 🌏";
+    }
+    
+    // Interests/Hobbies
+    if (msg.match(/hobby|hobbies|interest|fun|free time/)) {
+      return "I love photography, singing, playing guitar, and sports like badminton and basketball! 📸🎸";
+    }
+    
+    // Music/Favorite artist
+    if (msg.match(/music|song|artist|singer|taylor|favorite song/)) {
+      return "I'm a huge Taylor Swift fan! My favorite song is 'All Too Well (Ten Minute Version)' and my favorite album is Red (Taylor's Version) ❤️";
+    }
+    
+    // Contact
+    if (msg.match(/contact|email|phone|reach/)) {
+      return "You can reach me at jijun.nie@ufl.edu or (754) 610-4078! 📧";
+    }
+    
+    // Hometown/Where from
+    if (msg.match(/where|from|hometown|live|china|florida/)) {
+      return "I was born in Jiangmen, Guangdong, China and moved to Parkland, Florida at age 12! 🌎";
+    }
+    
+    // Extracurriculars/Leadership
+    if (msg.match(/club|organization|leader|president|extracurricular|csa/)) {
+      return "I'm the President of the Chinese Student Association at UF, leading 6 committees and organizing events with 300+ attendees! 🎉";
+    }
+    
+    // Food
+    if (msg.match(/food|eat|cuisine|favorite food|restaurant/)) {
+      return "I love Chinese and Indian cuisine! My favorites are sushi and hotpot 🍣🍲";
+    }
+    
+    // Color
+    if (msg.match(/color|favourite color|favorite color/)) {
+      return "My favorite color is red! ❤️";
+    }
+    
+    // Default response
+    return "Great question! For more details, check out the About page or email me at jijun.nie@ufl.edu! 😊";
+  };
+
   // Handle chat message with AI-driven responses
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
@@ -495,8 +568,10 @@ IMPORTANT RULES:
       
     } catch (error) {
       console.error('Chat error details:', error);
+      // Use fallback responses when API is unavailable
+      const fallbackResponse = getFallbackResponse(userMessage);
       setTimeout(() => {
-        typeOutBubble("I'm having trouble connecting right now. Feel free to email me at jijun.nie@ufl.edu! 📧", true);
+        typeOutBubble(fallbackResponse, true);
       }, 400);
     } finally {
       setIsLoading(false);
