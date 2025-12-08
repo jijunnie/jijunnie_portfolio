@@ -504,17 +504,15 @@ IMPORTANT RULES:
   };
   
   return (
-    <section className="fixed inset-0 px-4 sm:px-6 lg:px-8 flex items-center justify-center overflow-hidden bg-gradient-to-br from-white via-slate-50 to-blue-50">
+    <section className="fixed inset-0 flex items-center justify-center overflow-hidden bg-gradient-to-br from-white via-slate-50 to-blue-50" style={{ height: '100dvh' }}>
       {/* 3D Background */}
       <ThreeBackground />
       {/* Center Content */}
-      <div className={`max-w-6xl mx-auto text-center relative z-10 w-full transition-all duration-[2500ms] ease-out ${
-        showAvatar ? 'pt-20 sm:pt-24' : 'pt-24 sm:pt-32'
-      }`}>
+      <div className="max-w-6xl mx-auto text-center relative z-10 w-full h-full flex flex-col justify-center px-4 sm:px-6 lg:px-8 pt-16">
         {/* Title with 3D effect */}
-        <h1 className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-3 px-4 transition-all duration-[2500ms] ease-out ${
+        <h1 className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-2 sm:mb-3 transition-all duration-[2500ms] ease-out ${
           showTitle ? 'opacity-100 transform-none' : 'opacity-0'
-        } ${showAvatar ? '-translate-y-2' : 'translate-y-0'}`}
+        }`}
         style={{
           transform: showTitle ? 'translateZ(50px)' : 'translateZ(0)',
           textShadow: '0 10px 30px rgba(59, 130, 246, 0.3), 0 20px 60px rgba(139, 92, 246, 0.2)',
@@ -537,9 +535,9 @@ IMPORTANT RULES:
           </span>
         </h1>
         {/* Subtitle with 3D effect */}
-        <div className={`mb-8 px-4 transition-all duration-[2500ms] ease-out ${
+        <div className={`mb-4 sm:mb-6 transition-all duration-[2500ms] ease-out ${
           showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-        } ${showAvatar ? '-translate-y-2' : 'translate-y-0'}`}
+        }`}
         style={{
           transform: showSubtitle ? 'translateZ(30px)' : 'translateZ(0)',
           textShadow: '0 5px 15px rgba(100, 116, 139, 0.2)',
@@ -557,10 +555,10 @@ IMPORTANT RULES:
         
         {/* Avatar and Chat Section */}
         {showAvatar && (
-          <div className="animate-fade-in">
+          <div className="animate-fade-in flex-1 flex flex-col justify-center min-h-0">
             <div className="flex flex-col items-center justify-center">
               {/* Speech Bubble */}
-              <div className="mb-4 relative px-4" style={{ minHeight: '70px' }}>
+              <div className="mb-2 sm:mb-4 relative px-2 sm:px-4" style={{ minHeight: '60px' }}>
                 {showBubble && (bubbleText || typingBubbleText) && (
                   <div className="animate-fade-in flex justify-center">
                     <div className="relative inline-block max-w-[90vw]">
@@ -610,7 +608,7 @@ IMPORTANT RULES:
               </div>
               
               {/* 3D Model Viewer */}
-              <div className="w-full max-w-lg flex justify-center" style={{ height: '380px' }}>
+              <div className="w-full max-w-lg flex justify-center h-[250px] sm:h-[320px] md:h-[380px]">
                 <Canvas 
                   camera={{ position: [0, 0, 5], fov: 50 }}
                   gl={{ 
@@ -646,7 +644,7 @@ IMPORTANT RULES:
             </div>
             
             {/* Chat Input */}
-            <div className="mt-4 px-4">
+            <div className="mt-2 sm:mt-4 px-2 sm:px-4 pb-4 sm:pb-6">
               {showChatInput && (
                 <div className={`max-w-2xl mx-auto transition-all duration-500 ${
                   showChatInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
@@ -658,14 +656,19 @@ IMPORTANT RULES:
                         value={inputMessage}
                         onChange={(e) => setInputMessage(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                        onFocus={(e) => {
+                          // Prevent iOS zoom and scroll on focus
+                          e.target.style.fontSize = '16px';
+                        }}
                         placeholder="Ask me anything..."
                         disabled={isLoading}
-                        className="w-full bg-white/90 backdrop-blur-xl border-2 border-gray-200 rounded-xl px-4 sm:px-5 py-2 sm:py-3 focus:outline-none focus:border-transparent focus:ring-2 focus:ring-purple-400 text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base shadow-lg transition-all duration-300 hover:shadow-xl"
+                        className="w-full bg-white/90 backdrop-blur-xl border-2 border-gray-200 rounded-xl px-3 sm:px-5 py-2 sm:py-3 focus:outline-none focus:border-transparent focus:ring-2 focus:ring-purple-400 text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-base shadow-lg transition-all duration-300 hover:shadow-xl"
                         style={{
                           backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899)',
                           backgroundOrigin: 'border-box',
                           backgroundClip: 'padding-box, border-box',
                           border: '2px solid transparent',
+                          fontSize: '16px', // Prevents iOS zoom
                         }}
                       />
                     </div>

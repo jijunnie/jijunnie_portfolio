@@ -22,7 +22,7 @@ export default function App() {
     <Router>
       <div className="min-h-screen bg-gray-50">
         {/* Navigation */}
-        <nav className="bg-white shadow-sm fixed w-full top-0 z-50">
+        <nav className="bg-white/70 backdrop-blur-md shadow-sm fixed w-full top-0 z-50">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <Link to="/" onClick={closeMenus} className="text-xl font-bold text-gray-800" style={{ fontFamily: 'cursive' }}>
@@ -45,7 +45,7 @@ export default function App() {
                   </button>
                   
                   {isDropdownOpen && (
-                    <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
+                    <div className="absolute top-full left-0 mt-2 w-48 bg-white/90 backdrop-blur-md rounded-lg shadow-lg py-2 z-50">
                       <Link to="/resume" onClick={closeMenus} className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100">
                         My Resume
                       </Link>
