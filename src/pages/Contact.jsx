@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mail, Phone, Calendar, Linkedin, Github, Twitter, Send, MessageSquare } from 'lucide-react';
+import { Mail, Phone, Calendar, Linkedin, Github, Send, MessageSquare, Instagram } from 'lucide-react';
+import emailjs from '@emailjs/browser';
 
 export default function Contact() {
   const [formData, setFormData] = useState({ name: '', email: '', message: '' });
@@ -8,6 +9,11 @@ export default function Contact() {
   const canvasRef = useRef(null);
   const mousePos = useRef({ x: 0, y: 0 });
   const particles = useRef([]);
+
+  // Initialize EmailJS
+  useEffect(() => {
+    emailjs.init('9h7WZUCDkTZScTuFO');
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -174,41 +180,74 @@ export default function Contact() {
     {
       icon: Mail,
       title: 'Email',
-      value: 'your.email@example.com',
-      link: 'mailto:your.email@example.com',
+      value: 'jijunnie2113@gmail.com',
+      link: 'mailto:jijunnie2113@gmail.com',
       color: 'from-red-500 to-pink-500'
     },
     {
       icon: Phone,
       title: 'Phone',
-      value: '+1 (555) 123-4567',
-      link: 'tel:+15551234567',
+      value: '+1 (754)610-4078',
+      link: 'tel:+17546104078',
       color: 'from-green-500 to-emerald-500'
     },
     {
       icon: Calendar,
       title: 'Schedule Meeting',
       value: 'Book a 30-min call',
-      link: 'https://calendly.com/yourusername',
+      link: 'https://calendar.app.google/E3d2bkJ778pT7T1E8',
       color: 'from-blue-500 to-cyan-500'
     }
   ];
 
   const socialLinks = [
-    { icon: Linkedin, url: 'https://linkedin.com/in/yourprofile', label: 'LinkedIn', color: '#0A66C2' },
-    { icon: Github, url: 'https://github.com/yourprofile', label: 'GitHub', color: '#171515' },
-    { icon: Twitter, url: 'https://twitter.com/yourprofile', label: 'Twitter', color: '#1DA1F2' },
-    { icon: MessageSquare, url: 'https://discord.com/users/yourprofile', label: 'Discord', color: '#5865F2' }
+    { icon: Linkedin, url: 'https://www.linkedin.com/in/jijun-nie-0aa297345/', label: 'LinkedIn', color: '#0A66C2' },
+    { icon: Github, url: 'https://github.com/jijunnie', label: 'GitHub', color: '#171515' },
+    { icon: Instagram, url: 'https://www.instagram.com/jijun_nie/', label: 'Instagram', color: '#E4405F' },
+    { icon: MessageSquare, url: 'https://discord.com/users/jijunnie', label: 'Discord', color: '#5865F2' }
   ];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setTimeout(() => {
-      alert('Message sent! I\'ll get back to you soon.');
+    
+    // Log to verify data
+    console.log('Sending email with data:', {
+      from_name: formData.name,
+      from_email: formData.email,
+      message: formData.message
+    });
+    
+    try {
+      const result = await emailjs.send(
+        'service_0fqtjbj',      
+        'template_rk6rqhn',     
+        {
+          from_name: formData.name,
+          from_email: formData.email,
+          message: formData.message,
+        }
+      );
+  
+      console.log('Email sent successfully:', result);
+      alert('✨ Message sent successfully! I\'ll get back to you soon.');
       setFormData({ name: '', email: '', message: '' });
+      
+    } catch (error) {
+      console.error('Detailed error:', error);
+      console.error('Error text:', error.text);
+      console.error('Error status:', error.status);
+      
+      if (error.text === 'The public key is invalid') {
+        alert('❌ Configuration error. Please check your EmailJS public key.');
+      } else if (error.status === 412) {
+        alert('❌ Please verify your email address in EmailJS dashboard first.');
+      } else {
+        alert('❌ Failed to send message. Please try again or email me directly at jijunnie2113@gmail.com');
+      }
+    } finally {
       setIsSubmitting(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -238,12 +277,13 @@ export default function Contact() {
             <div className="space-y-4">
               {contactMethods.map((method, index) => {
                 const Icon = method.icon;
+                const isMailto = method.link.startsWith('mailto:');
+                const isTel = method.link.startsWith('tel:');
                 return (
                   <a
                     key={index}
                     href={method.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    {...(!isMailto && !isTel ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                     onMouseEnter={() => setHoveredCard(index)}
                     onMouseLeave={() => setHoveredCard(null)}
                     className="block group"
@@ -326,7 +366,7 @@ export default function Contact() {
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
                   className="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                  placeholder="John Doe"
+                  placeholder="First Last"
                 />
               </div>
 
@@ -341,7 +381,7 @@ export default function Contact() {
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                   className="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                  placeholder="john@example.com"
+                  placeholder="name@example.com"
                 />
               </div>
 
