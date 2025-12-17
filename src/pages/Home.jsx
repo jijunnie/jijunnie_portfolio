@@ -509,10 +509,10 @@ const response = await fetch('/api/chat', {
       <ThreeBackground />
       {/* Center Content */}
       <div className={`max-w-6xl mx-auto text-center relative z-10 w-full transition-all duration-[2500ms] ease-out ${
-        showAvatar ? 'pt-20 sm:pt-24' : 'pt-24 sm:pt-32'
+        showAvatar ? 'pt-6 sm:pt-10' : 'pt-10 sm:pt-16'
       }`}>
         {/* Title with 3D effect */}
-        <h1 className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-3 px-4 transition-all duration-[2500ms] ease-out ${
+        <h1 className={`text-4xl sm:text-5xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-2 px-4 transition-all duration-[2500ms] ease-out ${
           showTitle ? 'opacity-100 transform-none' : 'opacity-0'
         } ${showAvatar ? '-translate-y-2' : 'translate-y-0'}`}
         style={{
@@ -537,7 +537,7 @@ const response = await fetch('/api/chat', {
           </span>
         </h1>
         {/* Subtitle with 3D effect */}
-        <div className={`mb-8 px-4 transition-all duration-[2500ms] ease-out ${
+        <div className={`mb-6 sm:mb-8 px-4 transition-all duration-[2500ms] ease-out ${
           showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
         } ${showAvatar ? '-translate-y-2' : 'translate-y-0'}`}
         style={{
@@ -545,7 +545,7 @@ const response = await fetch('/api/chat', {
           textShadow: '0 5px 15px rgba(100, 116, 139, 0.2)',
         }}>
           <p 
-            className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-600 font-medium"
+            className="text-lg sm:text-xl md:text-lg lg:text-xl text-gray-600 font-medium"
             style={{
               animation: showSubtitle ? 'floatText 3s ease-in-out infinite 0.5s' : 'none',
               filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1))',
@@ -560,22 +560,22 @@ const response = await fetch('/api/chat', {
           <div className="animate-fade-in">
             <div className="flex flex-col items-center justify-center">
               {/* Speech Bubble */}
-              <div className="mb-4 relative px-4" style={{ minHeight: '70px' }}>
+              <div className="mb-4 mt-4 sm:mt-6 relative px-2 sm:px-4" style={{ minHeight: '70px' }}>
                 {showBubble && (bubbleText || typingBubbleText) && (
-                  <div className="animate-fade-in flex justify-center">
-                    <div className="relative inline-block max-w-[90vw]">
+                  <div className="animate-fade-in flex justify-center w-full">
+                    <div className="relative inline-block w-full max-w-[85vw] sm:max-w-[80vw] md:max-w-[70vw] lg:max-w-[600px]">
                       <div 
-                        className="bg-white/95 backdrop-blur-xl rounded-2xl px-4 sm:px-6 py-3 sm:py-4 shadow-2xl relative"
+                        className="bg-white/95 backdrop-blur-xl rounded-xl sm:rounded-2xl px-3 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4 shadow-2xl relative"
                         style={{
-                          minWidth: '120px',
-                          maxWidth: '600px',
+                          minWidth: '100px',
+                          width: '100%',
                           border: '2px solid transparent',
                           backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899)',
                           backgroundOrigin: 'border-box',
                           backgroundClip: 'padding-box, border-box',
                         }}
                       >
-                        <p className="text-gray-800 font-medium text-left whitespace-pre-wrap break-words text-sm sm:text-base">
+                        <p className="text-gray-800 font-medium text-left whitespace-pre-wrap break-words text-xs sm:text-sm md:text-base leading-relaxed">
                           {typingBubbleText || bubbleText}
                           {typingBubbleText && typingBubbleText !== bubbleText && (
                             <span className="animate-blink text-blue-500">|</span>
@@ -583,9 +583,7 @@ const response = await fetch('/api/chat', {
                         </p>
                       </div>
                       <svg 
-                        className="absolute -bottom-3 left-8" 
-                        width="30" 
-                        height="15" 
+                        className="absolute -bottom-2 sm:-bottom-3 left-6 sm:left-8 w-6 h-3 sm:w-8 sm:h-4" 
                         viewBox="0 0 30 15"
                         style={{ overflow: 'visible' }}
                       >

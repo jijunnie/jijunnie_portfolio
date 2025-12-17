@@ -501,27 +501,6 @@ export default function Interests() {
       )}
 
       <style jsx>{`
-        /* Cyberpunk Background Effects */
-        .cyberpunk-bg {
-          background: 
-            radial-gradient(ellipse at top, rgba(0, 255, 255, 0.1), transparent),
-            radial-gradient(ellipse at bottom, rgba(255, 0, 255, 0.1), transparent),
-            linear-gradient(180deg, #000000 0%, #0a0a0a 50%, #000000 100%);
-        }
-
-        .cyberpunk-grid {
-          background-image: 
-            linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
-          background-size: 50px 50px;
-          animation: grid-move 20s linear infinite;
-        }
-
-        @keyframes grid-move {
-          0% { transform: perspective(500px) rotateX(60deg) translateY(0); }
-          100% { transform: perspective(500px) rotateX(60deg) translateY(50px); }
-        }
-
         .scanlines {
           background: linear-gradient(
             to bottom,
@@ -858,4 +837,3 @@ export default function Interests() {
     </section>
   );
 }
-
