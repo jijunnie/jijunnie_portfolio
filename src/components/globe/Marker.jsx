@@ -4,7 +4,7 @@ import { Text, Sphere } from '@react-three/drei';
 import * as THREE from 'three';
 import { latLonToVector3 } from '../../utils/latLonToVector3';
 
-export default function Marker({ lat, lon, name, description, visited, onClick, radius = 2.05, globeRotationRef, isGlobeHovered }) {
+export default function Marker({ lat, lon, name, description, visited, onClick, radius = 1.69, globeRotationRef, isGlobeHovered }) {
   const groupRef = useRef();
   const [hovered, setHovered] = useState(false);
   

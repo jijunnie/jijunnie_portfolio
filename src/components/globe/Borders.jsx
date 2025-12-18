@@ -5,7 +5,7 @@ import * as topojson from 'topojson-client';
 import { getRegionData, isRegionVisited } from '../../data/visitedRegions';
 
 // Simple sphere projection
-function project(lat, lon, radius = 2.01) {
+function project(lat, lon, radius = 1.66) {
   const phi = (90 - lat) * (Math.PI / 180);
   const theta = (lon + 180) * (Math.PI / 180);
   const x = -(radius * Math.sin(phi) * Math.cos(theta));
@@ -98,7 +98,7 @@ export default function Borders({ onRegionClick, selectedRegion, hoveredRegion, 
         // Process coordinates based on geometry type
         if (feature.geometry.type === 'Polygon') {
           coordinates.forEach(ring => {
-            const points = ring.map(([lon, lat]) => project(lat, lon, 2.01)); // Slightly above globe
+            const points = ring.map(([lon, lat]) => project(lat, lon, 1.66)); // Slightly above globe
             borders.push({
               key: `country-${countryName}-${borders.length}`,
               points,
@@ -112,7 +112,7 @@ export default function Borders({ onRegionClick, selectedRegion, hoveredRegion, 
         } else if (feature.geometry.type === 'MultiPolygon') {
           coordinates.forEach(polygon => {
             polygon.forEach(ring => {
-              const points = ring.map(([lon, lat]) => project(lat, lon, 2.01));
+              const points = ring.map(([lon, lat]) => project(lat, lon, 1.66));
               borders.push({
                 key: `country-${countryName}-${borders.length}`,
                 points,
@@ -174,23 +174,24 @@ export default function Borders({ onRegionClick, selectedRegion, hoveredRegion, 
           // Process coordinates based on geometry type
           if (feature.geometry.type === 'Polygon') {
             coordinates.forEach(ring => {
-              const points = ring.map(([lon, lat]) => project(lat, lon, 2.005));
+              const points = ring.map(([lon, lat]) => project(lat, lon, 1.655));
+              const fullRegionName = `${regionName}, ${countryName}`;
               borders.push({
                 key: `state-${countryCode}-${regionName}-${borders.length}`,
                 points,
-                regionName: `${regionName}, ${countryName}`,
+                regionName: fullRegionName,
                 type: 'state',
                 stateName: regionName,
                 countryName,
-                isVisited: false,
-                isSelected: false,
-                isHovered: false,
+                isVisited: isRegionVisited(fullRegionName),
+                isSelected: selectedRegion === fullRegionName,
+                isHovered: hoveredRegion === fullRegionName,
               });
             });
           } else if (feature.geometry.type === 'MultiPolygon') {
             coordinates.forEach(polygon => {
               polygon.forEach(ring => {
-                const points = ring.map(([lon, lat]) => project(lat, lon, 2.005));
+                const points = ring.map(([lon, lat]) => project(lat, lon, 1.655));
                 borders.push({
                   key: `state-${countryCode}-${regionName}-${borders.length}`,
                   points,
@@ -228,17 +229,18 @@ export default function Borders({ onRegionClick, selectedRegion, hoveredRegion, 
           const stateName = props.name || props.NAME || 'Unknown State';
           
           const processRing = (ring) => {
-            const points = ring.map(([lon, lat]) => project(lat, lon, 2.005));
+            const points = ring.map(([lon, lat]) => project(lat, lon, 1.655));
+            const fullRegionName = `${stateName}, United States`;
             borders.push({
               key: `us-state-${stateName}-${borders.length}`,
               points,
-              regionName: `${stateName}, United States`,
+              regionName: fullRegionName,
               type: 'state',
               stateName,
               countryName: 'United States',
-              isVisited: false,
-              isSelected: false,
-              isHovered: false,
+              isVisited: isRegionVisited(fullRegionName),
+              isSelected: selectedRegion === fullRegionName,
+              isHovered: hoveredRegion === fullRegionName,
             });
           };
           
@@ -280,17 +282,18 @@ export default function Borders({ onRegionClick, selectedRegion, hoveredRegion, 
             || props.NAME_CHN || props.NAME_EN || 'Unknown Province';
           
           const processRing = (ring) => {
-            const points = ring.map(([lon, lat]) => project(lat, lon, 2.005));
+            const points = ring.map(([lon, lat]) => project(lat, lon, 1.655));
+            const fullRegionName = `${provinceName}, China`;
             borders.push({
               key: `china-province-${provinceName}-${borders.length}`,
               points,
-              regionName: `${provinceName}, China`,
+              regionName: fullRegionName,
               type: 'state',
               stateName: provinceName,
               countryName: 'China',
-              isVisited: false,
-              isSelected: false,
-              isHovered: false,
+              isVisited: isRegionVisited(fullRegionName),
+              isSelected: selectedRegion === fullRegionName,
+              isHovered: hoveredRegion === fullRegionName,
             });
           };
           
@@ -327,23 +330,20 @@ export default function Borders({ onRegionClick, selectedRegion, hoveredRegion, 
         // Check if this border's region is currently hovered (from filled region or border hover)
         const isCurrentlyHovered = hoveredRegion === border.regionName;
         
+        // Only highlight when hovered (from filled region hover), no default highlighting
         const color = border.isSelected
           ? '#3b82f6' // blue for selected
           : isCurrentlyHovered
           ? '#8b5cf6' // purple for hovered
-          : border.isVisited
-          ? '#22c55e' // brighter green for visited
           : isCountry
-          ? '#6b7280' // gray for unvisited countries
-          : '#9ca3af'; // lighter gray for states/provinces
+          ? '#64748b' // darker gray for countries (less visible)
+          : '#94a3b8'; // darker gray for states/provinces (less visible)
 
         const lineWidth = border.isSelected 
           ? (isCountry ? 3.5 : 2.5)
           : isCurrentlyHovered 
-          ? (isCountry ? 3 : 2.5) // Thicker for hovered states/provinces too
-          : border.isVisited 
-          ? (isCountry ? 2.5 : 2) // Thicker, brighter lines for visited
-          : (isCountry ? 1.5 : 0.8); // Thinner lines for states
+          ? (isCountry ? 3 : 2.5) // Thicker for hovered
+          : (isCountry ? 1.2 : 0.9); // Thinner, less visible default lines for all borders
 
         // Only make countries clickable, not states/provinces
         const isClickable = border.type === 'country';

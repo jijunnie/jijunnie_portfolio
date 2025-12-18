@@ -508,14 +508,15 @@ const response = await fetch('/api/chat', {
       {/* 3D Background */}
       <ThreeBackground />
       {/* Center Content */}
-      <div className={`max-w-6xl mx-auto text-center relative z-10 w-full transition-all duration-[2500ms] ease-out ${
+      <div className={`max-w-6xl mx-auto text-center relative z-10 w-full transition-all duration-[4000ms] ease-in-out ${
         showAvatar ? 'pt-6 sm:pt-10' : 'pt-10 sm:pt-16'
       }`}>
         {/* Title with 3D effect */}
-        <h1 className={`text-4xl sm:text-5xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-2 px-4 transition-all duration-[2500ms] ease-out ${
+        <h1 className={`text-4xl sm:text-5xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-2 px-4 transition-all duration-[4000ms] ease-in-out ${
           showTitle ? 'opacity-100 transform-none' : 'opacity-0'
-        } ${showAvatar ? '-translate-y-2' : 'translate-y-0'}`}
+        } ${showAvatar ? '-translate-y-8 sm:-translate-y-10' : 'translate-y-0'}`}
         style={{
+          transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
           transform: showTitle ? 'translateZ(50px)' : 'translateZ(0)',
           textShadow: '0 10px 30px rgba(59, 130, 246, 0.3), 0 20px 60px rgba(139, 92, 246, 0.2)',
           perspective: '1000px',
@@ -537,10 +538,11 @@ const response = await fetch('/api/chat', {
           </span>
         </h1>
         {/* Subtitle with 3D effect */}
-        <div className={`mb-6 sm:mb-8 px-4 transition-all duration-[2500ms] ease-out ${
+        <div className={`mb-6 sm:mb-8 px-4 transition-all duration-[4000ms] ease-in-out ${
           showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-        } ${showAvatar ? '-translate-y-2' : 'translate-y-0'}`}
+        } ${showAvatar ? '-translate-y-8 sm:-translate-y-10' : 'translate-y-0'}`}
         style={{
+          transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
           transform: showSubtitle ? 'translateZ(30px)' : 'translateZ(0)',
           textShadow: '0 5px 15px rgba(100, 116, 139, 0.2)',
         }}>

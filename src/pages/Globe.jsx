@@ -64,7 +64,7 @@ export default function GlobePage() {
 
         {/* Globe */}
         <Suspense fallback={null}>
-          <Globe radius={2} rotationRef={globeRotationRef} onHoverChange={setIsGlobeHovered} />
+          <Globe radius={1.65} rotationRef={globeRotationRef} onHoverChange={setIsGlobeHovered} />
         </Suspense>
 
         {/* Filled Regions - Clickable areas inside borders */}

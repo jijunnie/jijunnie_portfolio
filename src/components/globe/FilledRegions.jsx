@@ -5,7 +5,7 @@ import * as topojson from 'topojson-client';
 import { getRegionData, isRegionVisited } from '../../data/visitedRegions';
 
 // Simple sphere projection - filled regions slightly closer than borders for better hover detection
-function project(lat, lon, radius = 2.002) {
+function project(lat, lon, radius = 1.651) {
   const phi = (90 - lat) * (Math.PI / 180);
   const theta = (lon + 180) * (Math.PI / 180);
   const x = -(radius * Math.sin(phi) * Math.cos(theta));
@@ -260,18 +260,14 @@ export default function FilledRegions({ onRegionClick, selectedRegion, hoveredRe
         const geometry = regionGeometries.get(region.key);
         if (!geometry) return null;
 
-        // No highlight on filled regions, just normal styling
+        // No highlight on filled regions, just normal styling - no green for visited
         const color = region.isSelected
           ? '#3b82f6' // blue for selected
-          : region.isVisited
-          ? '#22c55e' // brighter green for visited
-          : '#4b5563'; // gray for unvisited
+          : '#4b5563'; // gray for all non-selected regions (no green for visited)
 
         const opacity = region.isSelected
           ? 0.5
-          : region.isVisited
-          ? 0.35 // More visible for visited places
-          : 0.12; // Normal opacity for unvisited
+          : 0.12; // Same opacity for all non-selected regions (no special visibility for visited)
 
         // Stable hover handlers with debouncing
         const handlePointerOver = (e) => {
@@ -322,8 +318,8 @@ export default function FilledRegions({ onRegionClick, selectedRegion, hoveredRe
               color={color}
               transparent
               opacity={opacity}
-              emissive={region.isVisited ? color : '#000000'}
-              emissiveIntensity={region.isVisited ? 0.5 : 0} // No emissive on hover
+              emissive={'#000000'}
+              emissiveIntensity={0} // No emissive glow at all
               side={THREE.DoubleSide}
               // Ensure material is visible and catches pointer events
               depthWrite={false}
