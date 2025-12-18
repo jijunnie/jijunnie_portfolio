@@ -560,10 +560,10 @@ const response = await fetch('/api/chat', {
           <div className="animate-fade-in">
             <div className="flex flex-col items-center justify-center">
               {/* Speech Bubble */}
-              <div className="mb-4 mt-4 sm:mt-6 relative px-2 sm:px-4" style={{ minHeight: '70px' }}>
+              <div className="mb-4 mt-4 sm:mt-6 relative px-2 sm:px-4 flex justify-center" style={{ minHeight: '70px' }}>
                 {showBubble && (bubbleText || typingBubbleText) && (
                   <div className="animate-fade-in flex justify-center w-full">
-                    <div className="relative inline-block w-full max-w-[85vw] sm:max-w-[80vw] md:max-w-[70vw] lg:max-w-[600px]">
+                    <div className="relative w-full max-w-[85vw] sm:max-w-[80vw] md:max-w-[70vw] lg:max-w-[600px]">
                       <div 
                         className="bg-white/95 backdrop-blur-xl rounded-xl sm:rounded-2xl px-3 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4 shadow-2xl relative"
                         style={{
