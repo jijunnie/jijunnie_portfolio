@@ -61,10 +61,10 @@ function RotatingGlobe({ size = 1 }) {
       <meshStandardMaterial
         ref={materialRef}
         map={earthTexture.map}
-        roughness={0.6}
-        metalness={0.15}
-        emissive={0x000000}
-        emissiveIntensity={0}
+        roughness={0.7}
+        metalness={0.0}
+        emissive={0x4a90e2}
+        emissiveIntensity={0.25}
         color={0xffffff}
       />
     </mesh>
@@ -121,19 +121,18 @@ export default function WorldIcon({ size = 20, className = '' }) {
         gl={{ antialias: true, alpha: true }}
         style={{ width: '100%', height: '100%', transformOrigin: 'center center' }}
       >
-        {/* Maximum brightness - ultra bright balanced lighting */}
-        <ambientLight intensity={3.0} />
-        {/* Multiple directional lights from all angles for ultra bright balanced brightness */}
-        <directionalLight position={[3, 3, 3]} intensity={2.0} />
-        <directionalLight position={[-3, 3, 3]} intensity={2.0} />
-        <directionalLight position={[3, -3, 3]} intensity={1.8} />
-        <directionalLight position={[-3, -3, 3]} intensity={1.8} />
-        <directionalLight position={[0, 4, 0]} intensity={1.9} />
-        <directionalLight position={[0, -4, 0]} intensity={1.6} />
-        <directionalLight position={[4, 0, 0]} intensity={1.9} />
-        <directionalLight position={[-4, 0, 0]} intensity={1.9} />
-        <directionalLight position={[0, 0, 4]} intensity={1.8} />
-        <directionalLight position={[0, 0, -4]} intensity={1.8} />
+        {/* Bright but soft lighting to avoid white dots */}
+        <ambientLight intensity={4.8} />
+        {/* Hemisphere light for soft directional brightness without harsh highlights */}
+        <hemisphereLight 
+          skyColor={0xffffff} 
+          groundColor={0x888888} 
+          intensity={3.0} 
+        />
+        {/* Very soft directional lights from multiple angles with low intensity */}
+        <directionalLight position={[5, 5, 5]} intensity={1.0} />
+        <directionalLight position={[-5, 5, 5]} intensity={1.0} />
+        <directionalLight position={[0, 0, 5]} intensity={1.2} />
         <Suspense fallback={null}>
           <RotatingGlobe size={0.95} />
         </Suspense>

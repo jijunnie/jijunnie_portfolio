@@ -69,8 +69,8 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
                     className={`nav-icon-link ${isActive ? 'active' : ''}`}
                     title={item.label}
                     style={{
-                      width: '40px',
-                      height: '40px',
+                      width: '80px',
+                      height: '80px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -78,7 +78,7 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
                       transform: 'none',
                       position: 'relative',
                       marginLeft: '16px',
-                      left: '4px'
+                      left: '8px'
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.transform = 'none'}
                     onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
@@ -91,10 +91,10 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
                       height: '100%',
                       margin: 0,
                       position: 'relative',
-                      top: '4px',
-                      left: '4px'
+                      top: '8px',
+                      left: '8px'
                     }}>
-                      <WorldIcon size={80} className={`transition-all duration-300 ${isActive ? 'scale-110' : ''}`} />
+                      <WorldIcon size={110} className={`transition-all duration-300 ${isActive ? 'scale-110' : ''}`} />
                     </div>
                     {isActive && <span className="nav-active-indicator"></span>}
                   </Link>
@@ -152,8 +152,8 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
                     className={`nav-icon-link ${isActive ? 'active' : ''}`}
                     title={item.label}
                     style={{
-                      width: '36px',
-                      height: '36px',
+                      width: '70px',
+                      height: '70px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -161,7 +161,7 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
                       transform: 'none',
                       position: 'relative',
                       marginLeft: '16px',
-                      left: '4px'
+                      left: '8px'
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.transform = 'none'}
                     onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
@@ -174,10 +174,10 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
                       height: '100%',
                       margin: 0,
                       position: 'relative',
-                      top: '4px',
-                      left: '4px'
+                      top: '8px',
+                      left: '8px'
                     }}>
-                      <WorldIcon size={72} className={`transition-all duration-300 ${isActive ? 'scale-110' : ''}`} />
+                      <WorldIcon size={100} className={`transition-all duration-300 ${isActive ? 'scale-110' : ''}`} />
                     </div>
                     {isActive && <span className="nav-active-indicator"></span>}
                   </Link>
