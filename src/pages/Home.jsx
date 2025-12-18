@@ -531,7 +531,7 @@ const response = await fetch('/api/chat', {
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
               filter: 'drop-shadow(0 0 20px rgba(139, 92, 246, 0.4))',
-              animation: showTitle ? 'floatText 3s ease-in-out infinite' : 'none',
+              animation: showTitle ? 'floatText 4s ease-in-out infinite' : 'none',
               display: 'inline-block',
             }}
           >
@@ -550,7 +550,7 @@ const response = await fetch('/api/chat', {
           <p 
             className="text-lg sm:text-xl md:text-lg lg:text-xl text-gray-600 font-medium"
             style={{
-              animation: showSubtitle ? 'floatText 3s ease-in-out infinite 0.5s' : 'none',
+              animation: showSubtitle ? 'floatText 4s ease-in-out infinite 0.5s' : 'none',
               filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1))',
             }}
           >
@@ -708,7 +708,7 @@ const response = await fetch('/api/chat', {
       transform: translateY(0px) translateZ(0px);
     }
     50% { 
-      transform: translateY(-10px) translateZ(20px);
+      transform: translateY(-4px) translateZ(8px);
     }
   }
   
