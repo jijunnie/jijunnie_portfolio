@@ -1,6 +1,6 @@
 import React, { useState, Suspense, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
+import { OrbitControls } from '@react-three/drei';
 import Globe from '../components/globe/Globe';
 import Borders from '../components/globe/Borders';
 import FilledRegions from '../components/globe/FilledRegions';
@@ -141,4 +141,3 @@ export default function GlobePage() {
     </section>
   );
 }
-

@@ -4,6 +4,7 @@ import { OrbitControls, useGLTF, useFBX, Float, Text, Sphere, Box, Torus, Rounde
 import { Send } from 'lucide-react';
 import { SkeletonUtils } from 'three-stdlib';
 import * as THREE from 'three';
+import Spline from '@splinetool/react-spline';
 // ============================================
 // 3D BACKGROUND COMPONENT - VANILLA THREE.JS
 // ============================================
@@ -413,7 +414,7 @@ IMPORTANT RULES:
 - You must not say you are AI assistant, you are Jijun Nie
 - If asked about age or birthday, just say "I'm 19 years old" - do NOT give the exact date`;
       
-const response = await fetch('/api/chat', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -450,48 +451,28 @@ const response = await fetch('/api/chat', {
     <section className="fixed inset-0 px-4 sm:px-6 lg:px-8 flex items-center justify-center overflow-hidden bg-gradient-to-br from-white via-slate-50 to-blue-50">
       {/* 3D Background */}
       <ThreeBackground />
+      
       {/* Center Content */}
       <div className={`max-w-6xl mx-auto text-center relative z-10 w-full px-2 sm:px-4 md:px-6 transition-all duration-[4000ms] ease-in-out ${
         showAvatar ? 'pt-6 sm:pt-10' : 'pt-10 sm:pt-16'
       }`}>
-        {/* Title with 3D effect */}
-        <h1 className={`font-bold mb-2 px-2 sm:px-3 md:px-4 transition-all duration-[4000ms] ease-in-out ${
-          showTitle ? 'opacity-100 transform-none' : 'opacity-0'
-        } ${showAvatar ? '-translate-y-8 sm:-translate-y-10' : 'translate-y-0'}`}
-        style={{
-          transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
-          transform: showTitle ? 'translateZ(50px)' : 'translateZ(0)',
-          textShadow: '0 10px 30px rgba(59, 130, 246, 0.3), 0 20px 60px rgba(139, 92, 246, 0.2)',
-          perspective: '1000px',
-          fontSize: 'clamp(2rem, 3.5vw + 0.75rem, 3.75rem)',
-          lineHeight: '1.2',
-          whiteSpace: 'nowrap',
-        }}>
-          <span 
-            style={{
-              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              filter: 'drop-shadow(0 0 20px rgba(139, 92, 246, 0.4))',
-              animation: showTitle ? 'floatText 4s ease-in-out infinite' : 'none',
-              display: 'inline-block',
-            }}
-          >
-            Welcome to Jijun's World
-          </span>
-        </h1>
-        {/* Subtitle with 3D effect */}
-        <div className={`mb-6 sm:mb-8 px-4 transition-all duration-[4000ms] ease-in-out ${
-          showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-        } ${showAvatar ? '-translate-y-8 sm:-translate-y-10' : 'translate-y-0'}`}
-        style={{
-          transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
-          transform: showSubtitle ? 'translateZ(30px)' : 'translateZ(0)',
-          textShadow: '0 5px 15px rgba(100, 116, 139, 0.2)',
-        }}>
+         {/* Spline 3D Text Title - Responsive Height */}
+         <div className="spline-container mb-2 px-2 sm:px-3 md:px-4" style={{ transform: 'translateY(30px)' }}>
+           <Spline scene="https://prod.spline.design/JCZGttnh3jgFNvz6/scene.splinecode" />
+         </div>
+        
+         {/* Subtitle with 3D effect - Responsive */}
+         <div className={`subtitle-container mb-6 sm:mb-8 px-4 transition-all duration-[4000ms] ease-in-out ${
+           showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+         }`}
+         style={{
+           transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+           textShadow: '0 5px 15px rgba(100, 116, 139, 0.2)',
+           position: 'relative',
+           zIndex: 1,
+         }}>
           <p 
-            className="text-lg sm:text-xl md:text-lg lg:text-xl text-gray-600 font-medium"
+            className="subtitle-text text-lg sm:text-xl md:text-lg lg:text-xl text-gray-600 font-medium"
             style={{
               animation: showSubtitle ? 'floatText 4s ease-in-out infinite 0.5s' : 'none',
               filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1))',
@@ -503,10 +484,16 @@ const response = await fetch('/api/chat', {
         
         {/* Avatar and Chat Section */}
         {showAvatar && (
-          <div className="animate-fade-in">
+          <div 
+            className="animate-slide-up avatar-section"
+            style={{
+              animation: 'slideUp 1.2s ease-out forwards',
+              position: 'relative',
+              zIndex: 2,
+            }}>
             <div className="flex flex-col items-center justify-center">
-              {/* Speech Bubble */}
-              <div className="mb-4 mt-4 sm:mt-6 relative px-2 sm:px-4 flex justify-center" style={{ minHeight: '70px' }}>
+               {/* Speech Bubble - Responsive */}
+               <div className="response-bubble-container mb-4 mt-4 sm:mt-6 relative px-2 sm:px-4 flex justify-center">
                 {showBubble && (bubbleText || typingBubbleText) && (
                   <div className="animate-fade-in flex justify-center w-full">
                     <div className="relative w-full max-w-[85vw] sm:max-w-[80vw] md:max-w-[70vw] lg:max-w-[600px]">
@@ -521,7 +508,7 @@ const response = await fetch('/api/chat', {
                           backgroundClip: 'padding-box, border-box',
                         }}
                       >
-                        <p className="text-gray-800 font-medium text-left whitespace-pre-wrap break-words text-xs sm:text-sm md:text-base leading-relaxed">
+                        <p className="text-gray-800 font-medium text-left whitespace-pre-wrap break-words text-sm sm:text-sm md:text-base leading-relaxed">
                           {typingBubbleText || bubbleText}
                           {typingBubbleText && typingBubbleText !== bubbleText && (
                             <span className="animate-blink text-blue-500">|</span>
@@ -553,8 +540,8 @@ const response = await fetch('/api/chat', {
                 )}
               </div>
               
-              {/* 3D Model Viewer */}
-              <div className="w-full max-w-lg flex justify-center -mt-8" style={{ height: '380px' }}>
+               {/* 3D Model Viewer - Responsive */}
+               <div className="model-viewer w-full max-w-lg flex justify-center -mt-8">
                 <Canvas 
                   camera={{ position: [0, 0, 5], fov: 50 }}
                   gl={{ 
@@ -591,7 +578,7 @@ const response = await fetch('/api/chat', {
           </div>
         )}
       </div>
-
+      
       {/* Chat Input - Fixed at bottom */}
       {showChatInput && (
         <div className="fixed bottom-0 left-0 right-0 z-20 px-4 pb-6 sm:pb-8">
@@ -636,33 +623,100 @@ const response = await fetch('/api/chat', {
       )}
       
       <style jsx>{`
-  @keyframes blink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0; }
-  }
-  
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  
-  @keyframes floatText {
-    0%, 100% { 
-      transform: translateY(0px) translateZ(0px);
-    }
-    50% { 
-      transform: translateY(-4px) translateZ(8px);
-    }
-  }
-  
-  .animate-blink {
-    animation: blink 1s infinite;
-  }
-  
-  .animate-fade-in {
-    animation: fadeIn 0.8s ease-out forwards;
-  }
-`}</style>
+        @keyframes blink {
+          0%, 50% { opacity: 1; }
+          51%, 100% { opacity: 0; }
+        }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideUp {
+          from { 
+            opacity: 0; 
+            transform: translateY(60px); 
+          }
+          to { 
+            opacity: 1; 
+            transform: translateY(0); 
+          }
+        }
+        
+        @keyframes floatText {
+          0%, 100% { 
+            transform: translateY(0px) translateZ(0px);
+          }
+          50% { 
+            transform: translateY(-4px) translateZ(8px);
+          }
+        }
+        
+        .animate-blink {
+          animation: blink 1s infinite;
+        }
+        
+        .animate-fade-in {
+          animation: fadeIn 0.8s ease-out forwards;
+        }
+
+        /* ============================================ */
+        /* RESPONSIVE BREAKPOINTS - Mobile First       */
+        /* ============================================ */
+        
+         /* Spline title - Proportional scaling: 225px (mobile) to 450px (desktop) */
+         /* Formula: scales proportionally with viewport width from 320px to 1024px+ */
+         .spline-container {
+           height: clamp(225px, calc(225px + (450 - 225) * ((100vw - 320px) / (1024 - 320))), 450px);
+         }
+         
+        /* Proportional scaling: Mobile (-75px) to Desktop (-150px/-170px) */
+        /* Formula scales from 320px viewport (mobile) to 1024px viewport (desktop) */
+        .subtitle-container {
+          transform: translateZ(30px) translateY(calc(-75px + (-150 + 75) * ((100vw - 320px) / (1024 - 320)))) !important;
+        }
+        
+        .subtitle-container.opacity-0 {
+          transform: translateZ(0) translateY(calc(-75px + (-150 + 75) * ((100vw - 320px) / (1024 - 320)))) !important;
+        }
+        
+        .response-bubble-container {
+          min-height: 70px;
+          transform: translateY(calc(-80px + (-170 + 80) * ((100vw - 320px) / (1024 - 320)))) !important;
+        }
+        
+        .model-viewer {
+          height: 380px;
+          transform: translateY(calc(-80px + (-170 + 80) * ((100vw - 320px) / (1024 - 320)))) !important;
+        }
+
+        /* Desktop - Fixed values at 1024px+ */
+        @media (min-width: 1024px) {
+          .spline-container {
+            height: 450px !important;
+            transform: translateY(30px) !important;
+          }
+           
+          .subtitle-container {
+            transform: translateY(-150px) translateZ(30px) !important;
+          }
+          
+          .subtitle-container.opacity-0 {
+            transform: translateY(-150px) translateZ(0) !important;
+          }
+          
+          .response-bubble-container {
+            min-height: 70px;
+            transform: translateY(-170px) !important;
+          }
+           
+          .model-viewer {
+            height: 380px;
+            transform: translateY(-170px) !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }

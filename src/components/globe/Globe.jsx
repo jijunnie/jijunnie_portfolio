@@ -52,4 +52,3 @@ export default function Globe({ radius = 2, rotationRef, onHoverChange }) {
     </mesh>
   );
 }
-
