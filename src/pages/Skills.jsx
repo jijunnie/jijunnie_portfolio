@@ -12,7 +12,7 @@ export default function Skills() {
           <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-purple-600 hover:shadow-xl transition-all duration-300">
             <div className="flex items-center mb-4">
               <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-4">
-                <span className="text-2xl">💻</span>
+              <span className="text-2xl">💻</span>
               </div>
               <h3 className="text-2xl font-semibold text-gray-900">Programming & Data</h3>
             </div>
@@ -49,7 +49,7 @@ export default function Skills() {
           <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-teal-600 hover:shadow-xl transition-all duration-300">
             <div className="flex items-center mb-4">
               <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center mr-4">
-                <span className="text-2xl">🛠️</span>
+              <span className="text-2xl">🛠️</span>
               </div>
               <h3 className="text-2xl font-semibold text-gray-900">Tools</h3>
             </div>

@@ -472,7 +472,7 @@ IMPORTANT RULES:
            zIndex: 1,
          }}>
           <p 
-            className="subtitle-text text-lg sm:text-xl md:text-lg lg:text-xl text-gray-600 font-medium"
+            className="subtitle-text text-lg sm:text-xl md:text-xl lg:text-xl text-gray-600 font-medium"
             style={{
               animation: showSubtitle ? 'floatText 4s ease-in-out infinite 0.5s' : 'none',
               filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1))',
@@ -665,32 +665,33 @@ IMPORTANT RULES:
         /* RESPONSIVE BREAKPOINTS - Mobile First       */
         /* ============================================ */
         
-          /* Spline title - Proportional scaling: 195px (mobile) to 450px (desktop) */
+          /* Spline title - Proportional scaling: 150px (small mobile) to 450px (desktop) */
           /* Formula: scales proportionally with viewport width from 320px to 1024px+ */
+          /* At ~430px viewport (iPhone 14 Pro Max) = ~195px */
           .spline-container {
-            height: clamp(195px, calc(195px + (450 - 195) * ((100vw - 320px) / (1024 - 320))), 450px);
+            height: clamp(150px, calc(150px + (450 - 150) * ((100vw - 320px) / (1024 - 320))), 450px);
           }
           
           /* Desktop - Fixed values at 1024px+ */
          
-        /* Proportional scaling: Mobile (-55px) to Desktop (-150px/-170px) */
+        /* Proportional scaling: Mobile (-40px) to Desktop (-150px/-170px) */
         /* Formula scales from 320px viewport (mobile) to 1024px viewport (desktop) */
         .subtitle-container {
-          transform: translateZ(30px) translateY(calc(-55px + (-150 + 55) * ((100vw - 320px) / (1024 - 320)))) !important;
+          transform: translateZ(30px) translateY(calc(-40px + (-150 + 40) * ((100vw - 320px) / (1024 - 320)))) !important;
         }
         
         .subtitle-container.opacity-0 {
-          transform: translateZ(0) translateY(calc(-55px + (-150 + 55) * ((100vw - 320px) / (1024 - 320)))) !important;
+          transform: translateZ(0) translateY(calc(-40px + (-150 + 40) * ((100vw - 320px) / (1024 - 320)))) !important;
         }
         
         .response-bubble-container {
           min-height: 70px;
-          transform: translateY(calc(-80px + (-170 + 80) * ((100vw - 320px) / (1024 - 320)))) !important;
+          transform: translateY(calc(-50px + (-170 + 50) * ((100vw - 320px) / (1024 - 320)))) !important;
         }
         
         .model-viewer {
           height: 380px;
-          transform: translateY(calc(-80px + (-170 + 80) * ((100vw - 320px) / (1024 - 320)))) !important;
+          transform: translateY(calc(-50px + (-170 + 50) * ((100vw - 320px) / (1024 - 320)))) !important;
           margin-left: auto;
           margin-right: auto;
         }
