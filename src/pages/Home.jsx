@@ -665,10 +665,10 @@ IMPORTANT RULES:
         /* RESPONSIVE BREAKPOINTS - Mobile First       */
         /* ============================================ */
         
-          /* Spline title - Proportional scaling: 150px (small mobile) to 450px (desktop) */
+          /* Spline title - Proportional scaling: 170px (small mobile) to 450px (desktop) */
           /* Formula: scales proportionally with viewport width from 320px to 1024px+ */
           .spline-container {
-            height: clamp(150px, calc(150px + (450 - 150) * ((100vw - 320px) / (1024 - 320))), 450px);
+            height: clamp(170px, calc(170px + (450 - 170) * ((100vw - 320px) / (1024 - 320))), 450px);
           }
           
           
