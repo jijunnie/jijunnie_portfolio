@@ -463,14 +463,14 @@ IMPORTANT RULES:
         
          {/* Subtitle with 3D effect - Responsive */}
          <div className={`subtitle-container mb-6 sm:mb-8 px-4 transition-all duration-[4000ms] ease-in-out ${
-           showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+          showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
          }`}
-         style={{
+        style={{
            transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
-           textShadow: '0 5px 15px rgba(100, 116, 139, 0.2)',
+          textShadow: '0 5px 15px rgba(100, 116, 139, 0.2)',
            position: 'relative',
            zIndex: 1,
-         }}>
+        }}>
           <p 
             className="subtitle-text text-lg sm:text-xl md:text-xl lg:text-xl text-gray-600 font-medium"
             style={{
@@ -674,14 +674,15 @@ IMPORTANT RULES:
           
           /* Desktop - Fixed values at 1024px+ */
          
-        /* Proportional scaling: Mobile (-40px) to Desktop (-150px/-170px) */
+        /* Proportional scaling: Mobile to Desktop (-150px) */
         /* Formula scales from 320px viewport (mobile) to 1024px viewport (desktop) */
+        /* iPhone 14 Pro Max (430px viewport) = -195px */
         .subtitle-container {
-          transform: translateZ(30px) translateY(calc(-40px + (-150 + 40) * ((100vw - 320px) / (1024 - 320)))) !important;
+          transform: translateZ(30px) translateY(calc(-203px + (-150 + 203) * ((100vw - 320px) / (1024 - 320)))) !important;
         }
         
         .subtitle-container.opacity-0 {
-          transform: translateZ(0) translateY(calc(-40px + (-150 + 40) * ((100vw - 320px) / (1024 - 320)))) !important;
+          transform: translateZ(0) translateY(calc(-203px + (-150 + 203) * ((100vw - 320px) / (1024 - 320)))) !important;
         }
         
         .response-bubble-container {
