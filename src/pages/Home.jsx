@@ -665,11 +665,11 @@ IMPORTANT RULES:
         /* RESPONSIVE BREAKPOINTS - Mobile First       */
         /* ============================================ */
         
-         /* Spline title - Proportional scaling: 220px (mobile) to 450px (desktop) */
-         /* Formula: scales proportionally with viewport width from 320px to 1024px+ */
-         .spline-container {
-           height: clamp(220px, calc(220px + (450 - 220) * ((100vw - 320px) / (1024 - 320))), 450px);
-         }
+          /* Spline title - Proportional scaling: 210px (mobile) to 450px (desktop) */
+          /* Formula: scales proportionally with viewport width from 320px to 1024px+ */
+          .spline-container {
+            height: clamp(210px, calc(210px + (450 - 210) * ((100vw - 320px) / (1024 - 320))), 450px);
+          }
          
         /* Proportional scaling: Mobile (-75px) to Desktop (-150px/-170px) */
         /* Formula scales from 320px viewport (mobile) to 1024px viewport (desktop) */
