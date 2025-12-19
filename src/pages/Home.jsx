@@ -667,9 +667,15 @@ IMPORTANT RULES:
         
           /* Spline title - Proportional scaling: 150px (small mobile) to 450px (desktop) */
           /* Formula: scales proportionally with viewport width from 320px to 1024px+ */
-          /* At ~430px viewport (iPhone 14 Pro Max) = ~195px */
           .spline-container {
             height: clamp(150px, calc(150px + (450 - 150) * ((100vw - 320px) / (1024 - 320))), 450px);
+          }
+          
+          /* iPhone 14 Pro Max specific: 200px */
+          @media (min-width: 428px) and (max-width: 430px) {
+            .spline-container {
+              height: 200px !important;
+            }
           }
           
           /* Desktop - Fixed values at 1024px+ */
@@ -681,8 +687,29 @@ IMPORTANT RULES:
           transform: translateZ(30px) translateY(calc(-203px + (-150 + 203) * ((100vw - 320px) / (1024 - 320)))) !important;
         }
         
+
         .subtitle-container.opacity-0 {
           transform: translateZ(0) translateY(calc(-203px + (-150 + 203) * ((100vw - 320px) / (1024 - 320)))) !important;
+        }
+        
+        /* Mobile - shift down subtitle */
+        @media (max-width: 639px) {
+          .subtitle-container {
+            transform: translateZ(30px) translateY(calc(-40px + (-150 + 40) * ((100vw - 320px) / (1024 - 320)))) !important;
+          }
+          .subtitle-container.opacity-0 {
+            transform: translateZ(0) translateY(calc(-40px + (-150 + 40) * ((100vw - 320px) / (1024 - 320)))) !important;
+          }
+        }
+        
+        /* iPhone 14 Pro Max specific: -195px */
+        @media (min-width: 428px) and (max-width: 430px) {
+          .subtitle-container {
+            transform: translateZ(30px) translateY(-195px) !important;
+          }
+          .subtitle-container.opacity-0 {
+            transform: translateZ(0) translateY(-195px) !important;
+          }
         }
         
         .response-bubble-container {
