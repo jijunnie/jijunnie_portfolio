@@ -665,20 +665,22 @@ IMPORTANT RULES:
         /* RESPONSIVE BREAKPOINTS - Mobile First       */
         /* ============================================ */
         
-          /* Spline title - Proportional scaling: 210px (mobile) to 450px (desktop) */
+          /* Spline title - Proportional scaling: 195px (mobile) to 450px (desktop) */
           /* Formula: scales proportionally with viewport width from 320px to 1024px+ */
           .spline-container {
-            height: clamp(210px, calc(210px + (450 - 210) * ((100vw - 320px) / (1024 - 320))), 450px);
+            height: clamp(195px, calc(195px + (450 - 195) * ((100vw - 320px) / (1024 - 320))), 450px);
           }
+          
+          /* Desktop - Fixed values at 1024px+ */
          
-        /* Proportional scaling: Mobile (-75px) to Desktop (-150px/-170px) */
+        /* Proportional scaling: Mobile (-55px) to Desktop (-150px/-170px) */
         /* Formula scales from 320px viewport (mobile) to 1024px viewport (desktop) */
         .subtitle-container {
-          transform: translateZ(30px) translateY(calc(-75px + (-150 + 75) * ((100vw - 320px) / (1024 - 320)))) !important;
+          transform: translateZ(30px) translateY(calc(-55px + (-150 + 55) * ((100vw - 320px) / (1024 - 320)))) !important;
         }
         
         .subtitle-container.opacity-0 {
-          transform: translateZ(0) translateY(calc(-75px + (-150 + 75) * ((100vw - 320px) / (1024 - 320)))) !important;
+          transform: translateZ(0) translateY(calc(-55px + (-150 + 55) * ((100vw - 320px) / (1024 - 320)))) !important;
         }
         
         .response-bubble-container {
@@ -689,6 +691,8 @@ IMPORTANT RULES:
         .model-viewer {
           height: 380px;
           transform: translateY(calc(-80px + (-170 + 80) * ((100vw - 320px) / (1024 - 320)))) !important;
+          margin-left: auto;
+          margin-right: auto;
         }
 
         /* Desktop - Fixed values at 1024px+ */
@@ -714,6 +718,8 @@ IMPORTANT RULES:
           .model-viewer {
             height: 380px;
             transform: translateY(-170px) !important;
+            margin-left: auto;
+            margin-right: auto;
           }
         }
       `}</style>
