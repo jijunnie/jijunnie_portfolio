@@ -671,12 +671,6 @@ IMPORTANT RULES:
             height: clamp(150px, calc(150px + (450 - 150) * ((100vw - 320px) / (1024 - 320))), 450px);
           }
           
-          /* iPhone 14 Pro Max specific: 205px */
-          @media (min-width: 428px) and (max-width: 430px) {
-            .spline-container {
-              height: 205px !important;
-            }
-          }
           
           /* Desktop - Fixed values at 1024px+ */
          
@@ -684,34 +678,15 @@ IMPORTANT RULES:
         /* Formula scales from 320px viewport (mobile) to 1024px viewport (desktop) */
         /* iPhone 14 Pro Max (430px viewport) = -195px */
         
-        /* Default subtitle positioning */
+        /* Subtitle positioning - scales from mobile to desktop */
         .subtitle-container {
-          transform: translateZ(30px) translateY(calc(-65px + (-150 + 65) * ((100vw - 320px) / (1024 - 320)))) !important;
+          transform: translateZ(30px) translateY(calc(-40px + (-150 + 40) * ((100vw - 320px) / (1024 - 320)))) !important;
         }
         
         .subtitle-container.opacity-0 {
-          transform: translateZ(0) translateY(calc(-65px + (-150 + 65) * ((100vw - 320px) / (1024 - 320)))) !important;
+          transform: translateZ(0) translateY(calc(-40px + (-150 + 40) * ((100vw - 320px) / (1024 - 320)))) !important;
         }
         
-        /* Mobile - ensure subtitle is visible and positioned correctly */
-        @media (max-width: 639px) {
-          .subtitle-container {
-            transform: translateZ(30px) translateY(-65px) !important;
-          }
-          .subtitle-container.opacity-0 {
-            transform: translateZ(0) translateY(-65px) !important;
-          }
-        }
-        
-        /* iPhone 14 Pro Max specific: -195px */
-        @media (min-width: 428px) and (max-width: 430px) {
-          .subtitle-container {
-            transform: translateZ(30px) translateY(-195px) !important;
-          }
-          .subtitle-container.opacity-0 {
-            transform: translateZ(0) translateY(-195px) !important;
-          }
-        }
         
         .response-bubble-container {
           min-height: 70px;
