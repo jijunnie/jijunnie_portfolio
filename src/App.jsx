@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Menu, X, User, FileText, FolderKanban, Code, Heart, Mail, Globe as GlobeIcon } from 'lucide-react';
+import { Menu, X, User, FileText, FolderKanban, Heart, Mail, Globe as GlobeIcon } from 'lucide-react';
 import Home from './pages/Home';
 import About from './pages/About';
 import Resume from './pages/Resume';
-import Projects from './pages/Projects';
-import Skills from './pages/Skills';
+import Portfolio from './pages/Portfolio';
 import Interests from './pages/Interests';
 import Contact from './pages/Contact';
 import Globe from './pages/Globe';
@@ -324,12 +323,13 @@ function Layout({ children }) {
   const location = useLocation();
   const isHomePage = location.pathname === '/';
   const isGlobePage = location.pathname === '/globe';
+  const isPortfolioPage = location.pathname === '/projects';
   
   return (
     <>
       {children}
-      {/* Footer - hidden on home and globe pages since they use fixed positioning */}
-      {!isHomePage && !isGlobePage && (
+      {/* Footer - hidden on home, globe, and portfolio pages since they use fixed positioning */}
+      {!isHomePage && !isGlobePage && !isPortfolioPage && (
         <footer className="bg-gray-900 text-white py-8 px-4 sm:px-6 lg:px-8">
           <div className="max-w-6xl mx-auto text-center">
             <p>&copy; 2024 Jijun Nie. All rights reserved.</p>
@@ -339,6 +339,22 @@ function Layout({ children }) {
     </>
   );
 }
+
+// Content wrapper component that conditionally applies padding
+function ContentWrapper({ children }) {
+  const location = useLocation();
+  const isHomePage = location.pathname === '/';
+  const isGlobePage = location.pathname === '/globe';
+  const isPortfolioPage = location.pathname === '/projects';
+  
+  // Full-screen pages don't need padding wrapper
+  if (isHomePage || isGlobePage || isPortfolioPage) {
+    return <>{children}</>;
+  }
+  
+  return <div className="pt-20 md:pt-24">{children}</div>;
+}
+
 export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const closeMenus = () => {
@@ -348,34 +364,48 @@ export default function App() {
   const navItems = [
     { path: '/about', icon: User, label: 'About' },
     { path: '/resume', icon: FileText, label: 'Resume' },
-    { path: '/projects', icon: FolderKanban, label: 'Projects' },
-    { path: '/skills', icon: Code, label: 'Skills' },
+    { path: '/projects', icon: FolderKanban, label: 'Portfolio' },
     { path: '/interests', icon: Heart, label: 'Interests' },
     { path: '/globe', icon: GlobeIcon, label: 'Travel' },
     { path: '/contact', icon: Mail, label: 'Contact' },
   ];
   return (
     <Router>
-      <div className="min-h-screen bg-gray-50">
-        {/* Navigation with Liquid Glass Design */}
-        <NavBar navItems={navItems} isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} closeMenus={closeMenus} />
-        {/* Main Content */}
-        <Layout>
-          <div className="pt-20 md:pt-24">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/resume" element={<Resume />} />
-              <Route path="/projects" element={<Projects />} />
-              <Route path="/skills" element={<Skills />} />
-              <Route path="/interests" element={<Interests />} />
-              <Route path="/globe" element={<Globe />} />
-              <Route path="/contact" element={<Contact />} />
-            </Routes>
-          </div>
-        </Layout>
-      </div>
+      <MainApp navItems={navItems} isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} closeMenus={closeMenus} />
     </Router>
   );
 }
 
+// Separate component to use useLocation hook
+function MainApp({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
+  const location = useLocation();
+  const isHomePage = location.pathname === '/';
+  const isGlobePage = location.pathname === '/globe';
+  const isPortfolioPage = location.pathname === '/projects';
+  
+  // Full-screen pages have transparent/no background
+  const bgClass = (isHomePage || isGlobePage || isPortfolioPage) 
+    ? 'min-h-screen' 
+    : 'min-h-screen bg-gray-50';
+  
+  return (
+    <div className={bgClass}>
+      {/* Navigation with Liquid Glass Design */}
+      <NavBar navItems={navItems} isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} closeMenus={closeMenus} />
+      {/* Main Content */}
+      <Layout>
+        <ContentWrapper>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/resume" element={<Resume />} />
+            <Route path="/projects" element={<Portfolio />} />
+            <Route path="/interests" element={<Interests />} />
+            <Route path="/globe" element={<Globe />} />
+            <Route path="/contact" element={<Contact />} />
+          </Routes>
+        </ContentWrapper>
+      </Layout>
+    </div>
+  );
+}
