@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense, useMemo, useCallback } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, useGLTF, useFBX } from '@react-three/drei';
 import { SkeletonUtils } from 'three-stdlib';
@@ -13,7 +13,7 @@ function Avatar({ animationPath = '/animations/idle.fbx', scale = 1.5, position 
   const { scene: baseAvatar } = useGLTF('/models/avatar.glb');
   const fbx = useFBX(animationPath);
 
-  const clonedAvatar = React.useMemo(() => {
+  const clonedAvatar = useMemo(() => {
     if (!baseAvatar) return null;
     const cloned = SkeletonUtils.clone(baseAvatar);
     cloned.traverse((child) => {
@@ -80,19 +80,32 @@ export default function Interests() {
   const lastClickTime = useRef(0);
   const dragDistance = useRef(0);
   const carouselRef = useRef(null);
+  const animationFrameRef = useRef(null);
+  const lastRotationTime = useRef(0);
 
+  // Debounced resize handler
   useEffect(() => {
+    let resizeTimeout;
     const updateDimensions = () => {
-      setDimensions({
-        width: window.innerWidth,
-        height: window.innerHeight
-      });
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        setDimensions({
+          width: window.innerWidth,
+          height: window.innerHeight
+        });
+      }, 100);
     };
-    updateDimensions();
-    window.addEventListener('resize', updateDimensions);
     
+    // Initial set without debounce
+    setDimensions({
+      width: window.innerWidth,
+      height: window.innerHeight
+    });
+    
+    window.addEventListener('resize', updateDimensions);
     return () => {
       window.removeEventListener('resize', updateDimensions);
+      clearTimeout(resizeTimeout);
     };
   }, []);
 
@@ -110,10 +123,10 @@ export default function Interests() {
     return () => clearTimeout(timer);
   }, []);
 
-  const getResponsiveValues = () => {
+  // Memoized responsive values - only recalculate when dimensions change
+  const responsive = useMemo(() => {
     const isMobile = dimensions.width < 640;
     const isTablet = dimensions.width >= 640 && dimensions.width < 1024;
-    const isDesktop = dimensions.width >= 1024;
 
     return {
       carouselRadius: isMobile ? 200 : isTablet ? 250 : 300,
@@ -124,13 +137,12 @@ export default function Interests() {
       avatarPosition: isMobile ? [0, -1.0, 0] : isTablet ? [0, -1.2, 0] : [0, -1.4, 0],
       cameraPosition: isMobile ? [0, 0.8, 3.5] : isTablet ? [0, 0.9, 4] : [0, 1, 4.5],
       cameraFov: isMobile ? 55 : isTablet ? 52 : 50,
-      topPadding: isMobile ? 'pt-24' : isTablet ? 'pt-28' : 'pt-32'
+      topPadding: isMobile ? 'pt-24' : isTablet ? 'pt-28' : 'pt-32',
+      isMobile
     };
-  };
+  }, [dimensions.width]);
 
-  const responsive = getResponsiveValues();
-
-  const interests = [
+  const interests = useMemo(() => [
     {
       icon: Camera,
       title: "Photography",
@@ -208,17 +220,38 @@ export default function Interests() {
       glowColor: "shadow-sky-500/50",
       skills: ["Cultural Awareness", "Adaptability", "Planning", "Open-mindedness"]
     }
-  ];
+  ], []);
 
   const itemsCount = interests.length;
   const angleStep = 360 / itemsCount;
 
+  // Optimized auto-rotation using requestAnimationFrame
   useEffect(() => {
     if (!isDragging && !selectedInterest && hasAnimated && !isAnimating) {
-      const interval = setInterval(() => {
-        setRotation(prev => prev + 0.2);
-      }, 20);
-      return () => clearInterval(interval);
+      const animate = (timestamp) => {
+        if (!lastRotationTime.current) {
+          lastRotationTime.current = timestamp;
+        }
+        
+        const elapsed = timestamp - lastRotationTime.current;
+        
+        // Update every ~33ms (30fps) instead of 20ms for smoother mobile performance
+        if (elapsed >= 33) {
+          setRotation(prev => prev + 0.3); // Slightly faster to compensate
+          lastRotationTime.current = timestamp;
+        }
+        
+        animationFrameRef.current = requestAnimationFrame(animate);
+      };
+      
+      animationFrameRef.current = requestAnimationFrame(animate);
+      
+      return () => {
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+        }
+        lastRotationTime.current = 0;
+      };
     }
   }, [isDragging, selectedInterest, hasAnimated, isAnimating]);
 
@@ -229,81 +262,90 @@ export default function Interests() {
     };
   }, []);
 
-  const handleMouseDown = (e) => {
+  // Unified pointer handlers for better mobile/desktop compatibility
+  const handlePointerDown = useCallback((e) => {
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     setIsDragging(true);
-    setStartX(e.clientX);
+    setStartX(clientX);
     dragStartRotation.current = rotation;
     lastClickTime.current = Date.now();
     dragDistance.current = 0;
-  };
+  }, [rotation]);
 
-  const handleTouchStart = (e) => {
-    setIsDragging(true);
-    setStartX(e.touches[0].clientX);
-    dragStartRotation.current = rotation;
-    lastClickTime.current = Date.now();
-    dragDistance.current = 0;
-  };
-
-  const handleMouseMove = (e) => {
+  const handlePointerMove = useCallback((e) => {
     if (!isDragging) return;
-    const deltaX = e.clientX - startX;
+    
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const deltaX = clientX - startX;
     dragDistance.current = Math.abs(deltaX);
     const rotationDelta = deltaX * 0.5;
     setRotation(dragStartRotation.current + rotationDelta);
-  };
+  }, [isDragging, startX]);
 
-  const handleTouchMove = (e) => {
-    if (!isDragging) return;
-    const deltaX = e.touches[0].clientX - startX;
-    dragDistance.current = Math.abs(deltaX);
-    const rotationDelta = deltaX * 0.5;
-    setRotation(dragStartRotation.current + rotationDelta);
-  };
-
-  const handleMouseUp = () => {
+  const handlePointerUp = useCallback(() => {
     setIsDragging(false);
-  };
+  }, []);
 
-  const handleInterestClick = (e, interest) => {
+  const handleInterestClick = useCallback((e, interest) => {
     e.stopPropagation();
     const clickDuration = Date.now() - lastClickTime.current;
     if (clickDuration < 300 && dragDistance.current < 15) {
       setSelectedInterest(interest);
     }
-  };
+  }, []);
 
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     setSelectedInterest(null);
-  };
+  }, []);
 
+  // Unified event listeners
   useEffect(() => {
     if (isDragging) {
-      const handleMove = (e) => {
-        if (e.type === 'mousemove') {
-          handleMouseMove(e);
-        } else if (e.type === 'touchmove') {
-          handleTouchMove(e);
-        }
-      };
+      const handleMove = (e) => handlePointerMove(e);
+      const handleUp = () => handlePointerUp();
 
-      window.addEventListener('mousemove', handleMove);
-      window.addEventListener('mouseup', handleMouseUp);
-      window.addEventListener('touchmove', handleMove);
-      window.addEventListener('touchend', handleMouseUp);
+      window.addEventListener('mousemove', handleMove, { passive: true });
+      window.addEventListener('mouseup', handleUp);
+      window.addEventListener('touchmove', handleMove, { passive: true });
+      window.addEventListener('touchend', handleUp);
 
       return () => {
         window.removeEventListener('mousemove', handleMove);
-        window.removeEventListener('mouseup', handleMouseUp);
+        window.removeEventListener('mouseup', handleUp);
         window.removeEventListener('touchmove', handleMove);
-        window.removeEventListener('touchend', handleMouseUp);
+        window.removeEventListener('touchend', handleUp);
       };
     }
-  }, [isDragging, startX]);
+  }, [isDragging, handlePointerMove, handlePointerUp]);
+
+  // Generate keyframe styles once
+  const keyframeStyles = useMemo(() => {
+    return interests.map((_, index) => {
+      const angle = angleStep * index;
+      const startAngle = -135;
+      const midAngle = startAngle + ((angle - startAngle) * 0.5);
+      
+      return `
+        @keyframes slide-curve-in-${index} {
+          0% {
+            transform: rotateY(${startAngle}deg) translateZ(${responsive.carouselRadius + 200}px) rotateX(-15deg);
+            opacity: 0;
+          }
+          50% {
+            transform: rotateY(${midAngle}deg) translateZ(${responsive.carouselRadius + 100}px) rotateX(-15deg);
+            opacity: 0.5;
+          }
+          70%, 100% {
+            transform: rotateY(${angle}deg) translateZ(${responsive.carouselRadius}px) rotateX(-15deg);
+            opacity: 1;
+          }
+        }
+      `;
+    }).join('\n');
+  }, [interests, angleStep, responsive.carouselRadius]);
 
   return (
     <section className="fixed inset-0 bg-gradient-to-b from-gray-100 via-gray-200 to-gray-300 overflow-hidden">
-
       <div className={`relative w-full h-full max-w-6xl mx-auto flex flex-col items-center justify-center ${responsive.topPadding}`}>
         {/* Spinning Cards */}
         <div className="relative z-20 w-full flex items-center justify-center mb-8 sm:mb-12">
@@ -315,8 +357,8 @@ export default function Interests() {
               height: `${responsive.carouselHeight}px`,
               maxWidth: '800px'
             }}
-            onMouseDown={handleMouseDown}
-            onTouchStart={handleTouchStart}
+            onMouseDown={handlePointerDown}
+            onTouchStart={handlePointerDown}
           >
             <div
               ref={carouselRef}
@@ -329,7 +371,6 @@ export default function Interests() {
             >
               {interests.map((interest, index) => {
                 const Icon = interest.icon;
-                const angle = angleStep * index;
                 const animationDelay = index * 0.15;
                 
                 return (
@@ -380,7 +421,7 @@ export default function Interests() {
 
         {/* 3D Avatar */}
         <div className="relative pointer-events-none z-10 w-full flex items-start justify-center flex-1">
-          <div className="w-full h-full max-w-3xl" key={`canvas-${dimensions.width}-${dimensions.height}`}>
+          <div className="w-full h-full max-w-3xl">
             <Canvas
               camera={{ position: responsive.cameraPosition, fov: responsive.cameraFov }}
               gl={{
@@ -501,21 +542,6 @@ export default function Interests() {
       )}
 
       <style jsx>{`
-        .scanlines {
-          background: linear-gradient(
-            to bottom,
-            transparent 50%,
-            rgba(0, 255, 255, 0.05) 51%
-          );
-          background-size: 100% 4px;
-          animation: scanline 8s linear infinite;
-        }
-
-        @keyframes scanline {
-          0% { background-position: 0 0; }
-          100% { background-position: 0 100%; }
-        }
-
         /* Neon Glow Effects */
         .neon-glow {
           filter: drop-shadow(0 0 8px currentColor);
@@ -549,6 +575,8 @@ export default function Interests() {
         .cyberpunk-card {
           position: relative;
           background-clip: padding-box;
+          transform: translateZ(0);
+          backface-visibility: hidden;
         }
 
         .glitch-overlay {
@@ -762,32 +790,7 @@ export default function Interests() {
           animation: carousel-spin 2.5s linear;
         }
 
-        ${interests.map((_, index) => {
-          const angle = angleStep * index;
-          const startAngle = -135;
-          const midAngle = startAngle + ((angle - startAngle) * 0.5);
-          
-          return `
-            @keyframes slide-curve-in-${index} {
-              0% {
-                transform: rotateY(${startAngle}deg) translateZ(${responsive.carouselRadius + 200}px) rotateX(-15deg);
-                opacity: 0;
-              }
-              50% {
-                transform: rotateY(${midAngle}deg) translateZ(${responsive.carouselRadius + 100}px) rotateX(-15deg);
-                opacity: 0.5;
-              }
-              70% {
-                transform: rotateY(${angle}deg) translateZ(${responsive.carouselRadius}px) rotateX(-15deg);
-                opacity: 1;
-              }
-              100% {
-                transform: rotateY(${angle}deg) translateZ(${responsive.carouselRadius}px) rotateX(-15deg);
-                opacity: 1;
-              }
-            }
-          `;
-        }).join('\n')}
+        ${keyframeStyles}
 
         @keyframes bounce-cyber {
           0%, 100% {
