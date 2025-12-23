@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Cloud, CloudRain, Sun, Wind, Droplets, Thermometer, MapPin, Phone, Mail, Send, X, Calendar, Linkedin, Github, Instagram, MessageSquare } from 'lucide-react';
 import emailjs from '@emailjs/browser';
 import GLBIcon from '../components/3d/GLBIcon';
+import LivingRoomBackground from '../components/3d/LivingRoomBackground';
 
 // Real-time Date/Time Component
 function DateTimeDisplay() {
@@ -1219,6 +1220,157 @@ function MessagePanel({ onClose, visionOSPanelStyle, isMobile }) {
   );
 }
 
+// Jijun AI Panel - embedded chat experience similar to Home page
+function JijunAIChatPanel() {
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [messages, setMessages] = useState([
+    {
+      role: 'assistant',
+      content: "Hi, I'm Jijun Nie 👋  Ask me anything about my background, projects, or interests."
+    }
+  ]);
+
+  const handleSendMessage = async (e) => {
+    e?.preventDefault?.();
+    if (!inputMessage.trim() || isLoading) return;
+
+    const userMessage = inputMessage.trim();
+    setInputMessage('');
+    setIsLoading(true);
+
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+
+    try {
+      const systemPrompt = `You are Jijun Nie. Answer ONLY what the user asks in 1-2 short sentences. Be brief, friendly, and direct.
+Quick facts (share only if relevant to their question):
+- I'm 19 years old (do NOT mention exact birthday)
+- UF Junior studying Industrial & System Engineering going in supply chain and logistic path(3.94 GPA)
+- I spend free time learning new things on my own such as HTML/CSS, Data Analytics, Digital Marketing and more..
+- I have certificate in Google Data Analytics, Google Project Management, Google Digital Marketing, Solidwork... 
+- Work: Variantz Singapore (Web Design & Product Development Specialist - boosted traffic 400%), oversee two company website, 
+- Also worked at Gou Lou Cheong Chinese BBQ as Server back in 2019-2024
+- For school extracurricular activities, I am the President of Chinese Student Association(CSA) at UF leading 6 committes, 5 seasonal cultural events each with 300+ attendees. 
+- Head Intern Leader at Variantz 
+- Skills: JavaScript, Python, SQL, Matlab, R, SolidWorks, Google Workspace, Canva, SEO/SEM
+- Languages: fluent in English, Mandarin, Cantonese
+- Interests: Photography, Singing, Guitar, Badminton, Basketball, Gaming, Traveling
+- Contact: jijun.nie@ufl.edu, (754) 610-4078
+IMPORTANT RULES:
+- Only answer the specific question asked
+- Keep responses to 1-2 sentences maximum
+- Don't volunteer extra information unless directly asked
+- Be conversational and natural
+- Use "I" not "Jijun"
+- Add emojis sparingly (only when it feels natural)
+- You must not say you are AI assistant, you are Jijun Nie
+- If asked about age or birthday, just say "I'm 19 years old" - do NOT give the exact date`;
+
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          systemPrompt
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const aiResponse = data.response || 
+        "I'm not sure how to respond to that. Feel free to ask me something else!";
+
+      setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
+    } catch (error) {
+      console.error('Chat error details:', error);
+      setMessages(prev => [
+        ...prev,
+        { 
+          role: 'assistant', 
+          content: "Oops, something went wrong on my side. Please try again in a moment." 
+        }
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="h-full flex flex-col gap-3 md:gap-4">
+      {/* Header */}
+      <div className="text-center flex-shrink-0">
+        <h2 className="text-lg md:text-2xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
+          Jijun AI
+        </h2>
+        <p className="text-xs md:text-sm text-gray-600 mt-1">
+          A conversational version of me. Ask about my story, skills, or anything you're curious about.
+        </p>
+      </div>
+
+      {/* Chat area */}
+      <div className="flex-1 rounded-2xl bg-white/40 border border-white/40 shadow-inner overflow-hidden backdrop-blur-md">
+        <div className="h-full overflow-y-auto p-3 md:p-4 space-y-3">
+          {messages.map((msg, index) => (
+            <div
+              key={index}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`
+                  max-w-[85%] md:max-w-[70%] rounded-2xl px-3 py-2 text-xs md:text-sm leading-relaxed
+                  ${msg.role === 'user' 
+                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-md' 
+                    : 'bg-white/80 text-gray-800 shadow-sm border border-white/60'}
+                `}
+              >
+                {msg.content}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Input */}
+      <form onSubmit={handleSendMessage} className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+        <input
+          type="text"
+          value={inputMessage}
+          onChange={(e) => setInputMessage(e.target.value)}
+          placeholder="Ask me anything..."
+          disabled={isLoading}
+          className="flex-1 bg-white/90 backdrop-blur-xl border border-gray-200 rounded-xl px-3 md:px-4 py-2 text-xs md:text-sm focus:outline-none focus:border-transparent focus:ring-2 focus:ring-purple-400 text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm md:shadow-md transition-all duration-300"
+          style={{
+            backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899)',
+            backgroundOrigin: 'border-box',
+            backgroundClip: 'padding-box, border-box',
+            border: '1px solid transparent',
+          }}
+        />
+        <button
+          type="submit"
+          disabled={isLoading || !inputMessage.trim()}
+          className="relative bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white px-3 md:px-4 py-2 rounded-xl hover:shadow-lg hover:shadow-purple-300/50 hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-md group overflow-hidden flex items-center justify-center"
+        >
+          <span className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <span className="relative flex items-center gap-1">
+            {isLoading ? (
+              <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
+            <span className="hidden md:inline text-sm">Send</span>
+          </span>
+        </button>
+      </form>
+    </div>
+  );
+}
+
 export default function Portfolio() {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [deviceOrientation, setDeviceOrientation] = useState({ x: 0, y: 0 });
@@ -1234,8 +1386,16 @@ export default function Portfolio() {
   const animationFrameRef = useRef(null);
   const lastOrientationUpdate = useRef(0);
   
+  // Smooth interpolation for mouse position
+  const smoothMousePos = useRef({ x: 0, y: 0 });
+  const targetMousePos = useRef({ x: 0, y: 0 });
+  const mouseAnimationFrame = useRef(null);
+  const lastMousePosRef = useRef({ x: 0, y: 0 });
+  
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
+  const hoverTimeoutRef = useRef(null);
+  const iconsPanelRef = useRef(null);
 
   const panelOrder = ['calendar', 'icons', 'weather'];
 
@@ -1270,9 +1430,17 @@ export default function Portfolio() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsReady(true);
-      setMousePos({ x: 0.001, y: 0.001 });
+      const initialPos = { x: 0.001, y: 0.001 };
+      setMousePos(initialPos);
+      smoothMousePos.current = initialPos;
+      lastMousePosRef.current = initialPos;
     }, 100);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -1350,26 +1518,62 @@ export default function Portfolio() {
   useEffect(() => {
     if (isMobile) return;
     
-    let rafId = null;
-    let lastX = 0;
-    let lastY = 0;
+    // Smooth interpolation function (lerp) - higher factor for more immediate response
+    const lerp = (start, end, factor) => start + (end - start) * factor;
     
     const handleMouseMove = (e) => {
-      lastX = (e.clientX / window.innerWidth - 0.5) * 2;
-      lastY = (e.clientY / window.innerHeight - 0.5) * 2;
+      const newX = (e.clientX / window.innerWidth - 0.5) * 2;
+      const newY = (e.clientY / window.innerHeight - 0.5) * 2;
       
-      if (!rafId) {
-        rafId = requestAnimationFrame(() => {
-          setMousePos({ x: lastX, y: lastY });
-          rafId = null;
-        });
+      targetMousePos.current = { x: newX, y: newY };
+      
+      // Start smooth animation loop if not already running
+      if (!mouseAnimationFrame.current) {
+        const animate = () => {
+          // Much higher lerp factor (0.7) for immediate, responsive movement
+          smoothMousePos.current = {
+            x: lerp(smoothMousePos.current.x, targetMousePos.current.x, 0.7),
+            y: lerp(smoothMousePos.current.y, targetMousePos.current.y, 0.7)
+          };
+          
+          // Update state immediately with minimal threshold
+          const dx = Math.abs(smoothMousePos.current.x - lastMousePosRef.current.x);
+          const dy = Math.abs(smoothMousePos.current.y - lastMousePosRef.current.y);
+          
+          // Very low threshold for immediate updates
+          if (dx > 0.001 || dy > 0.001) {
+            lastMousePosRef.current = {
+              x: smoothMousePos.current.x,
+              y: smoothMousePos.current.y
+            };
+            setMousePos({ 
+              x: smoothMousePos.current.x, 
+              y: smoothMousePos.current.y 
+            });
+          }
+          
+          // Continue animation if there's still a difference
+          const remainingDx = Math.abs(targetMousePos.current.x - smoothMousePos.current.x);
+          const remainingDy = Math.abs(targetMousePos.current.y - smoothMousePos.current.y);
+          
+          if (remainingDx > 0.0001 || remainingDy > 0.0001) {
+            mouseAnimationFrame.current = requestAnimationFrame(animate);
+          } else {
+            mouseAnimationFrame.current = null;
+          }
+        };
+        
+        mouseAnimationFrame.current = requestAnimationFrame(animate);
       }
     };
     
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
-      if (rafId) cancelAnimationFrame(rafId);
+      if (mouseAnimationFrame.current) {
+        cancelAnimationFrame(mouseAnimationFrame.current);
+        mouseAnimationFrame.current = null;
+      }
     };
   }, [isMobile]);
 
@@ -1383,7 +1587,7 @@ export default function Portfolio() {
     { type: 'glb', src: '/icons/music.glb', label: 'My Musics', depth: 1.3, scale: 0.48 },
     { type: 'glb', src: '/icons/photo.glb', label: 'My Photographies', depth: 1.3, scale: 0.5 },
     { type: 'glb', src: '/icons/video.glb', label: 'My Videographies', depth: 1.5, scale: 3 },
-    { type: 'glb', src: '/icons/safari.glb', label: 'Jijun AI', depth: 1.4, scale: 0.5 },
+    { type: 'glb', src: '/icons/safari.glb', label: 'Jijun AI', depth: 1.4, scale: 0.5, action: 'ai' },
     { type: 'glb', src: '/icons/setting.glb', label: 'Settings', depth: 1.2, scale: 0.47 },
     { type: 'glb', src: '/icons/findmy.glb', label: 'Find My', depth: 1.3, scale: 0.5 },
   ], []);
@@ -1407,9 +1611,10 @@ export default function Portfolio() {
 
   const getTransform = useCallback((depth) => {
     const pos = spatialPos;
-    const rotateX = -pos.y * 8 * depth;
-    const rotateY = pos.x * 8 * depth;
-    const translateZ = depth * 10;
+    // More precise rounding to reduce flickering while maintaining smoothness
+    const rotateX = Math.round((-pos.y * 8 * depth) * 1000) / 1000;
+    const rotateY = Math.round((pos.x * 8 * depth) * 1000) / 1000;
+    const translateZ = Math.round(depth * 10 * 100) / 100;
     return `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(${translateZ}px)`;
   }, [spatialPos]);
 
@@ -1441,8 +1646,9 @@ export default function Portfolio() {
 
   const getIconTransform = useCallback((index, depth) => {
     const pos = spatialPos;
-    const offsetX = pos.x * 20 * depth;
-    const offsetY = pos.y * 20 * depth;
+    // More precise rounding for smoother movement
+    const offsetX = Math.round((pos.x * 20 * depth) * 1000) / 1000;
+    const offsetY = Math.round((pos.y * 20 * depth) * 1000) / 1000;
 
     if (isHovered !== null) {
       if (isHovered === index) {
@@ -1454,8 +1660,8 @@ export default function Portfolio() {
         const dy = currentPos.y - hoveredPos.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         const pushDistance = Math.max(0, 60 - distance * 150);
-        const pushX = (dx / (distance || 1)) * pushDistance;
-        const pushY = (dy / (distance || 1)) * pushDistance;
+        const pushX = Math.round(((dx / (distance || 1)) * pushDistance) * 1000) / 1000;
+        const pushY = Math.round(((dy / (distance || 1)) * pushDistance) * 1000) / 1000;
         return `translate(${offsetX + pushX}px, ${offsetY + pushY}px) scale(0.9)`;
       }
     }
@@ -1490,7 +1696,7 @@ export default function Portfolio() {
 
   const visionOSTransition = isTransitioning 
     ? 'all 0.6s cubic-bezier(0.32, 0.72, 0, 1)'
-    : 'transform 0.15s ease-out, filter 0.3s ease-out, opacity 0.3s ease-out';
+    : 'transform 0.1s ease-out, filter 0.2s ease-out, opacity 0.2s ease-out';
 
   const getBlurStyle = useCallback((panelType) => {
     if (expandedApp) {
@@ -1701,6 +1907,17 @@ export default function Portfolio() {
       };
     }
     
+    if (type === 'ai') {
+      return {
+        transform: isActive 
+          ? `translate(-50%, -50%) scale(1) rotateX(${spatialRotateX}deg) rotateY(${spatialRotateY}deg)`
+          : 'translate(0, -150%) scale(0.8)',
+        opacity: isActive ? 1 : 0,
+        zIndex: isActive ? 50 : -1,
+        pointerEvents: isActive ? 'auto' : 'none'
+      };
+    }
+    
     return {};
   }, [expandedApp, spatialPos, isTransitioning]);
 
@@ -1746,11 +1963,22 @@ export default function Portfolio() {
       onTouchStart={isMobile ? handleTouchStart : undefined}
       onTouchEnd={isMobile ? handleTouchEnd : undefined}
     >
+      {/* Living Room 3D Background Model */}
+      <LivingRoomBackground 
+        mousePos={mousePos}
+        deviceOrientation={deviceOrientation}
+        isMobile={isMobile}
+      />
+
       <div 
         className="absolute inset-0 pointer-events-none bg-blobs" 
         style={{ 
           transform: getTransform(0.3),
-          willChange: 'transform'
+          willChange: 'transform',
+          zIndex: 1,
+          transformStyle: 'preserve-3d',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden'
         }}
       >
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-200/30 rounded-full blur-3xl" />
@@ -1777,8 +2005,9 @@ export default function Portfolio() {
             background: 'rgba(0, 0, 0, 0.2)',
             backdropFilter: 'blur(4px)',
             WebkitBackdropFilter: 'blur(4px)',
-            opacity: expandedApp ? 1 : 0,
-            transition: 'opacity 0.6s cubic-bezier(0.32, 0.72, 0, 1), backdrop-filter 0.6s cubic-bezier(0.32, 0.72, 0, 1)'
+            opacity: 1,
+            transition: 'opacity 0.3s ease-out, backdrop-filter 0.3s ease-out',
+            willChange: 'opacity'
           }}
         />
       )}
@@ -1818,7 +2047,9 @@ export default function Portfolio() {
           ...getBlurStyle('calendar'),
           transformStyle: 'preserve-3d',
           transition: visionOSTransition,
-          willChange: isTransitioning ? 'transform, opacity, filter' : 'auto'
+          willChange: isTransitioning ? 'transform, opacity, filter' : 'transform',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden'
         }}
         onClick={(e) => handlePanelClick('calendar', e)}
       >
@@ -1839,15 +2070,28 @@ export default function Portfolio() {
       </div>
 
       <div 
+        ref={iconsPanelRef}
         className="absolute left-1/2 top-1/2 panel-container"
         style={{
           ...getIconsPanelStyle(),
           ...getBlurStyle('icons'),
           transformStyle: isMobile ? 'preserve-3d' : 'flat',
           transition: visionOSTransition,
-          willChange: isTransitioning ? 'transform, opacity, filter' : 'auto'
+          willChange: isTransitioning ? 'transform, opacity, filter' : 'transform',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden'
         }}
         onClick={(e) => handlePanelClick('icons', e)}
+        onMouseLeave={(e) => {
+          // Clear hover when leaving the entire icons panel
+          if (hoverTimeoutRef.current) {
+            clearTimeout(hoverTimeoutRef.current);
+          }
+          const relatedTarget = e.relatedTarget;
+          if (!relatedTarget || !relatedTarget.closest('.icon-item')) {
+            setIsHovered(null);
+          }
+        }}
       >
         <div 
           className="relative"
@@ -1871,18 +2115,39 @@ export default function Portfolio() {
                   transform: `translate(-50%, -50%) ${getIconTransform(index, depth)}`,
                   opacity: isHovered !== null && isHovered !== index ? 0.4 : 1,
                   zIndex: isHovered === index ? 100 : index + 1,
-                  transition: 'transform 0.3s ease-out, opacity 0.2s ease-out',
-                  willChange: isHovered === index ? 'transform' : 'auto',
+                  transition: 'opacity 0.05s linear, transform 0.1s ease-out',
+                  willChange: 'transform, opacity',
                   cursor: action ? 'pointer' : 'default',
                   width: iconSize,
                   height: iconSize,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  overflow: 'visible'
+                  overflow: 'visible',
+                  backfaceVisibility: 'hidden',
+                  WebkitBackfaceVisibility: 'hidden',
+                  transformStyle: 'preserve-3d'
                 }}
-                onMouseEnter={() => setIsHovered(index)}
-                onMouseLeave={() => setIsHovered(null)}
+                onMouseEnter={() => {
+                  if (hoverTimeoutRef.current) {
+                    clearTimeout(hoverTimeoutRef.current);
+                    hoverTimeoutRef.current = null;
+                  }
+                  setIsHovered(index);
+                }}
+                onMouseLeave={(e) => {
+                  // Delay clearing hover to prevent flashing when moving to panel
+                  hoverTimeoutRef.current = setTimeout(() => {
+                    const relatedTarget = e.relatedTarget;
+                    // Only clear if not moving to another icon or panel
+                    if (!relatedTarget || 
+                        (!relatedTarget.closest('.icon-item') && 
+                         !relatedTarget.closest('.panel-container') &&
+                         !relatedTarget.closest('.panel-inner'))) {
+                      setIsHovered(null);
+                    }
+                  }, 50);
+                }}
                 onClick={(e) => {
                   e.stopPropagation();
                   console.log('Icon clicked:', label, 'action:', action);
@@ -1938,7 +2203,9 @@ export default function Portfolio() {
           ...getBlurStyle('weather'),
           transformStyle: 'preserve-3d',
           transition: visionOSTransition,
-          willChange: isTransitioning ? 'transform, opacity, filter' : 'auto'
+          willChange: isTransitioning ? 'transform, opacity, filter' : 'transform',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden'
         }}
         onClick={(e) => handlePanelClick('weather', e)}
       >
@@ -2080,6 +2347,48 @@ export default function Portfolio() {
           </button>
           
           <ClockPanel />
+        </div>
+      </div>
+
+      <div 
+        className="absolute left-1/2 top-1/2 panel-container"
+        style={{
+          ...getExpandedPanelStyle('ai'),
+          transformStyle: 'preserve-3d',
+          transition: visionOSTransition,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div 
+          className="rounded-3xl panel-inner relative"
+          style={{ 
+            ...expandedPanelStyle,
+            width: isMobile 
+              ? 'clamp(300px, 92vw, 420px)' 
+              : 'clamp(480px, min(65vw, 90vw - 80px), 800px)',
+            height: isMobile 
+              ? 'clamp(500px, 88vh, 680px)' 
+              : 'clamp(450px, min(65vh, 90vh - 60px), 600px)',
+            maxWidth: isMobile ? '92vw' : 'min(65vw, 90vw - 80px)',
+            maxHeight: isMobile ? '88vh' : 'min(65vh, 90vh - 60px)',
+            padding: isMobile ? 'clamp(12px, 3vw, 20px)' : 'clamp(20px, 2vw, 32px)',
+            overflow: 'hidden'
+          }}
+        >
+          <button
+            onClick={closeExpandedApp}
+            className="absolute z-10 rounded-full bg-white/30 hover:bg-white/50 flex items-center justify-center transition-all"
+            style={{
+              top: isMobile ? 'clamp(8px, 2vw, 12px)' : 'clamp(12px, 1.5vw, 16px)',
+              right: isMobile ? 'clamp(8px, 2vw, 12px)' : 'clamp(12px, 1.5vw, 16px)',
+              width: isMobile ? 'clamp(28px, 7vw, 36px)' : 'clamp(32px, 3vw, 40px)',
+              height: isMobile ? 'clamp(28px, 7vw, 36px)' : 'clamp(32px, 3vw, 40px)',
+            }}
+          >
+            <X className="text-gray-700" style={{ width: isMobile ? 'clamp(14px, 3.5vw, 18px)' : 'clamp(16px, 1.5vw, 20px)', height: isMobile ? 'clamp(14px, 3.5vw, 18px)' : 'clamp(16px, 1.5vw, 20px)' }} />
+          </button>
+          
+          <JijunAIChatPanel />
         </div>
       </div>
 
