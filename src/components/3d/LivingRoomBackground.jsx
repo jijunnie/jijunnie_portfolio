@@ -4,7 +4,13 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 
 function LivingRoomModel({ mousePos, deviceOrientation, isMobile }) {
-  const { scene } = useGLTF('/models/cozy_living_room_baked.glb');
+  // Load from external CDN in production (if set), otherwise use local file
+  // In development, always use local file to maintain visual consistency
+  const modelUrl = import.meta.env.PROD && import.meta.env.VITE_MODEL_CDN_URL
+    ? import.meta.env.VITE_MODEL_CDN_URL
+    : '/models/cozy_living_room_baked.glb';
+  
+  const { scene } = useGLTF(modelUrl);
   const groupRef = useRef();
   const [clonedScene, setClonedScene] = useState(null);
 

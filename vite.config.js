@@ -1,9 +1,30 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { unlinkSync, existsSync } from 'fs'
+import { join } from 'path'
+
+// Plugin to exclude large GLB file from build (must be hosted on CDN)
+const excludeLargeFiles = () => {
+  return {
+    name: 'exclude-large-files',
+    closeBundle() {
+      // Remove the large GLB file from dist after build
+      const distModelPath = join(process.cwd(), 'dist', 'models', 'cozy_living_room_baked.glb')
+      if (existsSync(distModelPath)) {
+        try {
+          unlinkSync(distModelPath)
+          console.log('✓ Excluded large GLB file from build (must be hosted on CDN)')
+        } catch (error) {
+          console.warn('⚠ Could not remove large GLB file:', error.message)
+        }
+      }
+    }
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), excludeLargeFiles()],
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
