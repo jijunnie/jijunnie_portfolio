@@ -1,10 +1,12 @@
-import React, { useState, useEffect, Suspense, useRef, useMemo } from 'react';
+import React, { useState, useEffect, Suspense, useRef, useMemo, lazy } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, useGLTF, useFBX, Float, Text, Sphere, Box, Torus, RoundedBox, MeshDistortMaterial, MeshWobbleMaterial, Trail, Sparkles } from '@react-three/drei';
 import { Send } from 'lucide-react';
 import { SkeletonUtils } from 'three-stdlib';
 import * as THREE from 'three';
-import Spline from '@splinetool/react-spline';
+
+// Lazy load Spline to reduce initial bundle size (4.5MB library)
+const Spline = lazy(() => import('@splinetool/react-spline').then(module => ({ default: module.default })));
 // ============================================
 // 3D BACKGROUND COMPONENT - VANILLA THREE.JS
 // ============================================
@@ -458,7 +460,9 @@ IMPORTANT RULES:
       }`}>
          {/* Spline 3D Text Title - Responsive Height */}
          <div className="spline-container mb-2 px-2 sm:px-3 md:px-4" style={{ transform: 'translateY(30px)' }}>
-           <Spline scene="https://prod.spline.design/JCZGttnh3jgFNvz6/scene.splinecode" />
+           <Suspense fallback={<div className="w-full" style={{ height: 'clamp(175px, calc(175px + (450 - 175) * ((100vw - 320px) / (1024 - 320))), 450px)' }} />}>
+             <Spline scene="https://prod.spline.design/JCZGttnh3jgFNvz6/scene.splinecode" />
+           </Suspense>
          </div>
         
          {/* Subtitle with 3D effect - Responsive */}
