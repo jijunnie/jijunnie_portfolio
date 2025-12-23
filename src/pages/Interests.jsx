@@ -541,7 +541,7 @@ export default function Interests() {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         /* Neon Glow Effects */
         .neon-glow {
           filter: drop-shadow(0 0 8px currentColor);

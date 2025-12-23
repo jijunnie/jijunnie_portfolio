@@ -112,11 +112,25 @@ function IconModel({ url, isHovered, baseScale = 1, mousePos = { x: 0, y: 0 } })
 
 export default function GLBIcon({ src, isHovered, scale = 1, mousePos = { x: 0, y: 0 } }) {
   return (
-    <div className="w-full h-full">
+    <div 
+      className="w-full h-full" 
+      style={{ 
+        pointerEvents: 'none',
+        overflow: 'visible',
+        // Add padding inside to give room for hover expansion
+        padding: '15%',
+        boxSizing: 'border-box'
+      }}
+    >
       <Canvas
         camera={{ position: [0, 0, 2], fov: 50 }}
         gl={{ alpha: true, antialias: true }}
-        style={{ width: '100%', height: '100%' }}
+        style={{ 
+          width: '100%', 
+          height: '100%', 
+          pointerEvents: 'none',
+          overflow: 'visible'
+        }}
         frameloop="always"
       >
         <ambientLight intensity={1.2} />
