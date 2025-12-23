@@ -314,6 +314,45 @@ export default function Portfolio() {
   const orientationRef = useRef({ x: 0, y: 0 });
   const animationFrameRef = useRef(null);
   const lastOrientationUpdate = useRef(0);
+  
+  // Refs for swipe gesture
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+
+  // Panel order for swipe navigation
+  const panelOrder = ['calendar', 'icons', 'weather'];
+
+  // Swipe gesture handler
+  const handleTouchStart = useCallback((e) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+
+  const handleTouchEnd = useCallback((e) => {
+    if (!isMobile || isTransitioning) return;
+    
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const deltaX = touchEndX - touchStartX.current;
+    const deltaY = touchEndY - touchStartY.current;
+    
+    // Only trigger if horizontal swipe is dominant and significant
+    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+      const currentIndex = panelOrder.indexOf(activePanel);
+      
+      if (deltaX < 0 && currentIndex < panelOrder.length - 1) {
+        // Swipe left - go to next panel
+        setIsTransitioning(true);
+        setActivePanel(panelOrder[currentIndex + 1]);
+        setTimeout(() => setIsTransitioning(false), 500);
+      } else if (deltaX > 0 && currentIndex > 0) {
+        // Swipe right - go to previous panel
+        setIsTransitioning(true);
+        setActivePanel(panelOrder[currentIndex - 1]);
+        setTimeout(() => setIsTransitioning(false), 500);
+      }
+    }
+  }, [isMobile, isTransitioning, activePanel, panelOrder]);
 
   // Force a render cycle on mount
   useEffect(() => {
@@ -505,24 +544,33 @@ export default function Portfolio() {
     return `translate(${offsetX}px, ${offsetY}px) scale(1)`;
   }, [spatialPos, isHovered, positionsArray]);
 
-  // VisionOS-style glass panel styling
+  // VisionOS-style glass panel styling - more translucent like visionOS
   const visionOSPanelStyle = useMemo(() => ({
-    background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.1) 100%)',
-    backdropFilter: 'blur(40px) saturate(180%)',
-    WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-    border: '1px solid rgba(255,255,255,0.4)',
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)',
+    backdropFilter: 'blur(60px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(60px) saturate(180%)',
+    border: '1px solid rgba(255,255,255,0.25)',
     boxShadow: `
-      0 8px 32px rgba(0,0,0,0.1),
-      0 2px 8px rgba(0,0,0,0.05),
-      inset 0 1px 0 rgba(255,255,255,0.5),
+      0 8px 32px rgba(0,0,0,0.12),
+      0 2px 8px rgba(0,0,0,0.08),
+      inset 0 1px 0 rgba(255,255,255,0.4),
       inset 0 -1px 0 rgba(255,255,255,0.1)
     `
   }), []);
 
   // Optimized transition - separate transform from opacity/filter
   const visionOSTransition = isTransitioning 
-    ? 'transform 0.5s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.4s ease-out'
-    : 'transform 0.15s ease-out';
+    ? 'transform 0.5s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.4s ease-out, filter 0.4s ease-out'
+    : 'transform 0.15s ease-out, filter 0.3s ease-out';
+
+  // Get blur style for inactive panels
+  const getBlurStyle = useCallback((panelType) => {
+    if (!isMobile) return {};
+    const isActive = activePanel === panelType;
+    return {
+      filter: isActive ? 'blur(0px)' : 'blur(3px)',
+    };
+  }, [isMobile, activePanel]);
 
   // Panel style getters with reduced complexity during transitions
   const getCalendarPanelStyle = useCallback(() => {
@@ -543,10 +591,10 @@ export default function Portfolio() {
       left: '50%',
       transform: isActive 
         ? `translate(-50%, -50%) scale(1) rotateX(${spatialRotateX}deg) rotateY(${spatialRotateY}deg)`
-        : `translate(-95%, -50%) scale(0.75) rotateY(35deg)`,
-      opacity: isActive ? 1 : 0.7,
+        : `translate(-120%, -50%) scale(0.85) rotateY(25deg)`,
+      opacity: isActive ? 1 : 0.85,
       zIndex: isActive ? 30 : 5,
-      pointerEvents: 'auto'
+      pointerEvents: isActive ? 'auto' : 'none'
     };
   }, [isMobile, activePanel, spatialPos, getTransform, isTransitioning]);
 
@@ -566,8 +614,8 @@ export default function Portfolio() {
     return {
       transform: isActive 
         ? `translate(-50%, -50%) scale(1) rotateX(${spatialRotateX}deg) rotateY(${spatialRotateY}deg)`
-        : 'translate(-50%, -50%) scale(0.8)',
-      opacity: isActive ? 1 : 0.5,
+        : 'translate(-50%, -50%) scale(0.85)',
+      opacity: isActive ? 1 : 0.6,
       zIndex: isActive ? 30 : 10,
       pointerEvents: isActive ? 'auto' : 'none'
     };
@@ -591,10 +639,10 @@ export default function Portfolio() {
       right: 'auto',
       transform: isActive 
         ? `translate(-50%, -50%) scale(1) rotateX(${spatialRotateX}deg) rotateY(${spatialRotateY}deg)`
-        : 'translate(-5%, -50%) scale(0.75) rotateY(-35deg)',
-      opacity: isActive ? 1 : 0.7,
+        : 'translate(20%, -50%) scale(0.85) rotateY(-25deg)',
+      opacity: isActive ? 1 : 0.85,
       zIndex: isActive ? 30 : 5,
-      pointerEvents: 'auto'
+      pointerEvents: isActive ? 'auto' : 'none'
     };
   }, [isMobile, activePanel, spatialPos, getTransform, isTransitioning]);
 
@@ -627,6 +675,8 @@ export default function Portfolio() {
     <div 
       className="relative w-full h-screen bg-gradient-to-br from-slate-200 via-gray-200 to-slate-300 overflow-hidden"
       onClick={handleBackgroundClick}
+      onTouchStart={isMobile ? handleTouchStart : undefined}
+      onTouchEnd={isMobile ? handleTouchEnd : undefined}
     >
       {/* Background effects */}
       <div 
@@ -653,14 +703,46 @@ export default function Portfolio() {
         />
       )}
 
+      {/* Edge tap zones for easier panel switching on mobile */}
+      {isMobile && activePanel === 'icons' && (
+        <>
+          {/* Left edge tap zone - go to calendar */}
+          <div 
+            className="absolute left-0 top-0 bottom-0 w-16 z-25 flex items-center justify-start pl-2"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsTransitioning(true);
+              setActivePanel('calendar');
+              setTimeout(() => setIsTransitioning(false), 500);
+            }}
+          >
+            <div className="w-1.5 h-20 rounded-full bg-white/30 backdrop-blur-sm shadow-lg" />
+          </div>
+          
+          {/* Right edge tap zone - go to weather */}
+          <div 
+            className="absolute right-0 top-0 bottom-0 w-16 z-25 flex items-center justify-end pr-2"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsTransitioning(true);
+              setActivePanel('weather');
+              setTimeout(() => setIsTransitioning(false), 500);
+            }}
+          >
+            <div className="w-1.5 h-20 rounded-full bg-white/30 backdrop-blur-sm shadow-lg" />
+          </div>
+        </>
+      )}
+
       {/* Left Panel - Date/Time & Calendar */}
       <div 
         className="absolute top-1/2 panel-container"
         style={{ 
           ...getCalendarPanelStyle(),
+          ...getBlurStyle('calendar'),
           transformStyle: 'preserve-3d',
           transition: visionOSTransition,
-          willChange: isTransitioning ? 'transform, opacity' : 'auto'
+          willChange: isTransitioning ? 'transform, opacity, filter' : 'auto'
         }}
         onClick={(e) => handlePanelClick('calendar', e)}
       >
@@ -668,8 +750,9 @@ export default function Portfolio() {
           className="rounded-3xl p-4 flex flex-col overflow-hidden cursor-pointer panel-inner"
           style={{ 
             ...visionOSPanelStyle,
-            width: isMobile ? 'clamp(280px, 85vw, 340px)' : 'clamp(180px, 18vw, 280px)',
-            height: isMobile ? 'clamp(400px, 75vh, 520px)' : 'clamp(320px, 42vh, 480px)',
+            width: isMobile ? 'clamp(260px, 75vw, 320px)' : 'clamp(180px, 18vw, 280px)',
+            height: isMobile ? 'auto' : 'clamp(320px, 42vh, 480px)',
+            maxHeight: isMobile ? 'clamp(340px, 60vh, 420px)' : 'none',
             transform: isMobile ? 'none' : 'rotateY(12deg)',
             transformStyle: 'preserve-3d'
           }}
@@ -684,17 +767,18 @@ export default function Portfolio() {
         className="absolute left-1/2 top-1/2 panel-container"
         style={{
           ...getIconsPanelStyle(),
+          ...getBlurStyle('icons'),
           transformStyle: isMobile ? 'preserve-3d' : 'flat',
           transition: visionOSTransition,
-          willChange: isTransitioning ? 'transform, opacity' : 'auto'
+          willChange: isTransitioning ? 'transform, opacity, filter' : 'auto'
         }}
         onClick={(e) => handlePanelClick('icons', e)}
       >
         <div 
           className="relative"
           style={{ 
-            width: isMobile ? 'clamp(320px, 95vw, 420px)' : 'clamp(300px, 40vw, 500px)',
-            height: isMobile ? 'clamp(320px, 55vh, 420px)' : 'clamp(280px, 45vh, 450px)'
+            width: isMobile ? 'clamp(300px, 85vw, 380px)' : 'clamp(300px, 40vw, 500px)',
+            height: isMobile ? 'clamp(280px, 45vh, 360px)' : 'clamp(280px, 45vh, 450px)'
           }}
         >
           {icons.map((item, index) => {
@@ -755,9 +839,10 @@ export default function Portfolio() {
         className="absolute top-1/2 panel-container"
         style={{ 
           ...getWeatherPanelStyle(),
+          ...getBlurStyle('weather'),
           transformStyle: 'preserve-3d',
           transition: visionOSTransition,
-          willChange: isTransitioning ? 'transform, opacity' : 'auto'
+          willChange: isTransitioning ? 'transform, opacity, filter' : 'auto'
         }}
         onClick={(e) => handlePanelClick('weather', e)}
       >
@@ -765,8 +850,9 @@ export default function Portfolio() {
           className="rounded-3xl p-4 overflow-hidden cursor-pointer panel-inner"
           style={{ 
             ...visionOSPanelStyle,
-            width: isMobile ? 'clamp(280px, 85vw, 340px)' : 'clamp(160px, 16vw, 240px)',
-            height: isMobile ? 'clamp(400px, 75vh, 520px)' : 'clamp(320px, 42vh, 480px)',
+            width: isMobile ? 'clamp(240px, 70vw, 300px)' : 'clamp(160px, 16vw, 240px)',
+            height: isMobile ? 'auto' : 'clamp(320px, 42vh, 480px)',
+            maxHeight: isMobile ? 'clamp(320px, 55vh, 400px)' : 'none',
             transform: isMobile ? 'none' : 'rotateY(-12deg)',
             transformStyle: 'preserve-3d'
           }}
@@ -775,36 +861,45 @@ export default function Portfolio() {
         </div>
       </div>
 
-      {/* Mobile Navigation Dots */}
+      {/* Mobile Navigation Dots with labels */}
       {isMobile && (
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3 z-40">
-          {['calendar', 'icons', 'weather'].map((panel) => (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-6 z-40">
+          {[
+            { id: 'calendar', label: 'Calendar' },
+            { id: 'icons', label: 'Apps' },
+            { id: 'weather', label: 'Weather' }
+          ].map(({ id, label }) => (
             <button
-              key={panel}
+              key={id}
               onClick={(e) => {
                 e.stopPropagation();
-                if (activePanel !== panel) {
+                if (activePanel !== id) {
                   setIsTransitioning(true);
-                  setActivePanel(panel);
+                  setActivePanel(id);
                   setTimeout(() => setIsTransitioning(false), 500);
                 }
               }}
-              className="relative p-1"
+              className="flex flex-col items-center gap-1.5"
             >
               <div 
                 className={`
-                  w-2.5 h-2.5 rounded-full transition-all duration-300
-                  ${activePanel === panel 
+                  w-3 h-3 rounded-full transition-all duration-300
+                  ${activePanel === id 
                     ? 'bg-gray-800 scale-125' 
-                    : 'bg-gray-400/60'
+                    : 'bg-gray-400/50'
                   }
                 `}
                 style={{
-                  boxShadow: activePanel === panel 
+                  boxShadow: activePanel === id 
                     ? '0 0 12px rgba(0,0,0,0.3)' 
                     : 'none'
                 }}
               />
+              <span className={`text-[10px] font-medium transition-all duration-300 ${
+                activePanel === id ? 'text-gray-800' : 'text-gray-500'
+              }`}>
+                {label}
+              </span>
             </button>
           ))}
         </div>
@@ -862,7 +957,7 @@ export default function Portfolio() {
               border: '1px solid rgba(255,255,255,0.3)'
             }}
           >
-            Tilt device to explore • Tap panels to switch
+            Swipe or tap edges to switch panels
           </p>
         </div>
       )}
