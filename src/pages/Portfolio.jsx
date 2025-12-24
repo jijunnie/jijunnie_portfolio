@@ -1292,13 +1292,13 @@ function TypingMessage({ content, onComplete }) {
         setDisplayedText(content.slice(0, currentIndex + 1));
         currentIndex++;
         
-        // Determine delay based on character - humanized pauses
-        let delay = 30; // Default typing speed: 30ms per character
+        // Determine delay based on character - optimized for faster, smoother experience
+        let delay = 20; // Faster default typing speed: 20ms per character (reduced from 30ms)
         
         if (char === ',') {
-          delay = 400; // Pause for 400ms after comma
+          delay = 150; // Reduced pause for 150ms after comma (from 400ms)
         } else if (char === '.' || char === '!' || char === '?') {
-          delay = 1200; // Pause for 1200ms (1.2s) after sentence-ending punctuation - human-like pause
+          delay = 300; // Reduced pause for 300ms after sentence-ending punctuation (from 1200ms)
         }
         
         timeoutIdRef.current = setTimeout(typeNextCharacter, delay);
@@ -1364,7 +1364,7 @@ function JijunAIChatPanel({ isActive }) {
     if (isActive && !welcomeShown) {
       setWelcomeShown(true);
       
-      // Add preset welcome message immediately and start typing animation
+      // Add preset welcome message immediately - show instantly without typing animation for better UX
       const welcomeId = 'initial';
       setMessages([{
         role: 'assistant',
@@ -1372,8 +1372,8 @@ function JijunAIChatPanel({ isActive }) {
         id: welcomeId
       }]);
       
-      // Start typing animation immediately
-      setTypingMessageId(welcomeId);
+      // Don't start typing animation for welcome message - show it instantly
+      // setTypingMessageId(welcomeId);
     } else if (!isActive) {
       // Reset when panel closes
       setWelcomeShown(false);
