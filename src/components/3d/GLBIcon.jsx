@@ -1,20 +1,86 @@
-import { Suspense } from 'react';
+import { Suspense, Component } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useGLTF, Environment } from '@react-three/drei';
 import { useRef, useState } from 'react';
 import * as THREE from 'three';
 import React from 'react';
 
+// Error Boundary for icon loading
+class IconErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.warn('Icon failed to load, showing fallback:', error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div 
+          className="w-full h-full flex items-center justify-center"
+          style={{ 
+            pointerEvents: 'none',
+            background: 'rgba(200, 200, 200, 0.1)',
+            borderRadius: '12px'
+          }}
+        >
+          <div className="text-gray-400 text-xs">3D</div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 function IconModel({ url, isHovered, baseScale = 1, mousePos = { x: 0, y: 0 } }) {
-  const { scene } = useGLTF(url);
+  const [loadError, setLoadError] = useState(false);
   const modelRef = useRef();
   const groupRef = useRef();
   const [clonedScene, setClonedScene] = useState(null);
+  
+  // useGLTF must be called unconditionally (React hook rules)
+  // Errors will be caught in useEffect
+  let scene = null;
+  try {
+    const gltf = useGLTF(url);
+    scene = gltf?.scene;
+  } catch (error) {
+    // This catch won't work for async loading errors, but helps with immediate errors
+    console.warn('GLB hook error:', url, error);
+  }
+  
+  // Smooth interpolation for rotation to prevent glitching
+  const targetRotationX = useRef(0);
+  const targetRotationY = useRef(0);
+  const currentRotationX = useRef(0);
+  const currentRotationY = useRef(0);
+  const targetPositionY = useRef(0);
+  const currentPositionY = useRef(0);
 
   // Clone scene and enhance materials for better contrast
   React.useEffect(() => {
-    if (scene && !clonedScene) {
-      const cloned = scene.clone();
+    if (!scene) {
+      // Set error if scene doesn't load after a timeout
+      const timeout = setTimeout(() => {
+        if (!clonedScene && !loadError) {
+          console.warn('GLB icon failed to load:', url);
+          setLoadError(true);
+        }
+      }, 10000); // 10 second timeout
+      return () => clearTimeout(timeout);
+    }
+    
+    if (scene && !clonedScene && !loadError) {
+      try {
+        const cloned = scene.clone();
       cloned.traverse((child) => {
         if (child.isMesh && child.material) {
           // Enhance material properties for better contrast
@@ -73,10 +139,14 @@ function IconModel({ url, isHovered, baseScale = 1, mousePos = { x: 0, y: 0 } })
         }
       });
       setClonedScene(cloned);
+      } catch (error) {
+        console.error('Failed to clone icon scene:', error);
+        setLoadError(true);
+      }
     }
-  }, [scene, clonedScene]);
+  }, [scene, clonedScene, loadError]);
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     // Add comprehensive null checks to prevent "Activity" errors
     if (!groupRef.current) return;
     if (!state || !state.clock) return;
@@ -88,21 +158,33 @@ function IconModel({ url, isHovered, baseScale = 1, mousePos = { x: 0, y: 0 } })
     if (!groupRef.current.position) return;
     
     if (isHovered) {
-      // Rotate when hovered
-      groupRef.current.rotation.y = Math.sin(time * 2) * 0.2;
-      groupRef.current.rotation.x = Math.sin(time * 1.5) * 0.1;
+      // Rotate when hovered - smooth interpolation
+      targetRotationY.current = Math.sin(time * 2) * 0.2;
+      targetRotationX.current = Math.sin(time * 1.5) * 0.1;
     } else {
       // Apply mouse spatial effect with same intensity as panels
       const rotateX = -mousePos.y * 8 * 0.6;
       const rotateY = mousePos.x * 8 * 0.6;
-      groupRef.current.rotation.x = (rotateX * Math.PI) / 180;
-      groupRef.current.rotation.y = (rotateY * Math.PI) / 180;
+      targetRotationX.current = (rotateX * Math.PI) / 180;
+      targetRotationY.current = (rotateY * Math.PI) / 180;
       
       // Gentle floating animation
-      groupRef.current.position.y = Math.sin(time * 0.8) * 0.1;
+      targetPositionY.current = Math.sin(time * 0.8) * 0.1;
     }
+    
+    // Smooth interpolation (lerp) to prevent glitching
+    const lerpFactor = Math.min(delta * 10, 1); // Smooth interpolation based on frame delta
+    currentRotationX.current += (targetRotationX.current - currentRotationX.current) * lerpFactor;
+    currentRotationY.current += (targetRotationY.current - currentRotationY.current) * lerpFactor;
+    currentPositionY.current += (targetPositionY.current - currentPositionY.current) * lerpFactor;
+    
+    // Apply smoothed values
+    groupRef.current.rotation.x = currentRotationX.current;
+    groupRef.current.rotation.y = currentRotationY.current;
+    groupRef.current.position.y = currentPositionY.current;
   });
 
+  if (loadError) return null;
   if (!clonedScene) return null;
 
   return (
@@ -117,6 +199,55 @@ function IconModel({ url, isHovered, baseScale = 1, mousePos = { x: 0, y: 0 } })
 }
 
 export default function GLBIcon({ src, isHovered, scale = 1, mousePos = { x: 0, y: 0 } }) {
+  const [hasWebGL, setHasWebGL] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  
+  // Check WebGL support on mount with device-specific detection
+  React.useEffect(() => {
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || 
+                 canvas.getContext('experimental-webgl') ||
+                 canvas.getContext('webgl2');
+      if (!gl) {
+        setHasWebGL(false);
+        return;
+      }
+      
+      // Check for specific device issues
+      const userAgent = navigator.userAgent.toLowerCase();
+      const isIOS = /iphone|ipad|ipod/.test(userAgent);
+      const isAndroid = /android/.test(userAgent);
+      
+      // Some older devices may have WebGL but poor performance
+      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+      if (debugInfo) {
+        const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+        // Log for debugging but don't block
+        console.log('WebGL Renderer:', renderer);
+      }
+    } catch (e) {
+      setHasWebGL(false);
+      console.warn('WebGL check failed:', e);
+    }
+  }, []);
+  
+  // Fallback for devices without WebGL support
+  if (!hasWebGL) {
+    return (
+      <div 
+        className="w-full h-full flex items-center justify-center"
+        style={{ 
+          pointerEvents: 'none',
+          background: 'rgba(200, 200, 200, 0.1)',
+          borderRadius: '12px'
+        }}
+      >
+        <div className="text-gray-400 text-xs">3D</div>
+      </div>
+    );
+  }
+  
   return (
     <div 
       className="w-full h-full" 
@@ -130,7 +261,12 @@ export default function GLBIcon({ src, isHovered, scale = 1, mousePos = { x: 0, 
     >
       <Canvas
         camera={{ position: [0, 0, 2], fov: 50 }}
-        gl={{ alpha: true, antialias: true }}
+        gl={{ 
+          alpha: true, 
+          antialias: true,
+          powerPreference: "high-performance",
+          failIfMajorPerformanceCaveat: false // Allow on lower-end devices
+        }}
         style={{ 
           width: '100%', 
           height: '100%', 
@@ -138,13 +274,21 @@ export default function GLBIcon({ src, isHovered, scale = 1, mousePos = { x: 0, 
           overflow: 'visible'
         }}
         frameloop="always"
+        dpr={[0.5, 2]} // Adaptive DPR: lower on mobile for better performance
+        performance={{ min: 0.5 }} // Allow lower framerate on slower devices
+        onError={(error) => {
+          console.warn('Canvas error:', error);
+          setLoadError(true);
+        }}
       >
         <ambientLight intensity={1.2} />
         <directionalLight position={[5, 5, 5]} intensity={1.5} />
         <directionalLight position={[-5, -5, -5]} intensity={0.5} />
-        <Suspense fallback={null}>
-          <IconModel url={src} isHovered={isHovered} baseScale={scale} mousePos={mousePos} />
-        </Suspense>
+        <IconErrorBoundary>
+          <Suspense fallback={null}>
+            <IconModel url={src} isHovered={isHovered} baseScale={scale} mousePos={mousePos} />
+          </Suspense>
+        </IconErrorBoundary>
       </Canvas>
     </div>
   );

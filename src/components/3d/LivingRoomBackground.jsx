@@ -47,6 +47,12 @@ function LivingRoomModel({ externalMousePos, deviceOrientation, isMobile }) {
   const clonedSceneRef = useRef(null);
   const autoRotateRef = useRef(0);
   
+  // Smooth interpolation for rotation to prevent glitching
+  const targetRotationX = useRef(0);
+  const targetRotationY = useRef(0);
+  const currentRotationX = useRef(0);
+  const currentRotationY = useRef(0);
+  
   // Clone scene once to avoid mutating the original
   useEffect(() => {
     if (scene && !clonedSceneRef.current) {
@@ -57,8 +63,13 @@ function LivingRoomModel({ externalMousePos, deviceOrientation, isMobile }) {
         // Initialize rotation immediately so model is visible from the start
         if (groupRef.current) {
           const baseRotationY = -20;
+          const baseRad = (baseRotationY * Math.PI) / 180;
           groupRef.current.rotation.x = 0;
-          groupRef.current.rotation.y = (baseRotationY * Math.PI) / 180;
+          groupRef.current.rotation.y = baseRad;
+          currentRotationX.current = 0;
+          currentRotationY.current = baseRad;
+          targetRotationX.current = 0;
+          targetRotationY.current = baseRad;
         }
       } catch (error) {
         console.error('❌ Failed to clone scene:', error);
@@ -97,9 +108,18 @@ function LivingRoomModel({ externalMousePos, deviceOrientation, isMobile }) {
       }
     }
     
-    // Always apply rotations (even if spatial values are 0, model will still be visible with base + auto rotation)
-    groupRef.current.rotation.x = (spatialRotateX * Math.PI) / 180;
-    groupRef.current.rotation.y = ((baseRotationY + autoRotationY + spatialRotateY) * Math.PI) / 180;
+    // Calculate target rotations in radians
+    targetRotationX.current = (spatialRotateX * Math.PI) / 180;
+    targetRotationY.current = ((baseRotationY + autoRotationY + spatialRotateY) * Math.PI) / 180;
+    
+    // Smooth interpolation (lerp) to prevent glitching - higher factor = more responsive, lower = smoother
+    const lerpFactor = Math.min(delta * 8, 1); // Smooth interpolation based on frame delta
+    currentRotationX.current += (targetRotationX.current - currentRotationX.current) * lerpFactor;
+    currentRotationY.current += (targetRotationY.current - currentRotationY.current) * lerpFactor;
+    
+    // Apply smoothed rotations
+    groupRef.current.rotation.x = currentRotationX.current;
+    groupRef.current.rotation.y = currentRotationY.current;
   });
 
   if (!clonedSceneRef.current) return null;
@@ -117,8 +137,39 @@ function LivingRoomModel({ externalMousePos, deviceOrientation, isMobile }) {
 
 export default function LivingRoomBackground({ mousePos, deviceOrientation, isMobile }) {
   const [canvasError, setCanvasError] = useState(false);
+  const [hasWebGL, setHasWebGL] = useState(true);
   const handlersRef = useRef(null);
   const [scrollY, setScrollY] = useState(0);
+  
+  // Check WebGL support on mount with device-specific optimizations
+  useEffect(() => {
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || 
+                 canvas.getContext('experimental-webgl') ||
+                 canvas.getContext('webgl2');
+      if (!gl) {
+        setHasWebGL(false);
+        console.warn('⚠️ WebGL not supported, 3D background will not render');
+        return;
+      }
+      
+      // Device-specific optimizations
+      const userAgent = navigator.userAgent.toLowerCase();
+      const isIOS = /iphone|ipad|ipod/.test(userAgent);
+      const isAndroid = /android/.test(userAgent);
+      
+      // Log device info for debugging
+      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+      if (debugInfo) {
+        const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+        console.log('🔵 WebGL Renderer:', renderer, 'iOS:', isIOS, 'Android:', isAndroid);
+      }
+    } catch (e) {
+      setHasWebGL(false);
+      console.warn('⚠️ WebGL check failed:', e);
+    }
+  }, []);
 
   // Track scroll for depth blur effect
   useEffect(() => {
@@ -170,8 +221,8 @@ export default function LivingRoomBackground({ mousePos, deviceOrientation, isMo
     };
   }, []);
 
-  // If canvas has errored, don't render it
-  if (canvasError) {
+  // If canvas has errored or WebGL not supported, don't render it
+  if (canvasError || !hasWebGL) {
     return null;
   }
 
@@ -190,7 +241,10 @@ export default function LivingRoomBackground({ mousePos, deviceOrientation, isMo
             alpha: true, 
             antialias: true, 
             preserveDrawingBuffer: false,
-            powerPreference: "high-performance"
+            powerPreference: "high-performance",
+            failIfMajorPerformanceCaveat: false, // Allow on lower-end devices
+            stencil: false, // Disable stencil buffer for better performance
+            depth: true
           }}
           style={{ 
             position: 'absolute',
@@ -200,7 +254,8 @@ export default function LivingRoomBackground({ mousePos, deviceOrientation, isMo
             pointerEvents: 'none'
           }}
           frameloop="always"
-          dpr={[1, 2]}
+          dpr={[0.5, 2]} // Adaptive DPR: lower on mobile for better performance
+          performance={{ min: 0.5 }} // Allow lower framerate on slower devices
           onCreated={({ gl }) => {
             console.log('✅ Canvas created successfully');
             
