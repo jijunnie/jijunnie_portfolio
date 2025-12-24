@@ -30,14 +30,19 @@ class ModelErrorBoundary extends Component {
 }
 
 function LivingRoomModel({ externalMousePos, deviceOrientation, isMobile }) {
-  // Load from Cloudflare R2 CDN - streams directly from R2, no local bundle size
-  const cdnBaseUrl = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev';
-  const modelUrl = import.meta.env.PROD
-    ? import.meta.env.VITE_MODEL_CDN_URL || `${cdnBaseUrl}/cozy_living_room_baked.glb`
-    : '/models/cozy_living_room_baked.glb';
+  // Load from Cloudflare R2 CDN - always use CDN URL, no local files
+  const modelUrl = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/cozy_living_room_baked.glb';
+  
+  // Log the URL for debugging
+  useEffect(() => {
+    console.log('🔵 Loading 3D model from:', modelUrl);
+  }, [modelUrl]);
   
   // Best practice: Direct useGLTF usage - streams from R2, CDN-cached globally
-  const { scene } = useGLTF(modelUrl);
+  // useGLTF must be called unconditionally (React hook rules)
+  const gltf = useGLTF(modelUrl);
+  const scene = gltf?.scene;
+  
   const groupRef = useRef();
   const clonedSceneRef = useRef(null);
   const autoRotateRef = useRef(0);
@@ -47,46 +52,54 @@ function LivingRoomModel({ externalMousePos, deviceOrientation, isMobile }) {
     if (scene && !clonedSceneRef.current) {
       try {
         clonedSceneRef.current = scene.clone();
+        console.log('✅ Scene cloned successfully, model ready to render');
+        
+        // Initialize rotation immediately so model is visible from the start
+        if (groupRef.current) {
+          const baseRotationY = -20;
+          groupRef.current.rotation.x = 0;
+          groupRef.current.rotation.y = (baseRotationY * Math.PI) / 180;
+        }
       } catch (error) {
-        console.warn('Failed to clone scene:', error);
+        console.error('❌ Failed to clone scene:', error);
       }
+    } else if (!scene) {
+      console.warn('⚠️ Scene is null - GLB may still be loading or failed to load');
     }
   }, [scene]);
 
-  // Get mouse position from Three.js viewport (normalized -1 to 1)
-  const { viewport, mouse } = useThree();
-  
   useFrame((state, delta) => {
     if (!groupRef.current || !clonedSceneRef.current) return;
     
     // Slow auto-rotation (Apple/Vision Pro style)
     autoRotateRef.current += delta * 0.1; // Slow continuous rotation
     
-    // Parallax tied to cursor (subtle effect)
-    const mouseX = externalMousePos?.x !== undefined 
-      ? (externalMousePos.x / window.innerWidth) * 2 - 1 
-      : mouse.x;
-    const mouseY = externalMousePos?.y !== undefined
-      ? -(externalMousePos.y / window.innerHeight) * 2 + 1
-      : mouse.y;
+    // mousePos and deviceOrientation are already normalized (-1 to 1) from Portfolio component
+    // Apply spatial rotation similar to panels and icons
+    const baseRotationY = -20; // Fixed base rotation in degrees
+    const autoRotationY = autoRotateRef.current * 0.5; // Slow auto-rotate in degrees
     
-    // Combine auto-rotation with mouse parallax
-    const baseRotationY = -20; // Fixed base rotation
-    const autoRotationY = autoRotateRef.current * 0.5; // Slow auto-rotate
-    const parallaxY = mouseX * 0.1; // Subtle parallax from cursor
-    const parallaxX = mouseY * 0.05; // Subtle vertical parallax
+    let spatialRotateX = 0;
+    let spatialRotateY = 0;
     
-    // Apply rotations
-    groupRef.current.rotation.x = parallaxX;
-    groupRef.current.rotation.y = (baseRotationY + autoRotationY + parallaxY) * (Math.PI / 180);
-    
-    // Mobile: use device orientation if available
-    if (isMobile && deviceOrientation) {
-      if (typeof deviceOrientation.x === 'number' && typeof deviceOrientation.y === 'number') {
-        groupRef.current.rotation.x = -deviceOrientation.y * 0.1;
-        groupRef.current.rotation.y = (baseRotationY + autoRotationY + deviceOrientation.x * 0.1) * (Math.PI / 180);
+    // Desktop: use mouse position for spatial effect (always check, even if 0,0)
+    if (!isMobile && externalMousePos) {
+      if (typeof externalMousePos.x === 'number' && typeof externalMousePos.y === 'number') {
+        spatialRotateX = -externalMousePos.y * 5; // Match panel rotation intensity
+        spatialRotateY = externalMousePos.x * 5;
       }
     }
+    // Mobile/iPad: use device orientation when available
+    else if (isMobile && deviceOrientation) {
+      if (typeof deviceOrientation.x === 'number' && typeof deviceOrientation.y === 'number') {
+        spatialRotateX = -deviceOrientation.y * 5;
+        spatialRotateY = deviceOrientation.x * 5;
+      }
+    }
+    
+    // Always apply rotations (even if spatial values are 0, model will still be visible with base + auto rotation)
+    groupRef.current.rotation.x = (spatialRotateX * Math.PI) / 180;
+    groupRef.current.rotation.y = ((baseRotationY + autoRotationY + spatialRotateY) * Math.PI) / 180;
   });
 
   if (!clonedSceneRef.current) return null;
@@ -96,7 +109,7 @@ function LivingRoomModel({ externalMousePos, deviceOrientation, isMobile }) {
       <primitive 
         object={clonedSceneRef.current} 
         scale={[3, 3, 3]}
-        position={[-0.5, -3, -1.2]}
+        position={[-0.5, -4, -2]}
       />
     </group>
   );
@@ -118,6 +131,7 @@ export default function LivingRoomBackground({ mousePos, deviceOrientation, isMo
   }, []);
 
   // Handle unhandled promise rejections (like CORS errors from GLB loading)
+  // Catch and handle gracefully without breaking the app
   useEffect(() => {
     const handleUnhandledRejection = (event) => {
       const errorMessage = event.reason?.message || '';
@@ -129,9 +143,12 @@ export default function LivingRoomBackground({ mousePos, deviceOrientation, isMo
           errorMessage.includes('Failed to fetch') ||
           errorStack.includes('cozy_living_room_baked') ||
           errorStack.includes('r2.dev')) {
-        console.warn('GLB model failed to load (likely CORS issue), continuing without 3D background');
-        setCanvasError(true);
+        console.warn('⚠️ GLB model CORS/fetch error detected:', event.reason);
+        console.warn('⚠️ This is likely a CORS configuration issue on your R2 bucket');
+        console.warn('⚠️ Canvas will continue to render, but model may not load');
+        // Prevent the error from showing as uncaught
         event.preventDefault();
+        // Don't hide canvas - let it try to render anyway
       }
     };
 
@@ -176,35 +193,38 @@ export default function LivingRoomBackground({ mousePos, deviceOrientation, isMo
             powerPreference: "high-performance"
           }}
           style={{ 
-            position: 'fixed',
+            position: 'absolute',
             inset: 0,
             width: '100%', 
             height: '100%',
-            pointerEvents: 'none',
-            zIndex: -1
+            pointerEvents: 'none'
           }}
           frameloop="always"
           dpr={[1, 2]}
           onCreated={({ gl }) => {
+            console.log('✅ Canvas created successfully');
+            
             const handleContextLost = (event) => {
               event.preventDefault();
-              console.warn('WebGL context lost, disabling 3D background');
-              setCanvasError(true);
+              console.warn('⚠️ WebGL context lost');
+              // Don't hide canvas - it might recover
             };
             
             const handleContextRestored = () => {
-              console.log('WebGL context restored');
+              console.log('✅ WebGL context restored');
               setCanvasError(false);
             };
             
+            // Only catch errors specifically related to this canvas
             const handleError = (error) => {
-              console.warn('Canvas error, disabling 3D background:', error);
-              setCanvasError(true);
+              // Only hide if it's a critical WebGL error
+              if (error.message?.includes('WebGL') || error.message?.includes('context')) {
+                console.warn('⚠️ Canvas WebGL error:', error);
+              }
             };
             
             gl.domElement.addEventListener('webglcontextlost', handleContextLost);
             gl.domElement.addEventListener('webglcontextrestored', handleContextRestored);
-            window.addEventListener('error', handleError);
             
             handlersRef.current = {
               gl,

@@ -33,6 +33,25 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      // Proxy for R2 CDN to handle CORS issues (fallback if local file not found)
+      '/r2-proxy': {
+        target: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/r2-proxy/, ''),
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            // Add CORS headers
+            proxyReq.setHeader('Origin', 'http://localhost:4173');
+          });
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            // Add CORS headers to response
+            proxyRes.headers['Access-Control-Allow-Origin'] = '*';
+            proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS';
+            proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type';
+          });
+        },
+      },
     },
   },
   preview: {
@@ -41,6 +60,25 @@ export default defineConfig({
         target: 'http://localhost:3001',
         changeOrigin: true,
         secure: false,
+      },
+      // Proxy for R2 CDN to handle CORS issues (fallback if local file not found)
+      '/r2-proxy': {
+        target: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/r2-proxy/, ''),
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            // Add CORS headers
+            proxyReq.setHeader('Origin', 'http://localhost:4173');
+          });
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            // Add CORS headers to response
+            proxyRes.headers['Access-Control-Allow-Origin'] = '*';
+            proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS';
+            proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type';
+          });
+        },
       },
     },
   },

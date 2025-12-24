@@ -2088,7 +2088,8 @@ export default function Portfolio() {
             clearTimeout(hoverTimeoutRef.current);
           }
           const relatedTarget = e.relatedTarget;
-          if (!relatedTarget || !relatedTarget.closest('.icon-item')) {
+          // Check if relatedTarget is a valid DOM element before calling closest
+          if (!relatedTarget || !(relatedTarget instanceof Element) || !relatedTarget.closest('.icon-item')) {
             setIsHovered(null);
           }
         }}
@@ -2139,11 +2140,15 @@ export default function Portfolio() {
                   // Delay clearing hover to prevent flashing when moving to panel
                   hoverTimeoutRef.current = setTimeout(() => {
                     const relatedTarget = e.relatedTarget;
+                    // Check if relatedTarget is a valid DOM element before calling closest
+                    if (!relatedTarget || !(relatedTarget instanceof Element)) {
+                      setIsHovered(null);
+                      return;
+                    }
                     // Only clear if not moving to another icon or panel
-                    if (!relatedTarget || 
-                        (!relatedTarget.closest('.icon-item') && 
-                         !relatedTarget.closest('.panel-container') &&
-                         !relatedTarget.closest('.panel-inner'))) {
+                    if (!relatedTarget.closest('.icon-item') && 
+                        !relatedTarget.closest('.panel-container') &&
+                        !relatedTarget.closest('.panel-inner')) {
                       setIsHovered(null);
                     }
                   }, 50);
