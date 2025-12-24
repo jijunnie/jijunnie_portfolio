@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Cloud, CloudRain, Sun, Wind, Droplets, Thermometer, MapPin, Phone, Mail, Send, X, Calendar, Linkedin, Github, Instagram, MessageSquare } from 'lucide-react';
+import { Cloud, CloudRain, Sun, Wind, Droplets, Thermometer, MapPin, Phone, Mail, Send, X, Calendar, Linkedin, Github, Instagram, MessageSquare, Music, Image, Palette, Volume2, Monitor } from 'lucide-react';
 import emailjs from '@emailjs/browser';
 import { useGLTF } from '@react-three/drei';
 import GLBIcon from '../components/3d/GLBIcon';
@@ -396,6 +396,22 @@ function WeatherWidget({ compact = true }) {
               try {
                 const { latitude, longitude } = position.coords;
                 
+                // Fetch city name using reverse geocoding
+                let cityName = 'Your Location';
+                let countryName = '';
+                try {
+                  const geoResponse = await fetch(
+                    `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+                  );
+                  if (geoResponse.ok) {
+                    const geoData = await geoResponse.json();
+                    cityName = geoData.city || geoData.locality || geoData.principalSubdivision || 'Your Location';
+                    countryName = geoData.countryName || '';
+                  }
+                } catch (geoError) {
+                  console.log('Geocoding error:', geoError);
+                }
+                
                 const response = await fetch(
                   `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=7&temperature_unit=fahrenheit&wind_speed_unit=mph`
                 );
@@ -467,8 +483,8 @@ function WeatherWidget({ compact = true }) {
                   windSpeed: Math.round(data.current?.wind_speed_10m || 8),
                   condition: weatherInfo.condition,
                   icon: weatherInfo.icon,
-                  location: 'Your Location',
-                  country: '',
+                  location: cityName,
+                  country: countryName,
                   high: Math.round(data.daily?.temperature_2m_max?.[0] || 78),
                   low: Math.round(data.daily?.temperature_2m_min?.[0] || 65),
                   forecast: forecast.length > 0 ? forecast : weather.forecast,
@@ -1582,6 +1598,226 @@ IMPORTANT RULES:
   );
 }
 
+// Settings Panel Component - Apple-style two-column layout
+function SettingsPanel({ isMobile }) {
+  const [activeTab, setActiveTab] = useState('music');
+  
+  // Load settings from localStorage
+  const [settings, setSettings] = useState(() => {
+    const saved = localStorage.getItem('portfolioSettings');
+    return saved ? JSON.parse(saved) : {
+      music: { enabled: false, volume: 50 },
+      background: { blur: 0, brightness: 100 },
+      appearance: { theme: 'light', animations: true }
+    };
+  });
+
+  // Save settings to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('portfolioSettings', JSON.stringify(settings));
+  }, [settings]);
+
+  const updateSetting = (category, key, value) => {
+    setSettings(prev => ({
+      ...prev,
+      [category]: {
+        ...prev[category],
+        [key]: value
+      }
+    }));
+  };
+
+  const settingsTabs = [
+    { id: 'music', label: 'Music', icon: Music },
+    { id: 'background', label: 'Background', icon: Image },
+    { id: 'appearance', label: 'Appearance', icon: Palette },
+  ];
+
+  const renderSettingsContent = () => {
+    switch (activeTab) {
+      case 'music':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Music Settings</h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-white/50 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <Volume2 className="w-5 h-5 text-gray-600" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">Enable Background Music</p>
+                      <p className="text-xs text-gray-500">Play ambient music in the background</p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings.music.enabled}
+                      onChange={(e) => updateSetting('music', 'enabled', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                  </label>
+                </div>
+                {settings.music.enabled && (
+                  <div className="p-4 bg-white/50 rounded-xl">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-medium text-gray-800">Volume</p>
+                      <span className="text-xs text-gray-600">{settings.music.volume}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={settings.music.volume}
+                      onChange={(e) => updateSetting('music', 'volume', parseInt(e.target.value))}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      
+      case 'background':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Background Settings</h3>
+              <div className="space-y-4">
+                <div className="p-4 bg-white/50 rounded-xl">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">Blur Intensity</p>
+                      <p className="text-xs text-gray-500">Adjust background blur effect</p>
+                    </div>
+                    <span className="text-xs text-gray-600">{settings.background.blur}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="20"
+                    value={settings.background.blur}
+                    onChange={(e) => updateSetting('background', 'blur', parseInt(e.target.value))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                  />
+                </div>
+                <div className="p-4 bg-white/50 rounded-xl">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">Brightness</p>
+                      <p className="text-xs text-gray-500">Adjust background brightness</p>
+                    </div>
+                    <span className="text-xs text-gray-600">{settings.background.brightness}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="50"
+                    max="150"
+                    value={settings.background.brightness}
+                    onChange={(e) => updateSetting('background', 'brightness', parseInt(e.target.value))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      
+      case 'appearance':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Appearance Settings</h3>
+              <div className="space-y-4">
+                <div className="p-4 bg-white/50 rounded-xl">
+                  <p className="text-sm font-medium text-gray-800 mb-3">Theme</p>
+                  <div className="flex gap-3">
+                    {['light', 'auto', 'dark'].map((theme) => (
+                      <button
+                        key={theme}
+                        onClick={() => updateSetting('appearance', 'theme', theme)}
+                        className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                          settings.appearance.theme === theme
+                            ? 'bg-purple-600 text-white shadow-md'
+                            : 'bg-white/80 text-gray-700 hover:bg-white'
+                        }`}
+                      >
+                        {theme.charAt(0).toUpperCase() + theme.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-white/50 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <Monitor className="w-5 h-5 text-gray-600" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">Animations</p>
+                      <p className="text-xs text-gray-500">Enable smooth animations and transitions</p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings.appearance.animations}
+                      onChange={(e) => updateSetting('appearance', 'animations', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="text-center mb-4 flex-shrink-0">
+        <h2 className="text-lg md:text-2xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
+          Settings
+        </h2>
+      </div>
+
+      <div className={`flex-1 flex gap-4 overflow-hidden ${isMobile ? 'flex-col' : ''}`}>
+        {/* Left sidebar - 20% width on desktop, full width on mobile */}
+        <div className={`${isMobile ? 'w-full border-b border-white/30 pb-4 mb-4' : 'w-[20%] border-r border-white/30 pr-4'} flex-shrink-0`}>
+          <nav className={`${isMobile ? 'flex gap-2' : 'space-y-1'}`}>
+            {settingsTabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`${isMobile ? 'flex-1' : 'w-full'} flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    activeTab === tab.id
+                      ? 'bg-purple-600 text-white shadow-md'
+                      : 'text-gray-700 hover:bg-white/50'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Right content - 80% width on desktop, full width on mobile */}
+        <div className={`flex-1 overflow-y-auto ${isMobile ? '' : 'pr-2'}`}>
+          {renderSettingsContent()}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Portfolio() {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [deviceOrientation, setDeviceOrientation] = useState({ x: 0, y: 0 });
@@ -1919,7 +2155,7 @@ export default function Portfolio() {
     { type: 'glb', src: '/icons/photo.glb', label: 'My Photographies', depth: 1.3, scale: 0.5 },
     { type: 'glb', src: '/icons/video.glb', label: 'My Videographies', depth: 1.5, scale: 3 },
     { type: 'glb', src: '/icons/safari.glb', label: 'Jijun AI', depth: 1.4, scale: 0.5, action: 'ai' },
-    { type: 'glb', src: '/icons/setting.glb', label: 'Settings', depth: 1.2, scale: 0.47 },
+    { type: 'glb', src: '/icons/setting.glb', label: 'Settings', depth: 1.2, scale: 0.47, action: 'settings' },
     { type: 'glb', src: '/icons/findmy.glb', label: 'Find My', depth: 1.3, scale: 0.5 },
   ], []);
 
@@ -2251,6 +2487,17 @@ export default function Portfolio() {
         transform: isActive 
           ? `translate(-50%, -50%) scale(1) rotateX(${spatialRotateX}deg) rotateY(${spatialRotateY}deg)`
           : 'translate(0, -150%) scale(0.8)',
+        opacity: isActive ? 1 : 0,
+        zIndex: isActive ? 50 : -1,
+        pointerEvents: isActive ? 'auto' : 'none'
+      };
+    }
+    
+    if (type === 'settings') {
+      return {
+        transform: isActive 
+          ? `translate(-50%, -50%) scale(1) rotateX(${spatialRotateX}deg) rotateY(${spatialRotateY}deg)`
+          : 'translate(150%, -50%) scale(0.8)',
         opacity: isActive ? 1 : 0,
         zIndex: isActive ? 50 : -1,
         pointerEvents: isActive ? 'auto' : 'none'
@@ -2760,6 +3007,48 @@ export default function Portfolio() {
           </button>
           
           <JijunAIChatPanel key={expandedApp === 'ai' ? 'ai-open' : 'ai-closed'} isActive={expandedApp === 'ai'} />
+        </div>
+      </div>
+
+      <div 
+        className="absolute left-1/2 top-1/2 panel-container"
+        style={{
+          ...getExpandedPanelStyle('settings'),
+          transformStyle: 'preserve-3d',
+          transition: visionOSTransition,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div 
+          className="rounded-3xl panel-inner relative"
+          style={{ 
+            ...expandedPanelStyle,
+            width: isMobile 
+              ? 'clamp(300px, 92vw, 420px)' 
+              : 'clamp(600px, min(75vw, 90vw - 80px), 900px)',
+            height: isMobile 
+              ? 'clamp(500px, 88vh, 680px)' 
+              : 'clamp(500px, min(70vh, 90vh - 60px), 650px)',
+            maxWidth: isMobile ? '92vw' : 'min(75vw, 90vw - 80px)',
+            maxHeight: isMobile ? '88vh' : 'min(70vh, 90vh - 60px)',
+            padding: isMobile ? 'clamp(12px, 3vw, 20px)' : 'clamp(20px, 2vw, 32px)',
+            overflow: 'hidden'
+          }}
+        >
+          <button
+            onClick={closeExpandedApp}
+            className="absolute z-10 rounded-full bg-white/30 hover:bg-white/50 flex items-center justify-center transition-all"
+            style={{
+              top: isMobile ? 'clamp(8px, 2vw, 12px)' : 'clamp(12px, 1.5vw, 16px)',
+              right: isMobile ? 'clamp(8px, 2vw, 12px)' : 'clamp(12px, 1.5vw, 16px)',
+              width: isMobile ? 'clamp(28px, 7vw, 36px)' : 'clamp(32px, 3vw, 40px)',
+              height: isMobile ? 'clamp(28px, 7vw, 36px)' : 'clamp(32px, 3vw, 40px)',
+            }}
+          >
+            <X className="text-gray-700" style={{ width: isMobile ? 'clamp(14px, 3.5vw, 18px)' : 'clamp(16px, 1.5vw, 20px)', height: isMobile ? 'clamp(14px, 3.5vw, 18px)' : 'clamp(16px, 1.5vw, 20px)' }} />
+          </button>
+          
+          <SettingsPanel isMobile={isMobile} />
         </div>
       </div>
 
