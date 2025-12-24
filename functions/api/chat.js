@@ -23,7 +23,7 @@ export async function onRequestPost(context) {
       },
       body: JSON.stringify({
         model: 'claude-3-5-haiku-20241022',
-        max_tokens: 500,
+        max_tokens: 4096, // Maximum tokens for haiku model - no artificial limit
         system: systemPrompt || 'You are a helpful assistant.',
         messages: [{ role: 'user', content: message }],
       }),

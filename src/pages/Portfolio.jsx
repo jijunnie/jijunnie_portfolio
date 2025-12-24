@@ -1442,8 +1442,8 @@ function JijunAIChatPanel({ isActive }) {
     setMessages(prev => [...prev, { role: 'assistant', content: '', id: thinkingId, isThinking: true }]);
 
     try {
-      const systemPrompt = `You are Jijun Nie. Answer ONLY what the user asks in 1-2 short sentences. Be brief, friendly, and direct.
-Quick facts (share only if relevant to their question):
+      const systemPrompt = `You are Jijun Nie. Answer questions naturally and thoroughly. Provide complete, detailed responses when appropriate. Be friendly, conversational, and helpful.
+Quick facts about me (share when relevant to their question):
 - I'm 19 years old (do NOT mention exact birthday)
 - UF Junior studying Industrial & System Engineering going in supply chain and logistic path(3.94 GPA)
 - I spend free time learning new things on my own such as HTML/CSS, Data Analytics, Digital Marketing and more..
@@ -1457,14 +1457,13 @@ Quick facts (share only if relevant to their question):
 - Interests: Photography, Singing, Guitar, Badminton, Basketball, Gaming, Traveling
 - Contact: jijun.nie@ufl.edu, (754) 610-4078
 IMPORTANT RULES:
-- Only answer the specific question asked
-- Keep responses to 1-2 sentences maximum
-- Don't volunteer extra information unless directly asked
+- Answer questions completely and thoroughly - provide as much detail as needed
 - Be conversational and natural
 - Use "I" not "Jijun"
 - Add emojis sparingly (only when it feels natural)
 - You must not say you are AI assistant, you are Jijun Nie
-- If asked about age or birthday, just say "I'm 19 years old" - do NOT give the exact date`;
+- If asked about age or birthday, just say "I'm 19 years old" - do NOT give the exact date
+- There is NO limit on response length - give complete, detailed answers when appropriate`;
 
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -1672,28 +1671,115 @@ function SettingsPanel({ isMobile, settings, updateSetting }) {
         );
       
       case 'background':
+        const backgroundOptions = [
+          {
+            id: 'living-room',
+            name: 'Living Room',
+            preview: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/cozy_living_room_baked.glb',
+            thumbnail: '/images/living-room-thumb.jpg', // Placeholder - you can add actual thumbnail
+            isDefault: true
+          },
+          {
+            id: 'office',
+            name: 'Office',
+            preview: '',
+            thumbnail: '/images/office-thumb.jpg', // Placeholder
+            isDefault: false,
+            comingSoon: true
+          },
+          {
+            id: 'nature',
+            name: 'Nature',
+            preview: '',
+            thumbnail: '/images/nature-thumb.jpg', // Placeholder
+            isDefault: false,
+            comingSoon: true
+          },
+          {
+            id: 'studio',
+            name: 'Studio',
+            preview: '',
+            thumbnail: '/images/studio-thumb.jpg', // Placeholder
+            isDefault: false,
+            comingSoon: true
+          }
+        ];
+        
         return (
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Background Settings</h3>
               <div className="space-y-4">
                 <div className="p-4 bg-white/50 rounded-xl">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">Blur Intensity</p>
-                      <p className="text-xs text-gray-500">Control the blur effect on background decorative elements (colored blobs). Higher values create a more dreamy, soft appearance. Range: 0-20px.</p>
-                    </div>
-                    <span className="text-xs text-gray-600">{settings.background.blur}px</span>
+                  <p className="text-sm font-medium text-gray-800 mb-3">Choose Background</p>
+                  <p className="text-xs text-gray-500 mb-4">Select a 3D background model for your portfolio. The current selection is highlighted.</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {backgroundOptions.map((bg) => (
+                      <button
+                        key={bg.id}
+                        onClick={() => !bg.comingSoon && updateSetting('background', 'type', bg.id)}
+                        disabled={bg.comingSoon}
+                        className={`
+                          relative group rounded-xl overflow-hidden border-2 transition-all
+                          ${settings.background.type === bg.id
+                            ? 'border-purple-600 ring-2 ring-purple-300 ring-offset-2 shadow-lg scale-105'
+                            : 'border-gray-200 hover:border-gray-300'
+                          }
+                          ${bg.comingSoon ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-102'}
+                        `}
+                      >
+                        {/* Preview Image/Thumbnail */}
+                        <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative">
+                          {bg.id === 'living-room' ? (
+                            // Show a preview of the living room model
+                            <div className="w-full h-full bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 flex items-center justify-center">
+                              <div className="text-center">
+                                <div className="w-16 h-16 mx-auto mb-2 bg-gradient-to-br from-amber-200 to-orange-300 rounded-lg flex items-center justify-center">
+                                  <Image className="w-8 h-8 text-amber-600" />
+                                </div>
+                                <p className="text-xs font-medium text-gray-700">Living Room</p>
+                              </div>
+                            </div>
+                          ) : (
+                            // Placeholder for other backgrounds
+                            <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                              <div className="text-center">
+                                <div className="w-16 h-16 mx-auto mb-2 bg-gray-400 rounded-lg flex items-center justify-center">
+                                  <Image className="w-8 h-8 text-gray-500" />
+                                </div>
+                                <p className="text-xs font-medium text-gray-600">{bg.name}</p>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Coming Soon Badge */}
+                          {bg.comingSoon && (
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                              <span className="text-xs font-semibold text-white bg-black/60 px-2 py-1 rounded">Coming Soon</span>
+                            </div>
+                          )}
+                          
+                          {/* Selected Indicator */}
+                          {settings.background.type === bg.id && !bg.comingSoon && (
+                            <div className="absolute top-2 right-2 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center shadow-lg">
+                              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          )}
+                          
+                          {/* Default Badge */}
+                          {bg.isDefault && (
+                            <div className="absolute top-2 left-2 bg-blue-500 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded">
+                              Default
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    ))}
                   </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="20"
-                    value={settings.background.blur}
-                    onChange={(e) => updateSetting('background', 'blur', parseInt(e.target.value))}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
-                  />
                 </div>
+                
                 <div className="p-4 bg-white/50 rounded-xl">
                   <div className="flex items-center justify-between mb-2">
                     <div>
@@ -1826,11 +1912,31 @@ export default function Portfolio() {
   // Load settings from localStorage
   const [settings, setSettings] = useState(() => {
     const saved = localStorage.getItem('portfolioSettings');
-    return saved ? JSON.parse(saved) : {
+    const defaultSettings = {
       music: { enabled: false, volume: 50 },
-      background: { blur: 0, brightness: 100 },
+      background: { type: 'living-room', brightness: 100 },
       appearance: { theme: 'light', animations: true }
     };
+    
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Migrate old settings structure - remove blur, ensure type exists
+        if (parsed.background) {
+          if (parsed.background.blur !== undefined) {
+            delete parsed.background.blur;
+          }
+          if (!parsed.background.type) {
+            parsed.background.type = 'living-room';
+          }
+        }
+        return { ...defaultSettings, ...parsed };
+      } catch (e) {
+        console.error('Error parsing settings:', e);
+        return defaultSettings;
+      }
+    }
+    return defaultSettings;
   });
   
   // Audio ref for background music
@@ -2643,7 +2749,7 @@ export default function Portfolio() {
           transformStyle: 'preserve-3d',
           backfaceVisibility: 'hidden',
           WebkitBackfaceVisibility: 'hidden',
-          filter: `blur(${settings.background.blur}px) brightness(${settings.background.brightness}%)`,
+          filter: `brightness(${settings.background.brightness}%)`,
           transition: settings.appearance.animations ? 'filter 0.3s ease-out' : 'none'
         }}
       >
