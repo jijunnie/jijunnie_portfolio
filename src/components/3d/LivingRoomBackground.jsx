@@ -35,19 +35,28 @@ function LivingRoomModel({ mousePos, deviceOrientation, isMobile }) {
   }, [scene, clonedScene]);
 
   useFrame(() => {
-    if (groupRef.current) {
-      // Apply spatial rotation based on mouse or device orientation
-      const spatialPos = isMobile ? deviceOrientation : mousePos;
-      
-      // Calculate rotation based on spatial position
-      // Use a subtle rotation effect for the background
-      const rotateX = -spatialPos.y * 3; // Reduced intensity for background
-      const baseRotationY = -20; // Fixed rotation around Y axis (20 degrees clockwise)
-      const rotateY = spatialPos.x * 3 + baseRotationY;
-      
-      groupRef.current.rotation.x = (rotateX * Math.PI) / 180;
-      groupRef.current.rotation.y = (rotateY * Math.PI) / 180;
+    // Add comprehensive null checks to prevent "Activity" errors
+    if (!groupRef.current) return;
+    
+    // Ensure rotation object exists
+    if (!groupRef.current.rotation) return;
+    
+    // Apply spatial rotation based on mouse or device orientation
+    const spatialPos = isMobile ? deviceOrientation : mousePos;
+    
+    // Validate spatialPos exists and has x, y properties
+    if (!spatialPos || typeof spatialPos.x !== 'number' || typeof spatialPos.y !== 'number') {
+      return;
     }
+    
+    // Calculate rotation based on spatial position
+    // Use a subtle rotation effect for the background
+    const rotateX = -spatialPos.y * 3; // Reduced intensity for background
+    const baseRotationY = -20; // Fixed rotation around Y axis (20 degrees clockwise)
+    const rotateY = spatialPos.x * 3 + baseRotationY;
+    
+    groupRef.current.rotation.x = (rotateX * Math.PI) / 180;
+    groupRef.current.rotation.y = (rotateY * Math.PI) / 180;
   });
 
   if (!clonedScene) return null;

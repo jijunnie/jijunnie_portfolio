@@ -32,11 +32,20 @@ function Avatar({ animationPath = '/animations/idle.fbx', scale = 1.5, position 
 
   useEffect(() => {
     if (clonedAvatar && group.current) {
-      mixer.current = new THREE.AnimationMixer(clonedAvatar);
+      try {
+        mixer.current = new THREE.AnimationMixer(clonedAvatar);
+      } catch (error) {
+        console.warn('Failed to create animation mixer:', error);
+        mixer.current = null;
+      }
     }
     return () => {
       if (mixer.current) {
-        mixer.current.stopAllAction();
+        try {
+          mixer.current.stopAllAction();
+        } catch (error) {
+          console.warn('Error stopping animation actions:', error);
+        }
       }
     };
   }, [clonedAvatar]);
@@ -44,15 +53,27 @@ function Avatar({ animationPath = '/animations/idle.fbx', scale = 1.5, position 
   useEffect(() => {
     if (!fbx.animations?.length || !mixer.current) return;
     const newAnimation = fbx.animations[0];
+    if (!newAnimation) return;
+    
     const newAction = mixer.current.clipAction(newAnimation);
+    
+    // Add null check to prevent "Activity" error
+    if (!newAction) return;
+    
     newAction.setLoop(THREE.LoopRepeat);
     newAction.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).fadeIn(0.3).play();
     currentActionRef.current = newAction;
   }, [animationPath, fbx.animations]);
 
   useFrame((state, delta) => {
-    if (mixer.current) {
+    // Add comprehensive null checks to prevent "Activity" errors
+    if (!mixer.current) return;
+    if (typeof delta !== 'number' || !isFinite(delta)) return;
+    
+    try {
       mixer.current.update(delta);
+    } catch (error) {
+      console.warn('Animation mixer update error:', error);
     }
   });
 

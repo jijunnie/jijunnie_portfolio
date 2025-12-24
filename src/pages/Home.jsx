@@ -196,12 +196,21 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0] }) {
   
   useEffect(() => {
     if (clonedAvatar && group.current) {
-      mixer.current = new THREE.AnimationMixer(clonedAvatar);
-      fadeTimeRef.current = 0;
+      try {
+        mixer.current = new THREE.AnimationMixer(clonedAvatar);
+        fadeTimeRef.current = 0;
+      } catch (error) {
+        console.warn('Failed to create animation mixer:', error);
+        mixer.current = null;
+      }
     }
     return () => {
       if (mixer.current) {
-        mixer.current.stopAllAction();
+        try {
+          mixer.current.stopAllAction();
+        } catch (error) {
+          console.warn('Error stopping animation actions:', error);
+        }
       }
     };
   }, [clonedAvatar]);
@@ -210,7 +219,12 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0] }) {
     if (!fbx.animations?.length || !mixer.current) return;
     
     const newAnimation = fbx.animations[0];
+    if (!newAnimation) return;
+    
     const newAction = mixer.current.clipAction(newAnimation);
+    
+    // Add null check to prevent "Activity" error
+    if (!newAction) return;
     
     newAction.setLoop(THREE.LoopRepeat);
     newAction.clampWhenFinished = false;
@@ -219,20 +233,27 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0] }) {
     if (currentActionRef.current && currentActionRef.current !== newAction) {
       const fadeDuration = 0.5;
       
-      currentActionRef.current.fadeOut(fadeDuration);
-      newAction.reset()
-        .setEffectiveTimeScale(1)
-        .setEffectiveWeight(1)
-        .fadeIn(fadeDuration)
-        .play();
+      if (currentActionRef.current) {
+        currentActionRef.current.fadeOut(fadeDuration);
+      }
+      
+      if (newAction) {
+        newAction.reset()
+          .setEffectiveTimeScale(1)
+          .setEffectiveWeight(1)
+          .fadeIn(fadeDuration)
+          .play();
+      }
       
       fadeTimeRef.current = fadeDuration;
     } else {
-      newAction.reset()
-        .setEffectiveTimeScale(1)
-        .setEffectiveWeight(1)
-        .fadeIn(0.5)
-        .play();
+      if (newAction) {
+        newAction.reset()
+          .setEffectiveTimeScale(1)
+          .setEffectiveWeight(1)
+          .fadeIn(0.5)
+          .play();
+      }
     }
     
     currentActionRef.current = newAction;
@@ -245,8 +266,14 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0] }) {
   }, [animationPath, fbx.animations]);
   
   useFrame((state, delta) => {
-    if (mixer.current) {
+    // Add comprehensive null checks to prevent "Activity" errors
+    if (!mixer.current) return;
+    if (typeof delta !== 'number' || !isFinite(delta)) return;
+    
+    try {
       mixer.current.update(delta);
+    } catch (error) {
+      console.warn('Animation mixer update error:', error);
     }
   });
   

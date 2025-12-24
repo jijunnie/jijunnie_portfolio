@@ -77,23 +77,29 @@ function IconModel({ url, isHovered, baseScale = 1, mousePos = { x: 0, y: 0 } })
   }, [scene, clonedScene]);
 
   useFrame((state) => {
-    if (groupRef.current && modelRef.current) {
-      const time = state.clock.elapsedTime;
+    // Add comprehensive null checks to prevent "Activity" errors
+    if (!groupRef.current) return;
+    if (!state || !state.clock) return;
+    
+    const time = state.clock.elapsedTime;
+    
+    // Ensure rotation and position objects exist
+    if (!groupRef.current.rotation) return;
+    if (!groupRef.current.position) return;
+    
+    if (isHovered) {
+      // Rotate when hovered
+      groupRef.current.rotation.y = Math.sin(time * 2) * 0.2;
+      groupRef.current.rotation.x = Math.sin(time * 1.5) * 0.1;
+    } else {
+      // Apply mouse spatial effect with same intensity as panels
+      const rotateX = -mousePos.y * 8 * 0.6;
+      const rotateY = mousePos.x * 8 * 0.6;
+      groupRef.current.rotation.x = (rotateX * Math.PI) / 180;
+      groupRef.current.rotation.y = (rotateY * Math.PI) / 180;
       
-      if (isHovered) {
-        // Rotate when hovered
-        groupRef.current.rotation.y = Math.sin(time * 2) * 0.2;
-        groupRef.current.rotation.x = Math.sin(time * 1.5) * 0.1;
-      } else {
-        // Apply mouse spatial effect with same intensity as panels
-        const rotateX = -mousePos.y * 8 * 0.6;
-        const rotateY = mousePos.x * 8 * 0.6;
-        groupRef.current.rotation.x = (rotateX * Math.PI) / 180;
-        groupRef.current.rotation.y = (rotateY * Math.PI) / 180;
-        
-        // Gentle floating animation
-        groupRef.current.position.y = Math.sin(time * 0.8) * 0.1;
-      }
+      // Gentle floating animation
+      groupRef.current.position.y = Math.sin(time * 0.8) * 0.1;
     }
   });
 
