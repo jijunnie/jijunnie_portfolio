@@ -4,10 +4,10 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 
 function LivingRoomModel({ mousePos, deviceOrientation, isMobile }) {
-  // Load from external CDN in production (if set), otherwise use local file
-  // In development, always use local file to maintain visual consistency
-  const modelUrl = import.meta.env.PROD && import.meta.env.VITE_MODEL_CDN_URL
-    ? import.meta.env.VITE_MODEL_CDN_URL
+  // Load from Cloudflare R2 CDN in production, local file in development
+  const cdnBaseUrl = 'https://c05a89ab56cf617eda04249538afeb45.r2.cloudflarestorage.com/my-3d-assets';
+  const modelUrl = import.meta.env.PROD
+    ? import.meta.env.VITE_MODEL_CDN_URL || `${cdnBaseUrl}/cozy_living_room_baked.glb`
     : '/models/cozy_living_room_baked.glb';
   
   const { scene } = useGLTF(modelUrl);
