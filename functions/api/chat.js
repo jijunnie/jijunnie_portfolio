@@ -23,7 +23,7 @@ export async function onRequestPost(context) {
       },
       body: JSON.stringify({
         model: 'claude-3-5-haiku-20241022',
-        max_tokens: 150,
+        max_tokens: 500,
         system: systemPrompt || 'You are a helpful assistant.',
         messages: [{ role: 'user', content: message }],
       }),
@@ -35,8 +35,44 @@ export async function onRequestPost(context) {
 
     const data = await response.json();
 
+    // Check if response was cut off due to max_tokens
+    const stopReason = data.stop_reason;
+    
+    // Handle different response structures - Anthropic API might return content as array or object
+    let responseText = '';
+    if (data.content && Array.isArray(data.content) && data.content.length > 0) {
+      // Standard structure: content is an array
+      if (data.content[0].text) {
+        responseText = data.content[0].text;
+      } else if (typeof data.content[0] === 'string') {
+        responseText = data.content[0];
+      }
+    } else if (data.text) {
+      // Alternative structure: direct text property
+      responseText = data.text;
+    } else if (typeof data.content === 'string') {
+      // Content is a string directly
+      responseText = data.content;
+    }
+    
+    // Log for debugging
+    console.log('API Response stop_reason:', stopReason);
+    console.log('API Response text length:', responseText.length);
+    console.log('API Response text preview:', responseText.substring(0, 100));
+    
+    // If response was cut off, add a note (though with 500 tokens this should be rare)
+    if (stopReason === 'max_tokens' && responseText) {
+      // Response was truncated, but we'll return what we have
+      // The increased max_tokens should prevent this in most cases
+      console.log('Response was truncated due to max_tokens limit');
+    }
+
     return new Response(
-      JSON.stringify({ response: data.content[0].text }),
+      JSON.stringify({ 
+        response: responseText || "I'm having trouble formulating a response. Could you try rephrasing your question?",
+        stop_reason: stopReason,
+        full_response: data // Include full response for debugging
+      }),
       {
         status: 200,
         headers: {

@@ -1286,26 +1286,35 @@ function TypingMessage({ content, onComplete }) {
     // Clear any existing timeout
     if (timeoutIdRef.current) {
       clearTimeout(timeoutIdRef.current);
+      timeoutIdRef.current = null;
     }
     
-    if (!content) return;
+    if (!content || typeof content !== 'string') {
+      console.warn('TypingMessage: Invalid content', content);
+      return;
+    }
     
     // Update ref to track current content
-    contentRef.current = content;
+    const contentToType = String(content); // Ensure it's a string
+    contentRef.current = contentToType;
     hasCompletedRef.current = false;
     setDisplayedText('');
     setIsTyping(true);
     let currentIndex = 0;
     
     const typeNextCharacter = () => {
+      // Use the ref value to ensure we're working with the correct content
+      const currentContent = contentRef.current;
+      
       // Check if content has changed (prevent continuing if content changed)
-      if (contentRef.current !== content) {
+      if (currentContent !== contentToType) {
+        console.log('TypingMessage: Content changed during typing, stopping');
         return;
       }
       
-      if (currentIndex < content.length) {
-        const char = content[currentIndex];
-        setDisplayedText(content.slice(0, currentIndex + 1));
+      if (currentIndex < currentContent.length) {
+        const char = currentContent[currentIndex];
+        setDisplayedText(currentContent.slice(0, currentIndex + 1));
         currentIndex++;
         
         // Determine delay based on character - optimized for faster, smoother experience
@@ -1319,8 +1328,10 @@ function TypingMessage({ content, onComplete }) {
         
         timeoutIdRef.current = setTimeout(typeNextCharacter, delay);
       } else {
+        // Typing complete
         setIsTyping(false);
         hasCompletedRef.current = true;
+        setDisplayedText(currentContent); // Ensure full content is displayed
         if (onComplete) {
           setTimeout(onComplete, 100);
         }
@@ -1474,6 +1485,11 @@ IMPORTANT RULES:
       const aiResponse = data.response || 
         "I'm not sure how to respond to that. Feel free to ask me something else!";
 
+      // Log the full response for debugging
+      console.log('Full AI response received:', aiResponse);
+      console.log('Response length:', aiResponse.length);
+      console.log('Stop reason:', data.stop_reason);
+
       // Remove thinking bubble and add response with typing animation
       const responseId = `response-${Date.now()}`;
       setMessages(prev => {
@@ -1599,33 +1615,8 @@ IMPORTANT RULES:
 }
 
 // Settings Panel Component - Apple-style two-column layout
-function SettingsPanel({ isMobile }) {
+function SettingsPanel({ isMobile, settings, updateSetting }) {
   const [activeTab, setActiveTab] = useState('music');
-  
-  // Load settings from localStorage
-  const [settings, setSettings] = useState(() => {
-    const saved = localStorage.getItem('portfolioSettings');
-    return saved ? JSON.parse(saved) : {
-      music: { enabled: false, volume: 50 },
-      background: { blur: 0, brightness: 100 },
-      appearance: { theme: 'light', animations: true }
-    };
-  });
-
-  // Save settings to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('portfolioSettings', JSON.stringify(settings));
-  }, [settings]);
-
-  const updateSetting = (category, key, value) => {
-    setSettings(prev => ({
-      ...prev,
-      [category]: {
-        ...prev[category],
-        [key]: value
-      }
-    }));
-  };
 
   const settingsTabs = [
     { id: 'music', label: 'Music', icon: Music },
@@ -1646,7 +1637,7 @@ function SettingsPanel({ isMobile }) {
                     <Volume2 className="w-5 h-5 text-gray-600" />
                     <div>
                       <p className="text-sm font-medium text-gray-800">Enable Background Music</p>
-                      <p className="text-xs text-gray-500">Play ambient music in the background</p>
+                      <p className="text-xs text-gray-500">Play ambient background music while browsing. Music will loop automatically and respect your volume setting.</p>
                     </div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -1690,7 +1681,7 @@ function SettingsPanel({ isMobile }) {
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <p className="text-sm font-medium text-gray-800">Blur Intensity</p>
-                      <p className="text-xs text-gray-500">Adjust background blur effect</p>
+                      <p className="text-xs text-gray-500">Control the blur effect on background decorative elements (colored blobs). Higher values create a more dreamy, soft appearance. Range: 0-20px.</p>
                     </div>
                     <span className="text-xs text-gray-600">{settings.background.blur}px</span>
                   </div>
@@ -1707,7 +1698,7 @@ function SettingsPanel({ isMobile }) {
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <p className="text-sm font-medium text-gray-800">Brightness</p>
-                      <p className="text-xs text-gray-500">Adjust background brightness</p>
+                      <p className="text-xs text-gray-500">Adjust the overall brightness of background elements. Lower values (50-80%) create a darker, more subdued look. Higher values (120-150%) make everything brighter. Range: 50-150%.</p>
                     </div>
                     <span className="text-xs text-gray-600">{settings.background.brightness}%</span>
                   </div>
@@ -1732,8 +1723,11 @@ function SettingsPanel({ isMobile }) {
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Appearance Settings</h3>
               <div className="space-y-4">
                 <div className="p-4 bg-white/50 rounded-xl">
-                  <p className="text-sm font-medium text-gray-800 mb-3">Theme</p>
-                  <div className="flex gap-3">
+                  <div className="mb-3">
+                    <p className="text-sm font-medium text-gray-800 mb-1">Theme</p>
+                    <p className="text-xs text-gray-500">Choose your preferred color theme. Light uses bright colors, Dark uses darker tones, and Auto follows your system preference.</p>
+                  </div>
+                  <div className="flex gap-3 mt-3">
                     {['light', 'auto', 'dark'].map((theme) => (
                       <button
                         key={theme}
@@ -1754,7 +1748,7 @@ function SettingsPanel({ isMobile }) {
                     <Monitor className="w-5 h-5 text-gray-600" />
                     <div>
                       <p className="text-sm font-medium text-gray-800">Animations</p>
-                      <p className="text-xs text-gray-500">Enable smooth animations and transitions</p>
+                      <p className="text-xs text-gray-500">Toggle smooth animations and transitions throughout the portfolio. Disabling can improve performance on slower devices and reduce motion for accessibility.</p>
                     </div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -1828,6 +1822,72 @@ export default function Portfolio() {
   const [isReady, setIsReady] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [expandedApp, setExpandedApp] = useState(null);
+  
+  // Load settings from localStorage
+  const [settings, setSettings] = useState(() => {
+    const saved = localStorage.getItem('portfolioSettings');
+    return saved ? JSON.parse(saved) : {
+      music: { enabled: false, volume: 50 },
+      background: { blur: 0, brightness: 100 },
+      appearance: { theme: 'light', animations: true }
+    };
+  });
+  
+  // Audio ref for background music
+  const audioRef = useRef(null);
+  
+  // Save settings to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('portfolioSettings', JSON.stringify(settings));
+  }, [settings]);
+  
+  // Update setting function
+  const updateSetting = useCallback((category, key, value) => {
+    setSettings(prev => ({
+      ...prev,
+      [category]: {
+        ...prev[category],
+        [key]: value
+      }
+    }));
+  }, []);
+  
+  // Handle music settings
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = settings.music.volume / 100;
+      if (settings.music.enabled) {
+        audioRef.current.play().catch(err => {
+          console.log('Music autoplay prevented:', err);
+          // User interaction required for autoplay
+        });
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  }, [settings.music.enabled, settings.music.volume]);
+  
+  // Apply theme
+  useEffect(() => {
+    const root = document.documentElement;
+    if (settings.appearance.theme === 'dark') {
+      root.classList.add('dark');
+      root.classList.remove('light');
+    } else if (settings.appearance.theme === 'light') {
+      root.classList.add('light');
+      root.classList.remove('dark');
+    } else {
+      // Auto - use system preference
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (prefersDark) {
+        root.classList.add('dark');
+        root.classList.remove('light');
+      } else {
+        root.classList.add('light');
+        root.classList.remove('dark');
+      }
+    }
+  }, [settings.appearance.theme]);
   
   const orientationRef = useRef({ x: 0, y: 0 });
   const smoothedOrientationRef = useRef({ x: 0, y: 0 });
@@ -2261,9 +2321,14 @@ export default function Portfolio() {
     `
   }), []);
 
-  const visionOSTransition = isTransitioning 
-    ? 'all 0.6s cubic-bezier(0.32, 0.72, 0, 1)'
-    : 'transform 0.1s ease-out, filter 0.2s ease-out, opacity 0.2s ease-out';
+  const visionOSTransition = useMemo(() => {
+    if (!settings.appearance.animations) {
+      return 'none';
+    }
+    return isTransitioning 
+      ? 'all 0.6s cubic-bezier(0.32, 0.72, 0, 1)'
+      : 'transform 0.1s ease-out, filter 0.2s ease-out, opacity 0.2s ease-out';
+  }, [isTransitioning, settings.appearance.animations]);
 
   const getBlurStyle = useCallback((panelType) => {
     if (expandedApp) {
@@ -2556,6 +2621,19 @@ export default function Portfolio() {
         isMobile={isMobile}
       />
 
+      {/* Background Music */}
+      {settings.music.enabled && (
+        <audio
+          ref={audioRef}
+          loop
+          preload="auto"
+          style={{ display: 'none' }}
+        >
+          {/* You can add an actual music file here */}
+          <source src="" type="audio/mpeg" />
+        </audio>
+      )}
+      
       <div 
         className="absolute inset-0 pointer-events-none bg-blobs" 
         style={{ 
@@ -2564,12 +2642,23 @@ export default function Portfolio() {
           zIndex: 1,
           transformStyle: 'preserve-3d',
           backfaceVisibility: 'hidden',
-          WebkitBackfaceVisibility: 'hidden'
+          WebkitBackfaceVisibility: 'hidden',
+          filter: `blur(${settings.background.blur}px) brightness(${settings.background.brightness}%)`,
+          transition: settings.appearance.animations ? 'filter 0.3s ease-out' : 'none'
         }}
       >
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-200/30 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-200/30 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-pink-100/20 rounded-full blur-3xl" />
+        <div 
+          className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-200/30 rounded-full blur-3xl" 
+          style={{ filter: `blur(3rem)` }}
+        />
+        <div 
+          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-200/30 rounded-full blur-3xl" 
+          style={{ filter: `blur(3rem)` }}
+        />
+        <div 
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-pink-100/20 rounded-full blur-3xl" 
+          style={{ filter: `blur(3rem)` }}
+        />
       </div>
 
       {isMobile && activePanel !== 'icons' && !expandedApp && (
@@ -3048,7 +3137,7 @@ export default function Portfolio() {
             <X className="text-gray-700" style={{ width: isMobile ? 'clamp(14px, 3.5vw, 18px)' : 'clamp(16px, 1.5vw, 20px)', height: isMobile ? 'clamp(14px, 3.5vw, 18px)' : 'clamp(16px, 1.5vw, 20px)' }} />
           </button>
           
-          <SettingsPanel isMobile={isMobile} />
+          <SettingsPanel isMobile={isMobile} settings={settings} updateSetting={updateSetting} />
         </div>
       </div>
 
