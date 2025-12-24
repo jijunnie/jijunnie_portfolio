@@ -1383,6 +1383,7 @@ export default function Portfolio() {
   const [expandedApp, setExpandedApp] = useState(null);
   
   const orientationRef = useRef({ x: 0, y: 0 });
+  const smoothedOrientationRef = useRef({ x: 0, y: 0 });
   const animationFrameRef = useRef(null);
   const lastOrientationUpdate = useRef(0);
   
@@ -1479,10 +1480,19 @@ export default function Portfolio() {
       const gamma = event.gamma || 0;
       const beta = event.beta || 0;
 
-      const x = Math.max(-1, Math.min(1, gamma / 30));
-      const y = Math.max(-1, Math.min(1, (beta - 45) / 30));
+      // Clamp raw values first
+      const rawX = Math.max(-1, Math.min(1, gamma / 30));
+      const rawY = Math.max(-1, Math.min(1, (beta - 45) / 30));
 
-      orientationRef.current = { x, y };
+      // Apply exponential smoothing at source to prevent violent shaking
+      const smoothingFactor = 0.25; // Lower = smoother (more aggressive)
+      orientationRef.current = {
+        x: smoothedOrientationRef.current.x + (rawX - smoothedOrientationRef.current.x) * smoothingFactor,
+        y: smoothedOrientationRef.current.y + (rawY - smoothedOrientationRef.current.y) * smoothingFactor
+      };
+      
+      // Update smoothed reference
+      smoothedOrientationRef.current = orientationRef.current;
     };
 
     const updateOrientation = (timestamp) => {
@@ -1492,8 +1502,14 @@ export default function Portfolio() {
         setDeviceOrientation(prev => {
           const dx = Math.abs(prev.x - x);
           const dy = Math.abs(prev.y - y);
-          if (dx > 0.01 || dy > 0.01) {
-            return { x, y };
+          // Increased threshold to prevent micro-updates that cause shaking
+          if (dx > 0.02 || dy > 0.02) {
+            // Additional smoothing layer before setting state
+            const stateSmoothing = 0.3;
+            return {
+              x: prev.x + (x - prev.x) * stateSmoothing,
+              y: prev.y + (y - prev.y) * stateSmoothing
+            };
           }
           return prev;
         });

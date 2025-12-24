@@ -52,6 +52,8 @@ function LivingRoomModel({ externalMousePos, deviceOrientation, isMobile }) {
   const targetRotationY = useRef(0);
   const currentRotationX = useRef(0);
   const currentRotationY = useRef(0);
+  const previousDeviceOrientation = useRef({ x: 0, y: 0 });
+  const smoothedDeviceOrientation = useRef({ x: 0, y: 0 });
   
   // Clone scene once to avoid mutating the original
   useEffect(() => {
@@ -100,11 +102,32 @@ function LivingRoomModel({ externalMousePos, deviceOrientation, isMobile }) {
         spatialRotateY = externalMousePos.x * 5;
       }
     }
-    // Mobile/iPad: use device orientation when available
+    // Mobile/iPad: use device orientation when available with aggressive smoothing
     else if (isMobile && deviceOrientation) {
       if (typeof deviceOrientation.x === 'number' && typeof deviceOrientation.y === 'number') {
-        spatialRotateX = -deviceOrientation.y * 5;
-        spatialRotateY = deviceOrientation.x * 5;
+        // Clamp device orientation values to prevent extreme rotations
+        const clampedX = Math.max(-1, Math.min(1, deviceOrientation.x));
+        const clampedY = Math.max(-1, Math.min(1, deviceOrientation.y));
+        
+        // Dead zone to prevent micro-movements from causing shaking
+        const deadZone = 0.05;
+        const processedX = Math.abs(clampedX) < deadZone ? 0 : clampedX;
+        const processedY = Math.abs(clampedY) < deadZone ? 0 : clampedY;
+        
+        // Exponential smoothing for device orientation (much stronger smoothing)
+        const smoothingFactor = 0.15; // Lower = smoother, more stable (was using delta-based)
+        smoothedDeviceOrientation.current.x += (processedX - smoothedDeviceOrientation.current.x) * smoothingFactor;
+        smoothedDeviceOrientation.current.y += (processedY - smoothedDeviceOrientation.current.y) * smoothingFactor;
+        
+        // Apply reduced multiplier for device orientation to prevent violent shaking
+        const deviceMultiplier = 3; // Reduced from 5 for more stability
+        spatialRotateX = -smoothedDeviceOrientation.current.y * deviceMultiplier;
+        spatialRotateY = smoothedDeviceOrientation.current.x * deviceMultiplier;
+        
+        // Clamp rotation values to prevent extreme rotations
+        const maxRotation = 15; // Maximum rotation in degrees
+        spatialRotateX = Math.max(-maxRotation, Math.min(maxRotation, spatialRotateX));
+        spatialRotateY = Math.max(-maxRotation, Math.min(maxRotation, spatialRotateY));
       }
     }
     
@@ -112,8 +135,10 @@ function LivingRoomModel({ externalMousePos, deviceOrientation, isMobile }) {
     targetRotationX.current = (spatialRotateX * Math.PI) / 180;
     targetRotationY.current = ((baseRotationY + autoRotationY + spatialRotateY) * Math.PI) / 180;
     
-    // Smooth interpolation (lerp) to prevent glitching - higher factor = more responsive, lower = smoother
-    const lerpFactor = Math.min(delta * 8, 1); // Smooth interpolation based on frame delta
+    // Smooth interpolation (lerp) to prevent glitching
+    // Use stronger smoothing for mobile devices
+    const baseLerpFactor = isMobile ? 0.12 : Math.min(delta * 8, 1);
+    const lerpFactor = Math.min(baseLerpFactor, 1);
     currentRotationX.current += (targetRotationX.current - currentRotationX.current) * lerpFactor;
     currentRotationY.current += (targetRotationY.current - currentRotationY.current) * lerpFactor;
     

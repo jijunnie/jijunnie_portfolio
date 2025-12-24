@@ -64,6 +64,8 @@ function IconModel({ url, isHovered, baseScale = 1, mousePos = { x: 0, y: 0 } })
   const currentRotationY = useRef(0);
   const targetPositionY = useRef(0);
   const currentPositionY = useRef(0);
+  const smoothedMousePos = useRef({ x: 0, y: 0 });
+  const previousMousePos = useRef({ x: 0, y: 0 });
 
   // Clone scene and enhance materials for better contrast
   React.useEffect(() => {
@@ -162,9 +164,31 @@ function IconModel({ url, isHovered, baseScale = 1, mousePos = { x: 0, y: 0 } })
       targetRotationY.current = Math.sin(time * 2) * 0.2;
       targetRotationX.current = Math.sin(time * 1.5) * 0.1;
     } else {
-      // Apply mouse spatial effect with same intensity as panels
-      const rotateX = -mousePos.y * 8 * 0.6;
-      const rotateY = mousePos.x * 8 * 0.6;
+      // Smooth mouse position to prevent jittery rotation
+      // Use exponential smoothing for stability
+      const mouseSmoothingFactor = 0.2; // Lower = smoother (more aggressive smoothing)
+      smoothedMousePos.current.x += (mousePos.x - smoothedMousePos.current.x) * mouseSmoothingFactor;
+      smoothedMousePos.current.y += (mousePos.y - smoothedMousePos.current.y) * mouseSmoothingFactor;
+      
+      // Clamp smoothed values to prevent extreme rotations
+      const clampedX = Math.max(-1, Math.min(1, smoothedMousePos.current.x));
+      const clampedY = Math.max(-1, Math.min(1, smoothedMousePos.current.y));
+      
+      // Dead zone to prevent micro-movements
+      const deadZone = 0.03;
+      const processedX = Math.abs(clampedX) < deadZone ? 0 : clampedX;
+      const processedY = Math.abs(clampedY) < deadZone ? 0 : clampedY;
+      
+      // Apply mouse spatial effect with reduced multiplier for stability
+      const rotationMultiplier = 4.5; // Slightly reduced from 4.8 for more stability
+      let rotateX = -processedY * 8 * (rotationMultiplier / 8);
+      let rotateY = processedX * 8 * (rotationMultiplier / 8);
+      
+      // Clamp rotation values to prevent extreme rotations
+      const maxRotation = 12; // Maximum rotation in degrees for icons
+      rotateX = Math.max(-maxRotation, Math.min(maxRotation, rotateX));
+      rotateY = Math.max(-maxRotation, Math.min(maxRotation, rotateY));
+      
       targetRotationX.current = (rotateX * Math.PI) / 180;
       targetRotationY.current = (rotateY * Math.PI) / 180;
       
@@ -173,7 +197,9 @@ function IconModel({ url, isHovered, baseScale = 1, mousePos = { x: 0, y: 0 } })
     }
     
     // Smooth interpolation (lerp) to prevent glitching
-    const lerpFactor = Math.min(delta * 10, 1); // Smooth interpolation based on frame delta
+    // Use stronger smoothing for more stability
+    const baseLerpFactor = 0.15; // Fixed smoothing factor for consistent behavior
+    const lerpFactor = Math.min(baseLerpFactor, 1);
     currentRotationX.current += (targetRotationX.current - currentRotationX.current) * lerpFactor;
     currentRotationY.current += (targetRotationY.current - currentRotationY.current) * lerpFactor;
     currentPositionY.current += (targetPositionY.current - currentPositionY.current) * lerpFactor;
