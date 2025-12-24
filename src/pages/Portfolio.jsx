@@ -1,8 +1,41 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Cloud, CloudRain, Sun, Wind, Droplets, Thermometer, MapPin, Phone, Mail, Send, X, Calendar, Linkedin, Github, Instagram, MessageSquare } from 'lucide-react';
 import emailjs from '@emailjs/browser';
+import { useGLTF } from '@react-three/drei';
 import GLBIcon from '../components/3d/GLBIcon';
 import LivingRoomBackground from '../components/3d/LivingRoomBackground';
+
+// Preload 3D background model at module level (runs immediately when file loads)
+const backgroundModelUrl = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/cozy_living_room_baked.glb';
+try {
+  useGLTF.preload(backgroundModelUrl);
+  console.log('✅ Preloaded 3D background at module level:', backgroundModelUrl);
+} catch (error) {
+  console.warn('⚠️ Failed to preload 3D background at module level:', error);
+}
+
+// Preload all icon GLB files at module level
+const iconFiles = [
+  '/icons/weather.glb',
+  '/icons/message.glb',
+  '/icons/clock.glb',
+  '/icons/file.glb',
+  '/icons/music.glb',
+  '/icons/photo.glb',
+  '/icons/video.glb',
+  '/icons/safari.glb',
+  '/icons/setting.glb',
+  '/icons/findmy.glb'
+];
+
+iconFiles.forEach((url) => {
+  try {
+    useGLTF.preload(url);
+    console.log('✅ Preloaded icon at module level:', url);
+  } catch (error) {
+    console.warn('⚠️ Failed to preload icon at module level:', url, error);
+  }
+});
 
 // Real-time Date/Time Component
 function DateTimeDisplay() {
@@ -1220,16 +1253,150 @@ function MessagePanel({ onClose, visionOSPanelStyle, isMobile }) {
   );
 }
 
+// Typing animation component with humanized pauses
+function TypingMessage({ content, onComplete }) {
+  const [displayedText, setDisplayedText] = useState('');
+  const [isTyping, setIsTyping] = useState(true);
+  const contentRef = useRef('');
+  const hasCompletedRef = useRef(false);
+  const timeoutIdRef = useRef(null);
+
+  useEffect(() => {
+    // If content hasn't changed, don't restart
+    if (contentRef.current === content) {
+      return;
+    }
+    
+    // Clear any existing timeout
+    if (timeoutIdRef.current) {
+      clearTimeout(timeoutIdRef.current);
+    }
+    
+    if (!content) return;
+    
+    // Update ref to track current content
+    contentRef.current = content;
+    hasCompletedRef.current = false;
+    setDisplayedText('');
+    setIsTyping(true);
+    let currentIndex = 0;
+    
+    const typeNextCharacter = () => {
+      // Check if content has changed (prevent continuing if content changed)
+      if (contentRef.current !== content) {
+        return;
+      }
+      
+      if (currentIndex < content.length) {
+        const char = content[currentIndex];
+        setDisplayedText(content.slice(0, currentIndex + 1));
+        currentIndex++;
+        
+        // Determine delay based on character - humanized pauses
+        let delay = 30; // Default typing speed: 30ms per character
+        
+        if (char === ',') {
+          delay = 400; // Pause for 400ms after comma
+        } else if (char === '.' || char === '!' || char === '?') {
+          delay = 1200; // Pause for 1200ms (1.2s) after sentence-ending punctuation - human-like pause
+        }
+        
+        timeoutIdRef.current = setTimeout(typeNextCharacter, delay);
+      } else {
+        setIsTyping(false);
+        hasCompletedRef.current = true;
+        if (onComplete) {
+          setTimeout(onComplete, 100);
+        }
+      }
+    };
+    
+    // Start typing
+    timeoutIdRef.current = setTimeout(typeNextCharacter, 30);
+    
+    return () => {
+      if (timeoutIdRef.current) {
+        clearTimeout(timeoutIdRef.current);
+        timeoutIdRef.current = null;
+      }
+    };
+  }, [content, onComplete]);
+
+  return (
+    <>
+      {displayedText}
+      {isTyping && <span className="inline-block w-0.5 h-4 bg-current animate-pulse ml-0.5 align-middle">|</span>}
+    </>
+  );
+}
+
+// Thinking bubble component
+function ThinkingBubble() {
+  const [dots, setDots] = useState('.');
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDots(prev => {
+        if (prev.length >= 6) return '.';
+        return prev + '.';
+      });
+    }, 300);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return <span>{dots}</span>;
+}
+
 // Jijun AI Panel - embedded chat experience similar to Home page
-function JijunAIChatPanel() {
+function JijunAIChatPanel({ isActive }) {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      content: "Hi, I'm Jijun Nie 👋  Ask me anything about my background, projects, or interests."
+  const [messages, setMessages] = useState([]);
+  const [typingMessageId, setTypingMessageId] = useState(null);
+  const [welcomeShown, setWelcomeShown] = useState(false);
+  const chatContainerRef = useRef(null);
+  
+  const presetWelcomeMessage = "Hi, This is Jijun Nie. Ask me anything you wish to know about me.";
+  
+  // Show preset welcome message immediately when panel becomes active (before any user interaction)
+  useEffect(() => {
+    if (isActive && !welcomeShown) {
+      setWelcomeShown(true);
+      
+      // Add preset welcome message immediately and start typing animation
+      const welcomeId = 'initial';
+      setMessages([{
+        role: 'assistant',
+        content: presetWelcomeMessage,
+        id: welcomeId
+      }]);
+      
+      // Start typing animation immediately
+      setTypingMessageId(welcomeId);
+    } else if (!isActive) {
+      // Reset when panel closes
+      setWelcomeShown(false);
+      setMessages([]);
+      setTypingMessageId(null);
     }
-  ]);
+  }, [isActive, welcomeShown]);
+
+  // Auto-scroll to bottom only when response is generating (typing animation active or thinking bubble)
+  useEffect(() => {
+    if ((typingMessageId || isLoading) && chatContainerRef.current) {
+      const interval = setInterval(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTo({
+            top: chatContainerRef.current.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+      }, 200); // Update scroll every 200ms during typing/thinking to follow the animation
+
+      return () => clearInterval(interval);
+    }
+  }, [typingMessageId, isLoading]);
 
   const handleSendMessage = async (e) => {
     e?.preventDefault?.();
@@ -1239,7 +1406,13 @@ function JijunAIChatPanel() {
     setInputMessage('');
     setIsLoading(true);
 
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    // Add user message
+    const userMessageId = `user-${Date.now()}`;
+    setMessages(prev => [...prev, { role: 'user', content: userMessage, id: userMessageId }]);
+
+    // Add thinking bubble
+    const thinkingId = `thinking-${Date.now()}`;
+    setMessages(prev => [...prev, { role: 'assistant', content: '', id: thinkingId, isThinking: true }]);
 
     try {
       const systemPrompt = `You are Jijun Nie. Answer ONLY what the user asks in 1-2 short sentences. Be brief, friendly, and direct.
@@ -1285,16 +1458,27 @@ IMPORTANT RULES:
       const aiResponse = data.response || 
         "I'm not sure how to respond to that. Feel free to ask me something else!";
 
-      setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
+      // Remove thinking bubble and add response with typing animation
+      const responseId = `response-${Date.now()}`;
+      setMessages(prev => {
+        const filtered = prev.filter(msg => msg.id !== thinkingId);
+        return [...filtered, { role: 'assistant', content: aiResponse, id: responseId }];
+      });
+      
+      // Start typing animation for this message
+      setTypingMessageId(responseId);
     } catch (error) {
       console.error('Chat error details:', error);
-      setMessages(prev => [
-        ...prev,
-        { 
+      const errorId = `error-${Date.now()}`;
+      setMessages(prev => {
+        const filtered = prev.filter(msg => msg.id !== thinkingId);
+        return [...filtered, { 
           role: 'assistant', 
-          content: "Oops, something went wrong on my side. Please try again in a moment." 
-        }
-      ]);
+          content: "Oops, something went wrong on my side. Please try again in a moment.",
+          id: errorId
+        }];
+      });
+      setTypingMessageId(errorId);
     } finally {
       setIsLoading(false);
     }
@@ -1314,24 +1498,51 @@ IMPORTANT RULES:
 
       {/* Chat area */}
       <div className="flex-1 rounded-2xl bg-white/40 border border-white/40 shadow-inner overflow-hidden backdrop-blur-md">
-        <div className="h-full overflow-y-auto p-3 md:p-4 space-y-3">
-          {messages.map((msg, index) => (
-            <div
-              key={index}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
+        <div ref={chatContainerRef} className="h-full overflow-y-auto p-3 md:p-4 space-y-3">
+          {messages.map((msg, index) => {
+            const isTyping = msg.id === typingMessageId;
+            const isThinking = msg.isThinking;
+            
+            return (
               <div
-                className={`
-                  max-w-[85%] md:max-w-[70%] rounded-2xl px-3 py-2 text-xs md:text-sm leading-relaxed
-                  ${msg.role === 'user' 
-                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-md' 
-                    : 'bg-white/80 text-gray-800 shadow-sm border border-white/60'}
-                `}
+                key={msg.id || index}
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                {msg.content}
+                <div
+                  className={`
+                    max-w-[85%] md:max-w-[70%] rounded-2xl px-3 py-2 text-xs md:text-sm leading-relaxed
+                    ${msg.role === 'user' 
+                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-md' 
+                      : 'bg-white/80 text-gray-800 shadow-sm border border-white/60'}
+                  `}
+                >
+                  {isThinking ? (
+                    <ThinkingBubble />
+                  ) : isTyping ? (
+                    <TypingMessage 
+                      content={msg.content}
+                      onComplete={() => {
+                        setTypingMessageId(null);
+                        // Scroll to bottom when typing completes
+                        if (chatContainerRef.current) {
+                          setTimeout(() => {
+                            if (chatContainerRef.current) {
+                              chatContainerRef.current.scrollTo({
+                                top: chatContainerRef.current.scrollHeight,
+                                behavior: 'smooth'
+                              });
+                            }
+                          }, 100);
+                        }
+                      }}
+                    />
+                  ) : (
+                    msg.content
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -1397,6 +1608,47 @@ export default function Portfolio() {
   const touchStartY = useRef(0);
   const hoverTimeoutRef = useRef(null);
   const iconsPanelRef = useRef(null);
+  
+  // Smooth combined spatial position for stability
+  const smoothedSpatialPos = useRef({ x: 0, y: 0 });
+  const lastSpatialPosRef = useRef({ x: 0, y: 0 });
+  const [spatialPos, setSpatialPos] = useState({ x: 0, y: 0 });
+
+  // Preload all GLB files on component mount
+  useEffect(() => {
+    // Preload all icon GLB files
+    const iconFiles = [
+      '/icons/weather.glb',
+      '/icons/message.glb',
+      '/icons/clock.glb',
+      '/icons/file.glb',
+      '/icons/music.glb',
+      '/icons/photo.glb',
+      '/icons/video.glb',
+      '/icons/safari.glb',
+      '/icons/setting.glb',
+      '/icons/findmy.glb'
+    ];
+
+    // Preload all icons
+    iconFiles.forEach((url) => {
+      try {
+        useGLTF.preload(url);
+        console.log('✅ Preloaded icon:', url);
+      } catch (error) {
+        console.warn('⚠️ Failed to preload icon:', url, error);
+      }
+    });
+
+    // Preload 3D background model (from CDN)
+    const backgroundModelUrl = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/cozy_living_room_baked.glb';
+    try {
+      useGLTF.preload(backgroundModelUrl);
+      console.log('✅ Preloaded 3D background:', backgroundModelUrl);
+    } catch (error) {
+      console.warn('⚠️ Failed to preload 3D background:', backgroundModelUrl, error);
+    }
+  }, []);
 
   const panelOrder = ['calendar', 'icons', 'weather'];
 
@@ -1446,7 +1698,13 @@ export default function Portfolio() {
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024);
+      // Check for mobile/tablet devices (including iPad)
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      const isSmallScreen = window.innerWidth < 1024;
+      // iPad detection: check for iPad user agent or touch device with larger screen
+      const isIPad = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                     (isTouchDevice && window.innerWidth >= 768 && window.innerWidth <= 1024);
+      setIsMobile(isSmallScreen || isIPad);
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -1455,21 +1713,32 @@ export default function Portfolio() {
 
   useEffect(() => {
     const requestOrientationPermission = async () => {
-      if (typeof DeviceOrientationEvent !== 'undefined' && 
-          typeof DeviceOrientationEvent.requestPermission === 'function') {
-        try {
-          const permission = await DeviceOrientationEvent.requestPermission();
-          setHasOrientationPermission(permission === 'granted');
-        } catch (error) {
-          console.log('Orientation permission error:', error);
+      if (typeof DeviceOrientationEvent !== 'undefined') {
+        // iOS 13+ requires permission request
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+          try {
+            const permission = await DeviceOrientationEvent.requestPermission();
+            setHasOrientationPermission(permission === 'granted');
+          } catch (error) {
+            console.log('Orientation permission error:', error);
+            setHasOrientationPermission(false);
+          }
+        } else {
+          // Older iOS or Android: no permission needed
+          setHasOrientationPermission(true);
         }
       } else {
-        setHasOrientationPermission(true);
+        // Device orientation not supported
+        setHasOrientationPermission(false);
       }
     };
 
+    // Request permission for mobile/iPad devices
     if (isMobile) {
       requestOrientationPermission();
+    } else {
+      // Desktop: no device orientation needed
+      setHasOrientationPermission(false);
     }
   }, [isMobile]);
 
@@ -1532,8 +1801,7 @@ export default function Portfolio() {
   }, [isMobile, hasOrientationPermission]);
 
   useEffect(() => {
-    if (isMobile) return;
-    
+    // Enable mouse movement on ALL screen sizes for spatial effects
     // Smooth interpolation function (lerp) - higher factor for more immediate response
     const lerp = (start, end, factor) => start + (end - start) * factor;
     
@@ -1591,9 +1859,56 @@ export default function Portfolio() {
         mouseAnimationFrame.current = null;
       }
     };
-  }, [isMobile]);
+  }, []);
 
-  const spatialPos = isMobile ? deviceOrientation : mousePos;
+  // Combine mouse and device orientation for smooth spatial effects
+  // For ALL screen sizes: use mouse movement for spatial effects
+  // On iPad/mobile ONLY: add device orientation to mouse movement
+  // Smoothly combine mouse and device orientation for stable spatial effects
+  useEffect(() => {
+    const updateSpatialPos = () => {
+      let targetPos;
+      
+      if (isMobile && hasOrientationPermission) {
+        // On mobile/iPad: combine both inputs with smooth blending
+        // Weight: 60% device orientation, 40% mouse (device orientation is more prominent on mobile)
+        targetPos = {
+          x: deviceOrientation.x * 0.6 + mousePos.x * 0.4,
+          y: deviceOrientation.y * 0.6 + mousePos.y * 0.4
+        };
+      } else {
+        // Desktop or mobile without orientation: use mouse only (works for all screen sizes)
+        targetPos = mousePos;
+      }
+      
+      // Smooth interpolation for stability (lerp factor: 0.3 for smooth, stable movement)
+      const lerpFactor = 0.3;
+      smoothedSpatialPos.current = {
+        x: smoothedSpatialPos.current.x + (targetPos.x - smoothedSpatialPos.current.x) * lerpFactor,
+        y: smoothedSpatialPos.current.y + (targetPos.y - smoothedSpatialPos.current.y) * lerpFactor
+      };
+      
+      // Update state with threshold to prevent micro-updates
+      const dx = Math.abs(smoothedSpatialPos.current.x - lastSpatialPosRef.current.x);
+      const dy = Math.abs(smoothedSpatialPos.current.y - lastSpatialPosRef.current.y);
+      
+      if (dx > 0.001 || dy > 0.001) {
+        lastSpatialPosRef.current = {
+          x: smoothedSpatialPos.current.x,
+          y: smoothedSpatialPos.current.y
+        };
+        setSpatialPos({
+          x: smoothedSpatialPos.current.x,
+          y: smoothedSpatialPos.current.y
+        });
+      }
+    };
+    
+    const interval = setInterval(updateSpatialPos, 16); // ~60fps updates
+    updateSpatialPos(); // Initial update
+    
+    return () => clearInterval(interval);
+  }, [isMobile, hasOrientationPermission, deviceOrientation, mousePos]);
 
   const icons = useMemo(() => [
     { type: 'glb', src: '/icons/weather.glb', label: 'Weather', depth: 1.4, scale: 0.475, action: 'weather' },
@@ -1685,28 +2000,28 @@ export default function Portfolio() {
   }, [spatialPos, isHovered, positionsArray]);
 
   const visionOSPanelStyle = useMemo(() => ({
-    background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)',
-    backdropFilter: 'blur(60px) saturate(180%)',
-    WebkitBackdropFilter: 'blur(60px) saturate(180%)',
-    border: '1px solid rgba(255,255,255,0.25)',
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0.15) 100%)',
+    backdropFilter: 'blur(120px) saturate(200%)',
+    WebkitBackdropFilter: 'blur(120px) saturate(200%)',
+    border: '1px solid rgba(255,255,255,0.3)',
     boxShadow: `
       0 8px 32px rgba(0,0,0,0.12),
       0 2px 8px rgba(0,0,0,0.08),
-      inset 0 1px 0 rgba(255,255,255,0.4),
-      inset 0 -1px 0 rgba(255,255,255,0.1)
+      inset 0 1px 0 rgba(255,255,255,0.5),
+      inset 0 -1px 0 rgba(255,255,255,0.15)
     `
   }), []);
 
   const expandedPanelStyle = useMemo(() => ({
-    background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
-    backdropFilter: 'blur(80px) saturate(200%)',
-    WebkitBackdropFilter: 'blur(80px) saturate(200%)',
-    border: '1px solid rgba(255,255,255,0.1)',
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.12) 100%)',
+    backdropFilter: 'blur(140px) saturate(220%)',
+    WebkitBackdropFilter: 'blur(140px) saturate(220%)',
+    border: '1px solid rgba(255,255,255,0.25)',
     boxShadow: `
       0 8px 32px rgba(0,0,0,0.15),
       0 2px 8px rgba(0,0,0,0.1),
-      inset 0 1px 0 rgba(255,255,255,0.2),
-      inset 0 -1px 0 rgba(255,255,255,0.05)
+      inset 0 1px 0 rgba(255,255,255,0.4),
+      inset 0 -1px 0 rgba(255,255,255,0.1)
     `
   }), []);
 
@@ -1717,13 +2032,21 @@ export default function Portfolio() {
   const getBlurStyle = useCallback((panelType) => {
     if (expandedApp) {
       return {
-        filter: 'blur(4px)',
+        filter: 'blur(5px)',
       };
     }
     if (!isMobile) return {};
     const isActive = activePanel === panelType;
+    
+    // When icons panel is active, reduce blur on calendar and weather panels
+    if (activePanel === 'icons' && (panelType === 'calendar' || panelType === 'weather')) {
+      return {
+        filter: 'blur(2px)', // Less blurred when icons panel is in front
+      };
+    }
+    
     return {
-      filter: isActive ? 'blur(0px)' : 'blur(3px)',
+      filter: isActive ? 'blur(0px)' : 'blur(4px)',
     };
   }, [isMobile, activePanel, expandedApp]);
 
@@ -1934,6 +2257,7 @@ export default function Portfolio() {
       };
     }
     
+    
     return {};
   }, [expandedApp, spatialPos, isTransitioning]);
 
@@ -1981,8 +2305,7 @@ export default function Portfolio() {
     >
       {/* Living Room 3D Background Model */}
       <LivingRoomBackground 
-        mousePos={mousePos}
-        deviceOrientation={deviceOrientation}
+        spatialPos={spatialPos}
         isMobile={isMobile}
       />
 
@@ -2060,7 +2383,6 @@ export default function Portfolio() {
         className="absolute top-1/2 panel-container"
         style={{ 
           ...getCalendarPanelStyle(),
-          ...getBlurStyle('calendar'),
           transformStyle: 'preserve-3d',
           transition: visionOSTransition,
           willChange: isTransitioning ? 'transform, opacity, filter' : 'transform',
@@ -2070,9 +2392,8 @@ export default function Portfolio() {
         onClick={(e) => handlePanelClick('calendar', e)}
       >
         <div 
-          className="rounded-3xl p-4 flex flex-col overflow-hidden cursor-pointer panel-inner"
+          className="rounded-3xl overflow-hidden cursor-pointer panel-inner relative"
           style={{ 
-            ...visionOSPanelStyle,
             width: isMobile ? 'clamp(260px, 75vw, 320px)' : 'clamp(180px, 18vw, 280px)',
             height: isMobile ? 'auto' : 'clamp(320px, 42vh, 480px)',
             maxHeight: isMobile ? 'clamp(340px, 60vh, 420px)' : 'none',
@@ -2080,8 +2401,22 @@ export default function Portfolio() {
             transformStyle: 'preserve-3d'
           }}
         >
-          <DateTimeDisplay />
-          <CalendarWidget />
+          {/* Blurred background layer */}
+          <div 
+            className="absolute inset-0 rounded-3xl"
+            style={{ 
+              ...visionOSPanelStyle,
+              zIndex: 0
+            }}
+          />
+          {/* Content layer - tiny blur */}
+          <div 
+            className="relative z-10 p-4 flex flex-col h-full"
+            style={{ filter: 'blur(0.5px)' }}
+          >
+            <DateTimeDisplay />
+            <CalendarWidget />
+          </div>
         </div>
       </div>
 
@@ -2091,6 +2426,9 @@ export default function Portfolio() {
         style={{
           ...getIconsPanelStyle(),
           ...getBlurStyle('icons'),
+          backdropFilter: 'none',
+          WebkitBackdropFilter: 'none',
+          background: 'transparent',
           transformStyle: isMobile ? 'preserve-3d' : 'flat',
           transition: visionOSTransition,
           willChange: isTransitioning ? 'transform, opacity, filter' : 'transform',
@@ -2189,7 +2527,7 @@ export default function Portfolio() {
                     src={src} 
                     isHovered={isHovered === index} 
                     scale={scale} 
-                    mousePos={mousePos}
+                    spatialPos={spatialPos}
                   />
                 </div>
                 
@@ -2221,7 +2559,6 @@ export default function Portfolio() {
         className="absolute top-1/2 panel-container"
         style={{ 
           ...getWeatherPanelStyle(),
-          ...getBlurStyle('weather'),
           transformStyle: 'preserve-3d',
           transition: visionOSTransition,
           willChange: isTransitioning ? 'transform, opacity, filter' : 'transform',
@@ -2231,9 +2568,8 @@ export default function Portfolio() {
         onClick={(e) => handlePanelClick('weather', e)}
       >
         <div 
-          className="rounded-3xl p-4 overflow-hidden cursor-pointer panel-inner"
+          className="rounded-3xl overflow-hidden cursor-pointer panel-inner relative"
           style={{ 
-            ...visionOSPanelStyle,
             width: isMobile ? 'clamp(240px, 70vw, 300px)' : 'clamp(160px, 16vw, 240px)',
             height: isMobile ? 'auto' : 'clamp(320px, 42vh, 480px)',
             maxHeight: isMobile ? 'clamp(320px, 55vh, 400px)' : 'none',
@@ -2241,7 +2577,21 @@ export default function Portfolio() {
             transformStyle: 'preserve-3d'
           }}
         >
-          <WeatherWidget compact={true} />
+          {/* Blurred background layer */}
+          <div 
+            className="absolute inset-0 rounded-3xl"
+            style={{ 
+              ...visionOSPanelStyle,
+              zIndex: 0
+            }}
+          />
+          {/* Content layer - tiny blur */}
+          <div 
+            className="relative z-10 p-4 h-full overflow-hidden"
+            style={{ filter: 'blur(0.5px)' }}
+          >
+            <WeatherWidget compact={true} />
+          </div>
         </div>
       </div>
 
@@ -2409,7 +2759,7 @@ export default function Portfolio() {
             <X className="text-gray-700" style={{ width: isMobile ? 'clamp(14px, 3.5vw, 18px)' : 'clamp(16px, 1.5vw, 20px)', height: isMobile ? 'clamp(14px, 3.5vw, 18px)' : 'clamp(16px, 1.5vw, 20px)' }} />
           </button>
           
-          <JijunAIChatPanel />
+          <JijunAIChatPanel key={expandedApp === 'ai' ? 'ai-open' : 'ai-closed'} isActive={expandedApp === 'ai'} />
         </div>
       </div>
 

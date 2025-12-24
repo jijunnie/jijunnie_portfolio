@@ -40,7 +40,7 @@ class IconErrorBoundary extends Component {
   }
 }
 
-function IconModel({ url, isHovered, baseScale = 1, mousePos = { x: 0, y: 0 } }) {
+function IconModel({ url, isHovered, baseScale = 1, spatialPos = { x: 0, y: 0 } }) {
   const [loadError, setLoadError] = useState(false);
   const modelRef = useRef();
   const groupRef = useRef();
@@ -64,8 +64,7 @@ function IconModel({ url, isHovered, baseScale = 1, mousePos = { x: 0, y: 0 } })
   const currentRotationY = useRef(0);
   const targetPositionY = useRef(0);
   const currentPositionY = useRef(0);
-  const smoothedMousePos = useRef({ x: 0, y: 0 });
-  const previousMousePos = useRef({ x: 0, y: 0 });
+  const smoothedSpatialPos = useRef({ x: 0, y: 0 });
 
   // Clone scene and enhance materials for better contrast
   React.useEffect(() => {
@@ -164,22 +163,23 @@ function IconModel({ url, isHovered, baseScale = 1, mousePos = { x: 0, y: 0 } })
       targetRotationY.current = Math.sin(time * 2) * 0.2;
       targetRotationX.current = Math.sin(time * 1.5) * 0.1;
     } else {
-      // Smooth mouse position to prevent jittery rotation
+      // Smooth spatial position to prevent jittery rotation
+      // spatialPos is already smoothed from Portfolio component, but add extra smoothing for icon rotation
       // Use exponential smoothing for stability
-      const mouseSmoothingFactor = 0.2; // Lower = smoother (more aggressive smoothing)
-      smoothedMousePos.current.x += (mousePos.x - smoothedMousePos.current.x) * mouseSmoothingFactor;
-      smoothedMousePos.current.y += (mousePos.y - smoothedMousePos.current.y) * mouseSmoothingFactor;
+      const spatialSmoothingFactor = 0.2; // Lower = smoother (more aggressive smoothing)
+      smoothedSpatialPos.current.x += (spatialPos.x - smoothedSpatialPos.current.x) * spatialSmoothingFactor;
+      smoothedSpatialPos.current.y += (spatialPos.y - smoothedSpatialPos.current.y) * spatialSmoothingFactor;
       
       // Clamp smoothed values to prevent extreme rotations
-      const clampedX = Math.max(-1, Math.min(1, smoothedMousePos.current.x));
-      const clampedY = Math.max(-1, Math.min(1, smoothedMousePos.current.y));
+      const clampedX = Math.max(-1, Math.min(1, smoothedSpatialPos.current.x));
+      const clampedY = Math.max(-1, Math.min(1, smoothedSpatialPos.current.y));
       
       // Dead zone to prevent micro-movements
       const deadZone = 0.03;
       const processedX = Math.abs(clampedX) < deadZone ? 0 : clampedX;
       const processedY = Math.abs(clampedY) < deadZone ? 0 : clampedY;
       
-      // Apply mouse spatial effect with reduced multiplier for stability
+      // Apply spatial effect with reduced multiplier for stability
       const rotationMultiplier = 4.5; // Slightly reduced from 4.8 for more stability
       let rotateX = -processedY * 8 * (rotationMultiplier / 8);
       let rotateY = processedX * 8 * (rotationMultiplier / 8);
@@ -224,7 +224,7 @@ function IconModel({ url, isHovered, baseScale = 1, mousePos = { x: 0, y: 0 } })
   );
 }
 
-export default function GLBIcon({ src, isHovered, scale = 1, mousePos = { x: 0, y: 0 } }) {
+export default function GLBIcon({ src, isHovered, scale = 1, spatialPos = { x: 0, y: 0 } }) {
   const [hasWebGL, setHasWebGL] = useState(true);
   const [loadError, setLoadError] = useState(false);
   
@@ -312,7 +312,7 @@ export default function GLBIcon({ src, isHovered, scale = 1, mousePos = { x: 0, 
         <directionalLight position={[-5, -5, -5]} intensity={0.5} />
         <IconErrorBoundary>
           <Suspense fallback={null}>
-            <IconModel url={src} isHovered={isHovered} baseScale={scale} mousePos={mousePos} />
+            <IconModel url={src} isHovered={isHovered} baseScale={scale} spatialPos={spatialPos} />
           </Suspense>
         </IconErrorBoundary>
       </Canvas>

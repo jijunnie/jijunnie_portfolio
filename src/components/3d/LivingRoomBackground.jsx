@@ -3,6 +3,15 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useGLTF, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 
+// Preload 3D background model at module level (runs immediately when file loads)
+const backgroundModelUrl = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/cozy_living_room_baked.glb';
+try {
+  useGLTF.preload(backgroundModelUrl);
+  console.log('✅ Preloaded 3D background in LivingRoomBackground component:', backgroundModelUrl);
+} catch (error) {
+  console.warn('⚠️ Failed to preload 3D background in LivingRoomBackground component:', error);
+}
+
 // Error Boundary for 3D model loading
 class ModelErrorBoundary extends Component {
   constructor(props) {
@@ -29,7 +38,7 @@ class ModelErrorBoundary extends Component {
   }
 }
 
-function LivingRoomModel({ externalMousePos, deviceOrientation, isMobile }) {
+function LivingRoomModel({ spatialPos, isMobile }) {
   // Load from Cloudflare R2 CDN - always use CDN URL, no local files
   const modelUrl = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/cozy_living_room_baked.glb';
   
@@ -52,8 +61,6 @@ function LivingRoomModel({ externalMousePos, deviceOrientation, isMobile }) {
   const targetRotationY = useRef(0);
   const currentRotationX = useRef(0);
   const currentRotationY = useRef(0);
-  const previousDeviceOrientation = useRef({ x: 0, y: 0 });
-  const smoothedDeviceOrientation = useRef({ x: 0, y: 0 });
   
   // Clone scene once to avoid mutating the original
   useEffect(() => {
@@ -87,48 +94,26 @@ function LivingRoomModel({ externalMousePos, deviceOrientation, isMobile }) {
     // Slow auto-rotation (Apple/Vision Pro style)
     autoRotateRef.current += delta * 0.1; // Slow continuous rotation
     
-    // mousePos and deviceOrientation are already normalized (-1 to 1) from Portfolio component
-    // Apply spatial rotation similar to panels and icons
+    // spatialPos is already normalized (-1 to 1) and combined from Portfolio component
+    // It includes mouse movement for all screens, and device orientation for iPad/mobile
+    // Apply spatial rotation similar to panels and icons for consistent effect
     const baseRotationY = -20; // Fixed base rotation in degrees
     const autoRotationY = autoRotateRef.current * 0.5; // Slow auto-rotate in degrees
     
     let spatialRotateX = 0;
     let spatialRotateY = 0;
     
-    // Desktop: use mouse position for spatial effect (always check, even if 0,0)
-    if (!isMobile && externalMousePos) {
-      if (typeof externalMousePos.x === 'number' && typeof externalMousePos.y === 'number') {
-        spatialRotateX = -externalMousePos.y * 5; // Match panel rotation intensity
-        spatialRotateY = externalMousePos.x * 5;
-      }
-    }
-    // Mobile/iPad: use device orientation when available with aggressive smoothing
-    else if (isMobile && deviceOrientation) {
-      if (typeof deviceOrientation.x === 'number' && typeof deviceOrientation.y === 'number') {
-        // Clamp device orientation values to prevent extreme rotations
-        const clampedX = Math.max(-1, Math.min(1, deviceOrientation.x));
-        const clampedY = Math.max(-1, Math.min(1, deviceOrientation.y));
-        
-        // Dead zone to prevent micro-movements from causing shaking
-        const deadZone = 0.05;
-        const processedX = Math.abs(clampedX) < deadZone ? 0 : clampedX;
-        const processedY = Math.abs(clampedY) < deadZone ? 0 : clampedY;
-        
-        // Exponential smoothing for device orientation (much stronger smoothing)
-        const smoothingFactor = 0.15; // Lower = smoother, more stable (was using delta-based)
-        smoothedDeviceOrientation.current.x += (processedX - smoothedDeviceOrientation.current.x) * smoothingFactor;
-        smoothedDeviceOrientation.current.y += (processedY - smoothedDeviceOrientation.current.y) * smoothingFactor;
-        
-        // Apply reduced multiplier for device orientation to prevent violent shaking
-        const deviceMultiplier = 3; // Reduced from 5 for more stability
-        spatialRotateX = -smoothedDeviceOrientation.current.y * deviceMultiplier;
-        spatialRotateY = smoothedDeviceOrientation.current.x * deviceMultiplier;
-        
-        // Clamp rotation values to prevent extreme rotations
-        const maxRotation = 15; // Maximum rotation in degrees
-        spatialRotateX = Math.max(-maxRotation, Math.min(maxRotation, spatialRotateX));
-        spatialRotateY = Math.max(-maxRotation, Math.min(maxRotation, spatialRotateY));
-      }
+    // Use spatialPos for all screen sizes (already combines mouse + device orientation on mobile/iPad)
+    if (spatialPos && typeof spatialPos.x === 'number' && typeof spatialPos.y === 'number') {
+      // Apply consistent rotation intensity matching panels and icons
+      const rotationMultiplier = 5; // Match panel rotation intensity
+      spatialRotateX = -spatialPos.y * rotationMultiplier;
+      spatialRotateY = spatialPos.x * rotationMultiplier;
+      
+      // Clamp rotation values to prevent extreme rotations
+      const maxRotation = 15; // Maximum rotation in degrees
+      spatialRotateX = Math.max(-maxRotation, Math.min(maxRotation, spatialRotateX));
+      spatialRotateY = Math.max(-maxRotation, Math.min(maxRotation, spatialRotateY));
     }
     
     // Calculate target rotations in radians
@@ -160,11 +145,21 @@ function LivingRoomModel({ externalMousePos, deviceOrientation, isMobile }) {
   );
 }
 
-export default function LivingRoomBackground({ mousePos, deviceOrientation, isMobile }) {
+export default function LivingRoomBackground({ spatialPos, isMobile }) {
   const [canvasError, setCanvasError] = useState(false);
   const [hasWebGL, setHasWebGL] = useState(true);
   const handlersRef = useRef(null);
   const [scrollY, setScrollY] = useState(0);
+  
+  // Ensure background model is preloaded as early as possible
+  useEffect(() => {
+    try {
+      useGLTF.preload(backgroundModelUrl);
+      console.log('✅ Ensured 3D background preload in component:', backgroundModelUrl);
+    } catch (error) {
+      console.warn('⚠️ Failed to ensure 3D background preload in component:', error);
+    }
+  }, []);
   
   // Check WebGL support on mount with device-specific optimizations
   useEffect(() => {
@@ -321,8 +316,7 @@ export default function LivingRoomBackground({ mousePos, deviceOrientation, isMo
           <ModelErrorBoundary>
             <Suspense fallback={null}>
               <LivingRoomModel 
-                externalMousePos={mousePos}
-                deviceOrientation={deviceOrientation}
+                spatialPos={spatialPos}
                 isMobile={isMobile}
               />
               <Environment preset="city" />
