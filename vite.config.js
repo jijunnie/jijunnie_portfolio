@@ -26,6 +26,14 @@ const excludeLargeFiles = () => {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), excludeLargeFiles()],
+  resolve: {
+    // Ensure single React instance to avoid version conflicts
+    dedupe: ['react', 'react-dom'],
+  },
+  optimizeDeps: {
+    // Force React Three Fiber to use the same React instance
+    include: ['react', 'react-dom', '@react-three/fiber', '@react-three/drei'],
+  },
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
@@ -33,12 +41,19 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Split React and React DOM into separate chunk
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/react-router')) {
+          // IMPORTANT: Keep React Three Fiber with React to avoid version conflicts
+          // React Three Fiber must share the same React instance
+          if (id.includes('node_modules/react') || 
+              id.includes('node_modules/react-dom') || 
+              id.includes('node_modules/react-router') ||
+              id.includes('node_modules/@react-three/fiber') ||
+              id.includes('node_modules/@react-three/drei') ||
+              id.includes('node_modules/@react-three/postprocessing') ||
+              id.includes('node_modules/@react-spring/three')) {
             return 'react-vendor';
           }
-          // Split Three.js related libraries
-          if (id.includes('node_modules/three') || id.includes('node_modules/@react-three')) {
+          // Split pure Three.js (without React bindings)
+          if (id.includes('node_modules/three') && !id.includes('@react-three')) {
             return 'three-vendor';
           }
           // Split Spline libraries
