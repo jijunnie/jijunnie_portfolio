@@ -5,10 +5,22 @@ import * as THREE from 'three';
 
 function LivingRoomModel({ mousePos, deviceOrientation, isMobile }) {
   // Load from Cloudflare R2 CDN in production, local file in development
+  // R2 bucket URL - make sure bucket is public and CORS is configured for jijunnie.com
   const cdnBaseUrl = 'https://c05a89ab56cf617eda04249538afeb45.r2.cloudflarestorage.com/my-3d-assets';
   const modelUrl = import.meta.env.PROD
     ? import.meta.env.VITE_MODEL_CDN_URL || `${cdnBaseUrl}/cozy_living_room_baked.glb`
     : '/models/cozy_living_room_baked.glb';
+  
+  // Log the URL being used (for debugging)
+  useEffect(() => {
+    if (import.meta.env.PROD) {
+      console.log('Loading 3D model from:', modelUrl);
+      console.log('If model fails to load, check:');
+      console.log('1. R2 bucket is set to public access');
+      console.log('2. CORS is configured for jijunnie.com');
+      console.log('3. File path is correct in R2 bucket');
+    }
+  }, [modelUrl]);
   
   const { scene } = useGLTF(modelUrl);
   const groupRef = useRef();

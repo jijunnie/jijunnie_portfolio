@@ -8,15 +8,16 @@ const excludeLargeFiles = () => {
   return {
     name: 'exclude-large-files',
     closeBundle() {
-      // Remove the large GLB file from dist after build
-      const distModelPath = join(process.cwd(), 'dist', 'models', 'cozy_living_room_baked.glb')
-      if (existsSync(distModelPath)) {
-        try {
+      try {
+        // Remove the large GLB file from dist after build
+        const distModelPath = join(process.cwd(), 'dist', 'models', 'cozy_living_room_baked.glb')
+        if (existsSync(distModelPath)) {
           unlinkSync(distModelPath)
           console.log('✓ Excluded large GLB file from build (must be hosted on CDN)')
-        } catch (error) {
-          console.warn('⚠ Could not remove large GLB file:', error.message)
         }
+      } catch (error) {
+        // Silently fail - don't break the build
+        console.warn('⚠ Could not remove large GLB file:', error.message)
       }
     }
   }
