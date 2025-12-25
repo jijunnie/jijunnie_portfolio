@@ -25,7 +25,7 @@ export default function Contact() {
     // Set canvas size
     const resizeCanvas = () => {
       canvas.width = window.innerWidth;
-      canvas.height = document.documentElement.scrollHeight;
+      canvas.height = window.innerHeight; // Use viewport height for fixed layout
       initParticles();
     };
 
@@ -251,7 +251,7 @@ export default function Contact() {
   };
 
   return (
-    <section className="relative py-20 px-4 sm:px-6 lg:px-8 min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-purple-50 to-blue-50">
+    <section className="relative px-4 sm:px-6 lg:px-8 h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-purple-50 to-blue-50">
       {/* Network Background Canvas */}
       <canvas
         ref={canvasRef}
@@ -259,22 +259,22 @@ export default function Contact() {
         style={{ zIndex: 0 }}
       />
 
-      <div className="relative max-w-7xl mx-auto" style={{ zIndex: 10 }}>
+      <div className="relative max-w-7xl mx-auto h-full flex flex-col justify-start pt-6 lg:pt-8" style={{ zIndex: 10 }}>
         {/* Header */}
-        <div className="text-center mb-16">
-          <h2 className="text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
+        <div className="text-center mb-6 lg:mb-8">
+          <h2 className="text-4xl lg:text-5xl font-bold mb-2 lg:mb-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
             Let's Connect
           </h2>
-          <p className="text-xl text-gray-700 max-w-2xl mx-auto">
+          <p className="text-base lg:text-lg text-gray-700 max-w-2xl mx-auto">
             Have a project in mind? Let's create something amazing together.
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-12 items-start">
+        <div className="grid lg:grid-cols-2 gap-6 lg:gap-8 items-start flex-1 overflow-y-auto lg:overflow-visible pb-4 lg:pb-0">
           {/* Left Column - Contact Methods & Social */}
-          <div className="space-y-8">
+          <div className="space-y-4 lg:space-y-5">
             {/* Contact Cards */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               {contactMethods.map((method, index) => {
                 const Icon = method.icon;
                 const isMailto = method.link.startsWith('mailto:');
@@ -289,25 +289,25 @@ export default function Contact() {
                     className="block group"
                   >
                     <div className={`
-                      relative bg-white/90 backdrop-blur-md rounded-2xl p-6 
+                      relative bg-white/90 backdrop-blur-md rounded-xl lg:rounded-2xl p-4 lg:p-5 
                       border-2 border-gray-200 transition-all duration-300
                       shadow-lg hover:shadow-2xl
                       ${hoveredCard === index ? 'scale-105 border-purple-400 bg-white' : 'hover:scale-102'}
                     `}>
-                      <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-3 lg:space-x-4">
                         <div className={`
-                          p-3 rounded-xl bg-gradient-to-br ${method.color}
+                          p-2.5 lg:p-3 rounded-lg lg:rounded-xl bg-gradient-to-br ${method.color}
                           transform transition-transform duration-300
                           ${hoveredCard === index ? 'rotate-12 scale-110' : ''}
                         `}>
-                          <Icon className="w-6 h-6 text-white" />
+                          <Icon className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
                         </div>
-                        <div className="flex-1">
-                          <h3 className="text-gray-900 font-semibold text-lg">{method.title}</h3>
-                          <p className="text-gray-600">{method.value}</p>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-gray-900 font-semibold text-base lg:text-lg">{method.title}</h3>
+                          <p className="text-gray-600 text-sm lg:text-base truncate">{method.value}</p>
                         </div>
                         <Send className={`
-                          w-5 h-5 text-gray-400 transition-all duration-300
+                          w-4 h-4 lg:w-5 lg:h-5 text-gray-400 transition-all duration-300 flex-shrink-0
                           ${hoveredCard === index ? 'translate-x-2 text-purple-600' : ''}
                         `} />
                       </div>
@@ -318,9 +318,9 @@ export default function Contact() {
             </div>
 
             {/* Social Media Links */}
-            <div className="bg-white/90 backdrop-blur-md rounded-2xl p-8 border-2 border-gray-200 shadow-lg">
-              <h3 className="text-gray-900 font-semibold text-xl mb-6 text-center">Follow Me</h3>
-              <div className="flex justify-center space-x-4">
+            <div className="bg-white/90 backdrop-blur-md rounded-xl lg:rounded-2xl p-5 lg:p-6 border-2 border-gray-200 shadow-lg">
+              <h3 className="text-gray-900 font-semibold text-lg lg:text-xl mb-4 lg:mb-5 text-center">Follow Me</h3>
+              <div className="flex justify-center space-x-3 lg:space-x-4">
                 {socialLinks.map((social, index) => {
                   const Icon = social.icon;
                   return (
@@ -333,15 +333,15 @@ export default function Contact() {
                       className="group relative"
                     >
                       <div className="
-                        w-14 h-14 rounded-xl bg-gray-50
+                        w-12 h-12 lg:w-14 lg:h-14 rounded-lg lg:rounded-xl bg-gray-50
                         flex items-center justify-center
                         border-2 border-gray-200 transition-all duration-300
                         group-hover:scale-110 group-hover:rotate-6 group-hover:border-purple-400
                         group-hover:shadow-lg
                       ">
-                        <Icon className="w-6 h-6 transition-colors" style={{ color: social.color }} />
+                        <Icon className="w-5 h-5 lg:w-6 lg:h-6 transition-colors" style={{ color: social.color }} />
                       </div>
-                      <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-xs text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                      <span className="absolute -bottom-7 lg:-bottom-8 left-1/2 -translate-x-1/2 text-xs text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                         {social.label}
                       </span>
                     </a>
@@ -352,11 +352,11 @@ export default function Contact() {
           </div>
 
           {/* Right Column - Contact Form */}
-          <div className="bg-white/90 backdrop-blur-md rounded-2xl p-8 border-2 border-gray-200 shadow-lg">
-            <h3 className="text-gray-900 font-semibold text-2xl mb-6">Send a Message</h3>
-            <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="bg-white/90 backdrop-blur-md rounded-xl lg:rounded-2xl p-6 lg:p-7 border-2 border-gray-200 shadow-lg">
+            <h3 className="text-gray-900 font-semibold text-xl lg:text-2xl mb-4 lg:mb-5">Send a Message</h3>
+            <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-5">
               <div>
-                <label htmlFor="name" className="block text-gray-700 mb-2 text-sm font-medium">
+                <label htmlFor="name" className="block text-gray-700 mb-1.5 lg:mb-2 text-xs lg:text-sm font-medium">
                   Your Name
                 </label>
                 <input
@@ -365,13 +365,13 @@ export default function Contact() {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  className="w-full px-3 lg:px-4 py-2 lg:py-2.5 rounded-lg lg:rounded-xl bg-gray-50 border-2 border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all text-sm lg:text-base"
                   placeholder="First Last"
                 />
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-gray-700 mb-2 text-sm font-medium">
+                <label htmlFor="email" className="block text-gray-700 mb-1.5 lg:mb-2 text-xs lg:text-sm font-medium">
                   Your Email
                 </label>
                 <input
@@ -380,22 +380,22 @@ export default function Contact() {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  className="w-full px-3 lg:px-4 py-2 lg:py-2.5 rounded-lg lg:rounded-xl bg-gray-50 border-2 border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all text-sm lg:text-base"
                   placeholder="name@example.com"
                 />
               </div>
 
               <div>
-                <label htmlFor="message" className="block text-gray-700 mb-2 text-sm font-medium">
+                <label htmlFor="message" className="block text-gray-700 mb-1.5 lg:mb-2 text-xs lg:text-sm font-medium">
                   Your Message
                 </label>
                 <textarea
                   id="message"
                   required
-                  rows="5"
+                  rows="4"
                   value={formData.message}
                   onChange={(e) => setFormData({...formData, message: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all resize-none"
+                  className="w-full px-3 lg:px-4 py-2 lg:py-2.5 rounded-lg lg:rounded-xl bg-gray-50 border-2 border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all resize-none text-sm lg:text-base"
                   placeholder="Tell me about your project..."
                 />
               </div>
@@ -403,7 +403,7 @@ export default function Contact() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-4 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 text-white font-semibold text-lg shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                className="w-full py-3 lg:py-3.5 rounded-lg lg:rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 text-white font-semibold text-base lg:text-lg shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               >
                 {isSubmitting ? (
                   <>
