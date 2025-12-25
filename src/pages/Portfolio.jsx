@@ -1,9 +1,18 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Cloud, CloudRain, Sun, Wind, Droplets, Thermometer, MapPin, Phone, Mail, Send, X, Calendar, Linkedin, Github, Instagram, MessageSquare, Music, Image, Palette, Volume2, Monitor } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, Suspense } from 'react';
+import { Cloud, CloudRain, Sun, Wind, Droplets, Thermometer, MapPin, Phone, Mail, Send, X, Calendar, Linkedin, Github, Instagram, MessageSquare, Music, Image, Palette, Volume2, Monitor, ChevronLeft, ChevronRight, ExternalLink, Code, Play, Pause, SkipForward, SkipBack } from 'lucide-react';
 import emailjs from '@emailjs/browser';
 import { useGLTF } from '@react-three/drei';
+import { Canvas } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
 import GLBIcon from '../components/3d/GLBIcon';
 import LivingRoomBackground from '../components/3d/LivingRoomBackground';
+import Globe from '../components/globe/Globe';
+import Borders from '../components/globe/Borders';
+import FilledRegions from '../components/globe/FilledRegions';
+import Marker from '../components/globe/Marker';
+import InfoPanel from '../components/globe/InfoPanel';
+import RotatingBackground from '../components/globe/RotatingBackground';
+import { markers } from '../data/visitedRegions';
 
 // Preload 3D background model at module level (runs immediately when file loads)
 const backgroundModelUrl = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/cozy_living_room_baked.glb';
@@ -1898,6 +1907,991 @@ function SettingsPanel({ isMobile, settings, updateSetting }) {
   );
 }
 
+// Music Panel Component - Apple Music style
+function MusicPanel({ isMobile }) {
+  const [selectedSong, setSelectedSong] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  // Placeholder music data
+  const songs = [
+    {
+      id: 1,
+      title: 'Midnight Dreams',
+      artist: 'Jijun Nie',
+      album: 'Night Vibes',
+      duration: '3:45',
+      albumCover: 'https://via.placeholder.com/150/6366f1/ffffff?text=Album+1',
+      year: '2024',
+      genre: 'Electronic'
+    },
+    {
+      id: 2,
+      title: 'Ocean Waves',
+      artist: 'Jijun Nie',
+      album: 'Nature Sounds',
+      duration: '4:12',
+      albumCover: 'https://via.placeholder.com/150/8b5cf6/ffffff?text=Album+2',
+      year: '2024',
+      genre: 'Ambient'
+    },
+    {
+      id: 3,
+      title: 'City Lights',
+      artist: 'Jijun Nie',
+      album: 'Urban Stories',
+      duration: '3:28',
+      albumCover: 'https://via.placeholder.com/150/ec4899/ffffff?text=Album+3',
+      year: '2023',
+      genre: 'Pop'
+    },
+    {
+      id: 4,
+      title: 'Mountain Peak',
+      artist: 'Jijun Nie',
+      album: 'Nature Sounds',
+      duration: '5:03',
+      albumCover: 'https://via.placeholder.com/150/14b8a6/ffffff?text=Album+4',
+      year: '2023',
+      genre: 'Instrumental'
+    },
+    {
+      id: 5,
+      title: 'Sunset Boulevard',
+      artist: 'Jijun Nie',
+      album: 'Urban Stories',
+      duration: '4:37',
+      albumCover: 'https://via.placeholder.com/150/f59e0b/ffffff?text=Album+5',
+      year: '2024',
+      genre: 'Jazz'
+    }
+  ];
+
+  if (selectedSong) {
+    const song = songs.find(s => s.id === selectedSong);
+    return (
+      <div className="h-full flex flex-col min-h-0">
+        <button
+          onClick={() => setSelectedSong(null)}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-6 transition-colors flex-shrink-0"
+        >
+          <ChevronLeft className="w-5 h-5" />
+          <span className="text-sm font-medium">Back to Library</span>
+        </button>
+
+        <div className="flex-1 flex gap-6 min-h-0 overflow-hidden">
+          {/* Left Side - Album Cover and Controls */}
+          <div className="flex-shrink-0 flex flex-col items-center gap-4">
+            <div className="w-64 h-64 bg-gradient-to-br from-purple-100 to-blue-100 rounded-2xl flex items-center justify-center overflow-hidden shadow-xl">
+              <img 
+                src={song.albumCover} 
+                alt={song.album}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
+              />
+              <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center" style={{ display: 'none' }}>
+                <Music className="w-24 h-24 text-purple-400" />
+              </div>
+            </div>
+            
+            {/* Playback Controls */}
+            <div className="flex items-center gap-4">
+              <button
+                className="w-12 h-12 rounded-full bg-gray-800 text-white flex items-center justify-center hover:bg-gray-700 transition-colors"
+                onClick={() => setIsPlaying(!isPlaying)}
+              >
+                {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
+              </button>
+              <button className="w-10 h-10 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center hover:bg-gray-300 transition-colors">
+                <SkipBack className="w-5 h-5" />
+              </button>
+              <button className="w-10 h-10 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center hover:bg-gray-300 transition-colors">
+                <SkipForward className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right Side - Song Info */}
+          <div className="flex-1 flex flex-col min-h-0 overflow-y-auto pr-2">
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-800 mb-2">{song.title}</h2>
+                <p className="text-lg text-gray-600 mb-4">{song.artist}</p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Album</h3>
+                  <p className="text-base text-gray-800">{song.album}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Duration</h3>
+                  <p className="text-base text-gray-800">{song.duration}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Year</h3>
+                  <p className="text-base text-gray-800">{song.year}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Genre</h3>
+                  <p className="text-base text-gray-800">{song.genre}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col min-h-0">
+      <div className="text-center mb-6 flex-shrink-0">
+        <h2 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600`}>
+          My Music
+        </h2>
+        <p className={`${isMobile ? 'text-sm' : 'text-sm'} text-gray-600 mt-1`}>
+          {songs.length} songs
+        </p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto min-h-0 pr-2">
+        <div className="space-y-1">
+          {songs.map((song) => (
+            <button
+              key={song.id}
+              onClick={() => setSelectedSong(song.id)}
+              className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-white/50 transition-all group"
+            >
+              {/* Album Cover */}
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-blue-100 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                <img 
+                  src={song.albumCover} 
+                  alt={song.album}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+                <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center" style={{ display: 'none' }}>
+                  <Music className="w-8 h-8 text-purple-400" />
+                </div>
+              </div>
+
+              {/* Song Info */}
+              <div className="flex-1 text-left min-w-0">
+                <h3 className="font-semibold text-gray-800 truncate">{song.title}</h3>
+                <p className="text-sm text-gray-500 truncate">{song.artist}</p>
+              </div>
+
+              {/* Duration */}
+              <div className="text-sm text-gray-500 flex-shrink-0">
+                {song.duration}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Photo Gallery Component with filters
+function PhotoGallery({ isMobile }) {
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [activeFilter, setActiveFilter] = useState('all');
+
+  // Sample photo data with categories
+  const photos = [
+    // Portrait photos
+    { id: 1, url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800', title: 'Portrait 1', category: 'portrait', city: null, year: '2024' },
+    { id: 2, url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800', title: 'Portrait 2', category: 'portrait', city: null, year: '2023' },
+    { id: 3, url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800', title: 'Portrait 3', category: 'portrait', city: null, year: '2024' },
+    
+    // Landscape photos
+    { id: 4, url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800', title: 'Mountain View', category: 'landscape', city: null, year: '2024' },
+    { id: 5, url: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800', title: 'Forest Path', category: 'landscape', city: null, year: '2023' },
+    { id: 6, url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800', title: 'Sunset', category: 'landscape', city: null, year: '2024' },
+    
+    // Concert photos
+    { id: 7, url: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800', title: 'Concert 1', category: 'concerts', city: null, year: '2024' },
+    { id: 8, url: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800', title: 'Concert 2', category: 'concerts', city: null, year: '2023' },
+    { id: 9, url: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800', title: 'Concert 3', category: 'concerts', city: null, year: '2024' },
+    
+    // Florida photos
+    { id: 10, url: 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=800', title: 'Florida Beach', category: 'landscape', city: 'Florida', year: '2024' },
+    { id: 11, url: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800', title: 'Florida Sunset', category: 'landscape', city: 'Florida', year: '2023' },
+    { id: 12, url: 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=800', title: 'Florida Palm', category: 'landscape', city: 'Florida', year: '2024' },
+    
+    // New York photos
+    { id: 13, url: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800', title: 'NYC Skyline', category: 'landscape', city: 'New York', year: '2024' },
+    { id: 14, url: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800', title: 'NYC Street', category: 'landscape', city: 'New York', year: '2023' },
+    { id: 15, url: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800', title: 'NYC Night', category: 'landscape', city: 'New York', year: '2024' },
+    
+    // China photos
+    { id: 16, url: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'China Temple', category: 'landscape', city: 'China', year: '2023' },
+    { id: 17, url: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'China Street', category: 'landscape', city: 'China', year: '2024' },
+    { id: 18, url: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'China Landscape', category: 'landscape', city: 'China', year: '2023' },
+    
+    // Guangdong photos
+    { id: 19, url: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'Guangdong City', category: 'landscape', city: 'Guangdong', year: '2024' },
+    { id: 20, url: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'Guangdong View', category: 'landscape', city: 'Guangdong', year: '2023' },
+    { id: 21, url: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'Guangdong Night', category: 'landscape', city: 'Guangdong', year: '2024' },
+  ];
+
+  const filters = [
+    { id: 'all', label: 'All Photos' },
+    { id: 'portrait', label: 'Portrait' },
+    { id: 'landscape', label: 'Landscape' },
+    { id: 'concerts', label: 'Concerts' },
+    { id: 'Florida', label: 'Florida' },
+    { id: 'New York', label: 'New York' },
+    { id: 'China', label: 'China' },
+    { id: 'Guangdong', label: 'Guangdong' },
+    { id: '2024', label: '2024' },
+    { id: '2023', label: '2023' },
+  ];
+
+  const filteredPhotos = useMemo(() => {
+    if (activeFilter === 'all') return photos;
+    
+    return photos.filter(photo => {
+      if (activeFilter === 'portrait' || activeFilter === 'landscape' || activeFilter === 'concerts') {
+        return photo.category === activeFilter;
+      }
+      if (['Florida', 'New York', 'China', 'Guangdong'].includes(activeFilter)) {
+        return photo.city === activeFilter;
+      }
+      if (['2024', '2023'].includes(activeFilter)) {
+        return photo.year === activeFilter;
+      }
+      return true;
+    });
+  }, [activeFilter]);
+
+  if (selectedPhoto) {
+    const photo = photos.find(p => p.id === selectedPhoto);
+    return (
+      <div className="h-full flex flex-col min-h-0">
+        <button
+          onClick={() => setSelectedPhoto(null)}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 transition-colors flex-shrink-0"
+        >
+          <ChevronLeft className="w-5 h-5" />
+          <span className="text-sm font-medium">Back to Gallery</span>
+        </button>
+
+        <div className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-hidden">
+          <div className="w-full h-full flex items-center justify-center">
+            <img 
+              src={photo.url} 
+              alt={photo.title}
+              className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                if (e.target.nextSibling) {
+                  e.target.nextSibling.style.display = 'flex';
+                }
+              }}
+            />
+            <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center rounded-2xl" style={{ display: 'none' }}>
+              <Image className="w-24 h-24 text-purple-400" />
+            </div>
+          </div>
+          
+          <div className="mt-4 text-center flex-shrink-0">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">{photo.title}</h2>
+            <div className="flex items-center justify-center gap-4 text-sm text-gray-600">
+              {photo.category && (
+                <span className="px-3 py-1 bg-gray-100 rounded-full capitalize">{photo.category}</span>
+              )}
+              {photo.city && (
+                <span className="px-3 py-1 bg-gray-100 rounded-full">{photo.city}</span>
+              )}
+              {photo.year && (
+                <span className="px-3 py-1 bg-gray-100 rounded-full">{photo.year}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col min-h-0">
+      <div className="text-center mb-4 flex-shrink-0">
+        <h2 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600`}>
+          My Photographies
+        </h2>
+        <p className={`${isMobile ? 'text-sm' : 'text-sm'} text-gray-600 mt-1`}>
+          {filteredPhotos.length} {filteredPhotos.length === 1 ? 'photo' : 'photos'}
+        </p>
+      </div>
+
+      {/* Filter Buttons */}
+      <div className="mb-4 flex-shrink-0">
+        <div className="overflow-x-auto pb-2">
+          <div className="flex gap-2 min-w-max">
+            {filters.map((filter) => (
+              <button
+                key={filter.id}
+                onClick={() => setActiveFilter(filter.id)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+                  activeFilter === filter.id
+                    ? 'bg-gray-800 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Photo Grid */}
+      <div className="flex-1 overflow-y-auto min-h-0 pr-2">
+        <div className={`grid gap-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-3'}`}>
+          {filteredPhotos.map((photo) => (
+            <button
+              key={photo.id}
+              onClick={() => setSelectedPhoto(photo.id)}
+              className="relative aspect-square rounded-xl overflow-hidden group hover:scale-105 transition-transform duration-200"
+            >
+              <img 
+                src={photo.url} 
+                alt={photo.title}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  if (e.target.nextSibling) {
+                    e.target.nextSibling.style.display = 'flex';
+                  }
+                }}
+              />
+              <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center" style={{ display: 'none' }}>
+                <Image className="w-12 h-12 text-purple-400" />
+              </div>
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+              <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                <p className="text-white text-xs font-medium truncate">{photo.title}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Video Gallery Component with filters
+function VideoGallery({ isMobile }) {
+  const [selectedVideo, setSelectedVideo] = useState(null);
+  const [activeFilter, setActiveFilter] = useState('all');
+
+  // Sample video data with categories
+  const videos = [
+    // Portrait videos
+    { id: 1, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', thumbnail: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800', title: 'Portrait Video 1', category: 'portrait', city: null, year: '2024', duration: '2:30' },
+    { id: 2, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', thumbnail: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800', title: 'Portrait Video 2', category: 'portrait', city: null, year: '2023', duration: '3:15' },
+    { id: 3, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', thumbnail: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800', title: 'Portrait Video 3', category: 'portrait', city: null, year: '2024', duration: '1:45' },
+    
+    // Landscape videos
+    { id: 4, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4', thumbnail: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800', title: 'Mountain Journey', category: 'landscape', city: null, year: '2024', duration: '4:20' },
+    { id: 5, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4', thumbnail: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800', title: 'Forest Walk', category: 'landscape', city: null, year: '2023', duration: '3:50' },
+    { id: 6, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4', thumbnail: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800', title: 'Sunset Time-lapse', category: 'landscape', city: null, year: '2024', duration: '2:10' },
+    
+    // Concert videos
+    { id: 7, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4', thumbnail: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800', title: 'Concert Performance 1', category: 'concerts', city: null, year: '2024', duration: '5:30' },
+    { id: 8, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4', thumbnail: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800', title: 'Concert Performance 2', category: 'concerts', city: null, year: '2023', duration: '4:15' },
+    { id: 9, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4', thumbnail: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800', title: 'Concert Performance 3', category: 'concerts', city: null, year: '2024', duration: '6:00' },
+    
+    // Florida videos
+    { id: 10, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4', thumbnail: 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=800', title: 'Florida Beach Day', category: 'landscape', city: 'Florida', year: '2024', duration: '3:25' },
+    { id: 11, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/VolkswagenGTIReview.mp4', thumbnail: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800', title: 'Florida Sunset', category: 'landscape', city: 'Florida', year: '2023', duration: '2:45' },
+    { id: 12, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4', thumbnail: 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=800', title: 'Florida Palm Trees', category: 'landscape', city: 'Florida', year: '2024', duration: '4:10' },
+    
+    // New York videos
+    { id: 13, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', thumbnail: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800', title: 'NYC Skyline Tour', category: 'landscape', city: 'New York', year: '2024', duration: '5:00' },
+    { id: 14, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', thumbnail: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800', title: 'NYC Street Life', category: 'landscape', city: 'New York', year: '2023', duration: '3:30' },
+    { id: 15, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', thumbnail: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800', title: 'NYC Night Lights', category: 'landscape', city: 'New York', year: '2024', duration: '4:45' },
+    
+    // China videos
+    { id: 16, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4', thumbnail: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'China Temple Visit', category: 'landscape', city: 'China', year: '2023', duration: '3:20' },
+    { id: 17, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4', thumbnail: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'China Street Walk', category: 'landscape', city: 'China', year: '2024', duration: '4:00' },
+    { id: 18, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4', thumbnail: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'China Landscape', category: 'landscape', city: 'China', year: '2023', duration: '5:15' },
+    
+    // Guangdong videos
+    { id: 19, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4', thumbnail: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'Guangdong City Tour', category: 'landscape', city: 'Guangdong', year: '2024', duration: '3:55' },
+    { id: 20, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4', thumbnail: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'Guangdong View', category: 'landscape', city: 'Guangdong', year: '2023', duration: '4:30' },
+    { id: 21, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4', thumbnail: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'Guangdong Night', category: 'landscape', city: 'Guangdong', year: '2024', duration: '3:40' },
+  ];
+
+  const filters = [
+    { id: 'all', label: 'All Videos' },
+    { id: 'portrait', label: 'Portrait' },
+    { id: 'landscape', label: 'Landscape' },
+    { id: 'concerts', label: 'Concerts' },
+    { id: 'Florida', label: 'Florida' },
+    { id: 'New York', label: 'New York' },
+    { id: 'China', label: 'China' },
+    { id: 'Guangdong', label: 'Guangdong' },
+    { id: '2024', label: '2024' },
+    { id: '2023', label: '2023' },
+  ];
+
+  const filteredVideos = useMemo(() => {
+    if (activeFilter === 'all') return videos;
+    
+    return videos.filter(video => {
+      if (activeFilter === 'portrait' || activeFilter === 'landscape' || activeFilter === 'concerts') {
+        return video.category === activeFilter;
+      }
+      if (['Florida', 'New York', 'China', 'Guangdong'].includes(activeFilter)) {
+        return video.city === activeFilter;
+      }
+      if (['2024', '2023'].includes(activeFilter)) {
+        return video.year === activeFilter;
+      }
+      return true;
+    });
+  }, [activeFilter]);
+
+  if (selectedVideo) {
+    const video = videos.find(v => v.id === selectedVideo);
+    return (
+      <div className="h-full flex flex-col min-h-0">
+        <button
+          onClick={() => setSelectedVideo(null)}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 transition-colors flex-shrink-0"
+        >
+          <ChevronLeft className="w-5 h-5" />
+          <span className="text-sm font-medium">Back to Gallery</span>
+        </button>
+
+        <div className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-hidden">
+          <div className="w-full h-full flex items-center justify-center">
+            <video 
+              src={video.url} 
+              controls
+              className="max-w-full max-h-full rounded-2xl shadow-2xl"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                if (e.target.nextSibling) {
+                  e.target.nextSibling.style.display = 'flex';
+                }
+              }}
+            >
+              Your browser does not support the video tag.
+            </video>
+            <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center rounded-2xl" style={{ display: 'none' }}>
+              <Image className="w-24 h-24 text-purple-400" />
+            </div>
+          </div>
+          
+          <div className="mt-4 text-center flex-shrink-0">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">{video.title}</h2>
+            <div className="flex items-center justify-center gap-4 text-sm text-gray-600">
+              {video.category && (
+                <span className="px-3 py-1 bg-gray-100 rounded-full capitalize">{video.category}</span>
+              )}
+              {video.city && (
+                <span className="px-3 py-1 bg-gray-100 rounded-full">{video.city}</span>
+              )}
+              {video.year && (
+                <span className="px-3 py-1 bg-gray-100 rounded-full">{video.year}</span>
+              )}
+              {video.duration && (
+                <span className="px-3 py-1 bg-gray-100 rounded-full">{video.duration}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col min-h-0">
+      <div className="text-center mb-4 flex-shrink-0">
+        <h2 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600`}>
+          My Videographies
+        </h2>
+        <p className={`${isMobile ? 'text-sm' : 'text-sm'} text-gray-600 mt-1`}>
+          {filteredVideos.length} {filteredVideos.length === 1 ? 'video' : 'videos'}
+        </p>
+      </div>
+
+      {/* Filter Buttons */}
+      <div className="mb-4 flex-shrink-0">
+        <div className="overflow-x-auto pb-2">
+          <div className="flex gap-2 min-w-max">
+            {filters.map((filter) => (
+              <button
+                key={filter.id}
+                onClick={() => setActiveFilter(filter.id)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+                  activeFilter === filter.id
+                    ? 'bg-gray-800 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Video Grid */}
+      <div className="flex-1 overflow-y-auto min-h-0 pr-2">
+        <div className={`grid gap-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-3'}`}>
+          {filteredVideos.map((video) => (
+            <button
+              key={video.id}
+              onClick={() => setSelectedVideo(video.id)}
+              className="relative aspect-video rounded-xl overflow-hidden group hover:scale-105 transition-transform duration-200"
+            >
+              <img 
+                src={video.thumbnail} 
+                alt={video.title}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  if (e.target.nextSibling) {
+                    e.target.nextSibling.style.display = 'flex';
+                  }
+                }}
+              />
+              <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center" style={{ display: 'none' }}>
+                <Image className="w-12 h-12 text-purple-400" />
+              </div>
+              {/* Play Button Overlay */}
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
+                <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
+                  <Play className="w-8 h-8 text-gray-800 ml-1" />
+                </div>
+              </div>
+              {/* Video Info Overlay */}
+              <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent">
+                <p className="text-white text-xs font-medium truncate">{video.title}</p>
+                {video.duration && (
+                  <p className="text-white/80 text-xs mt-0.5">{video.duration}</p>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Journeys Panel Component - Globe with all functionality
+function JourneysPanel({ isMobile }) {
+  const [selectedRegion, setSelectedRegion] = useState(null);
+  const [hoveredRegion, setHoveredRegion] = useState(null);
+  const [selectedMarker, setSelectedMarker] = useState(null);
+  const [infoPanelOpen, setInfoPanelOpen] = useState(false);
+  const [isGlobeHovered, setIsGlobeHovered] = useState(false);
+  const globeRotationRef = useRef(0);
+
+  const handleRegionClick = (regionName) => {
+    setSelectedRegion(regionName);
+    setSelectedMarker(null);
+    setInfoPanelOpen(true);
+  };
+
+  const handleMarkerClick = (markerData) => {
+    setSelectedMarker(markerData);
+    setSelectedRegion(null);
+    setInfoPanelOpen(true);
+  };
+
+  const handleClosePanel = () => {
+    setInfoPanelOpen(false);
+    setSelectedRegion(null);
+    setSelectedMarker(null);
+  };
+
+  return (
+    <div className="h-full w-full relative bg-gradient-to-b from-slate-950 via-indigo-950 to-slate-950 rounded-2xl overflow-hidden">
+      {/* 3D Globe Canvas */}
+      <Canvas
+        gl={{ antialias: true, alpha: false }}
+        camera={{ position: [0, 0, 6], fov: 50 }}
+        style={{ width: '100%', height: '100%' }}
+      >
+        {/* Balanced Lighting with better contrast */}
+        <ambientLight intensity={1.2} />
+        {/* Front lights - primary light source */}
+        <directionalLight position={[5, 2, 5]} intensity={3} />
+        <directionalLight position={[-5, 2, 5]} intensity={2.5} />
+        {/* Back lights - fill lights */}
+        <directionalLight position={[5, 0, -5]} intensity={1.8} />
+        <directionalLight position={[-5, 0, -5]} intensity={1.8} />
+        {/* Top and bottom lights */}
+        <directionalLight position={[0, 5, 0]} intensity={1.5} />
+        <directionalLight position={[0, -5, 0]} intensity={1.2} />
+        {/* Side lights for complete coverage */}
+        <pointLight position={[10, 0, 0]} intensity={1.5} />
+        <pointLight position={[-10, 0, 0]} intensity={1.5} />
+        <pointLight position={[0, 0, 10]} intensity={1.5} />
+        <pointLight position={[0, 0, -10]} intensity={1.2} />
+
+        {/* Rotating Background - continues rotating even when globe is hovered */}
+        <RotatingBackground />
+
+        {/* Globe */}
+        <Suspense fallback={null}>
+          <Globe radius={1.65} rotationRef={globeRotationRef} onHoverChange={setIsGlobeHovered} />
+        </Suspense>
+
+        {/* Filled Regions - Clickable areas inside borders */}
+        <Suspense fallback={null}>
+          <FilledRegions
+            onRegionClick={handleRegionClick}
+            selectedRegion={selectedRegion}
+            hoveredRegion={hoveredRegion}
+            setHoveredRegion={setHoveredRegion}
+            globeRotationRef={globeRotationRef}
+            isGlobeHovered={isGlobeHovered}
+          />
+        </Suspense>
+
+        {/* Country Borders */}
+        <Suspense fallback={null}>
+          <Borders
+            onRegionClick={handleRegionClick}
+            selectedRegion={selectedRegion}
+            hoveredRegion={hoveredRegion}
+            setHoveredRegion={setHoveredRegion}
+            globeRotationRef={globeRotationRef}
+            isGlobeHovered={isGlobeHovered}
+          />
+        </Suspense>
+
+        {/* Markers */}
+        <Suspense fallback={null}>
+          {markers.map((marker) => (
+            <Marker
+              key={marker.id}
+              lat={marker.lat}
+              lon={marker.lon}
+              name={marker.name}
+              description={marker.description}
+              visited={marker.visited}
+              onClick={handleMarkerClick}
+              globeRotationRef={globeRotationRef}
+              isGlobeHovered={isGlobeHovered}
+            />
+          ))}
+        </Suspense>
+
+        {/* Camera Controls */}
+        <OrbitControls
+          enableZoom={true}
+          enablePan={false}
+          minDistance={3}
+          maxDistance={10}
+          autoRotate={false}
+          autoRotateSpeed={0.5}
+          enableDamping
+          dampingFactor={0.05}
+        />
+      </Canvas>
+
+      {/* Info Panel */}
+      {infoPanelOpen && (
+        <InfoPanel
+          region={selectedRegion}
+          marker={selectedMarker}
+          onClose={handleClosePanel}
+        />
+      )}
+
+      {/* Instructions Overlay */}
+      <div className={`absolute ${isMobile ? 'bottom-4' : 'bottom-6'} left-1/2 transform -translate-x-1/2 z-30`}>
+        <div className="bg-black/60 backdrop-blur-md text-white px-4 py-2 rounded-full text-xs">
+          <p className="text-center whitespace-nowrap">
+            🖱️ Click countries or markers • 🎯 Drag to rotate • 🔍 Scroll to zoom
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Projects Panel Component - Horizontal slider with project cards
+function ProjectsPanel({ isMobile }) {
+  const [selectedProject, setSelectedProject] = useState(null);
+  const scrollContainerRef = useRef(null);
+  const [scrollPosition, setScrollPosition] = useState(0);
+  const [maxScroll, setMaxScroll] = useState(0);
+
+  // Sample projects data - replace with your actual projects
+  const projects = [
+    {
+      id: 1,
+      title: 'Portfolio Website',
+      description: 'A modern, interactive 3D portfolio website built with React and Three.js, featuring spatial interactions and immersive UI.',
+      technologies: ['React', 'Three.js', 'Vite', 'Tailwind CSS'],
+      image: '/images/project-portfolio.jpg',
+      link: 'https://github.com/jijunnie/portfolio',
+      category: 'Web Development'
+    },
+    {
+      id: 2,
+      title: 'E-Commerce Platform',
+      description: 'Full-stack e-commerce solution with payment integration, inventory management, and admin dashboard.',
+      technologies: ['React', 'Node.js', 'MongoDB', 'Stripe'],
+      image: '/images/project-ecommerce.jpg',
+      link: 'https://github.com/jijunnie/ecommerce',
+      category: 'Full Stack'
+    },
+    {
+      id: 3,
+      title: 'Data Analytics Dashboard',
+      description: 'Interactive data visualization dashboard for business analytics with real-time updates and custom reporting.',
+      technologies: ['Python', 'React', 'D3.js', 'PostgreSQL'],
+      image: '/images/project-analytics.jpg',
+      link: 'https://github.com/jijunnie/analytics',
+      category: 'Data Analytics'
+    },
+    {
+      id: 4,
+      title: 'Mobile App',
+      description: 'Cross-platform mobile application with offline capabilities and push notifications.',
+      technologies: ['React Native', 'Firebase', 'Redux'],
+      image: '/images/project-mobile.jpg',
+      link: 'https://github.com/jijunnie/mobile-app',
+      category: 'Mobile Development'
+    },
+    {
+      id: 5,
+      title: 'API Integration Service',
+      description: 'RESTful API service with authentication, rate limiting, and comprehensive documentation.',
+      technologies: ['Node.js', 'Express', 'JWT', 'Swagger'],
+      image: '/images/project-api.jpg',
+      link: 'https://github.com/jijunnie/api-service',
+      category: 'Backend'
+    }
+  ];
+
+  useEffect(() => {
+    const updateScrollInfo = () => {
+      if (scrollContainerRef.current) {
+        const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+        setScrollPosition(scrollLeft);
+        setMaxScroll(scrollWidth - clientWidth);
+      }
+    };
+
+    updateScrollInfo();
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', updateScrollInfo);
+      window.addEventListener('resize', updateScrollInfo);
+      return () => {
+        container.removeEventListener('scroll', updateScrollInfo);
+        window.removeEventListener('resize', updateScrollInfo);
+      };
+    }
+  }, [selectedProject]);
+
+  const scroll = (direction) => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 400;
+      const newPosition = direction === 'left' 
+        ? scrollPosition - scrollAmount 
+        : scrollPosition + scrollAmount;
+      scrollContainerRef.current.scrollTo({
+        left: Math.max(0, Math.min(newPosition, maxScroll)),
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  if (selectedProject) {
+    const project = projects.find(p => p.id === selectedProject);
+    return (
+      <div className="h-full flex flex-col min-h-0">
+        <button
+          onClick={() => setSelectedProject(null)}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 transition-colors flex-shrink-0"
+        >
+          <ChevronLeft className="w-5 h-5" />
+          <span className="text-sm font-medium">Back to Projects</span>
+        </button>
+
+        <div className="flex-1 overflow-y-auto min-h-0 pr-2">
+          <div className="space-y-6 pb-4">
+            {/* Project Image */}
+            <div className="w-full h-64 bg-gradient-to-br from-purple-100 to-blue-100 rounded-2xl flex items-center justify-center">
+              <Code className="w-24 h-24 text-purple-400" />
+            </div>
+
+            {/* Project Info */}
+            <div>
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800 mb-1">{project.title}</h2>
+                  <p className="text-sm text-gray-500">{project.category}</p>
+                </div>
+                {project.link && (
+                  <a
+                    href={project.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span className="text-sm">View Project</span>
+                  </a>
+                )}
+              </div>
+
+              <p className="text-gray-700 leading-relaxed mb-4">{project.description}</p>
+
+              {/* Technologies */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-800 mb-2">Technologies Used</h3>
+                <div className="flex flex-wrap gap-2">
+                  {project.technologies.map((tech, idx) => (
+                    <span
+                      key={idx}
+                      className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium"
+                    >
+                      {tech}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col min-h-0">
+      <div className="text-center mb-4 flex-shrink-0">
+        <h2 className={`${isMobile ? 'text-xl' : 'text-lg'} md:text-2xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600`}>
+          My Projects
+        </h2>
+        <p className={`${isMobile ? 'text-sm' : 'text-xs'} md:text-sm text-gray-600 mt-1`}>
+          Click on a project to view details
+        </p>
+      </div>
+
+      <div className="flex-1 relative min-h-0" style={{ overflow: 'visible', padding: isMobile ? '0' : '20px' }}>
+        {/* Scroll Buttons */}
+        {scrollPosition > 0 && (
+          <button
+            onClick={() => scroll('left')}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all"
+            style={{ left: isMobile ? '0' : '20px' }}
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-700" />
+          </button>
+        )}
+        {scrollPosition < maxScroll && (
+          <button
+            onClick={() => scroll('right')}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all"
+            style={{ right: isMobile ? '0' : '20px' }}
+          >
+            <ChevronRight className="w-5 h-5 text-gray-700" />
+          </button>
+        )}
+
+        {/* Horizontal Scroll Container */}
+        <div
+          ref={scrollContainerRef}
+          className="h-full"
+          style={{
+            overflowX: 'auto',
+            overflowY: 'visible',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            paddingLeft: isMobile ? '16px' : '20px',
+            paddingRight: isMobile ? '16px' : '20px',
+            paddingTop: isMobile ? '0' : '20px',
+            paddingBottom: isMobile ? '20px' : '20px'
+          }}
+          onScroll={() => {
+            if (scrollContainerRef.current) {
+              const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+              setScrollPosition(scrollLeft);
+              setMaxScroll(scrollWidth - clientWidth);
+            }
+          }}
+        >
+          <div className="flex" style={{ width: 'max-content', paddingTop: isMobile ? '16px' : '0', paddingBottom: isMobile ? '20px' : '0', alignItems: 'stretch', height: isMobile ? '100%' : 'calc(100% - 40px)', gap: isMobile ? '16px' : '24px' }}>
+            {projects.map((project) => (
+              <button
+                key={project.id}
+                onClick={() => setSelectedProject(project.id)}
+                className={`flex-shrink-0 bg-white/50 backdrop-blur-sm rounded-2xl hover:bg-white/70 transition-all hover:scale-105 hover:shadow-lg border border-white/40 flex flex-col cursor-pointer overflow-hidden ${
+                  isMobile ? 'w-[280px] p-5' : 'p-4'
+                }`}
+                style={{
+                  transformOrigin: 'center center',
+                  width: isMobile ? '280px' : 'clamp(200px, 18vw, 280px)',
+                  height: isMobile ? 'auto' : '100%',
+                  minHeight: isMobile ? '380px' : '100%',
+                  maxHeight: isMobile ? 'none' : '100%'
+                }}
+              >
+                {/* Project Image/Icon */}
+                <div className={`w-full bg-gradient-to-br from-purple-100 to-blue-100 rounded-xl flex items-center justify-center mb-3 flex-shrink-0 overflow-hidden ${
+                  isMobile ? 'h-32' : 'h-40'
+                }`}>
+                  <Code className={`text-purple-400 ${isMobile ? 'w-12 h-12' : 'w-16 h-16'}`} />
+                </div>
+
+                {/* Project Info */}
+                <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                  <div className="mb-2 flex-shrink-0">
+                    <h3 className={`font-semibold text-gray-800 mb-1 truncate ${isMobile ? 'text-base' : 'text-lg'}`}>{project.title}</h3>
+                    <p className={`text-gray-500 mb-2 truncate ${isMobile ? 'text-xs' : 'text-xs'}`}>{project.category}</p>
+                  </div>
+                  <p className={`text-gray-600 line-clamp-3 mb-3 flex-shrink-0 ${isMobile ? 'text-sm leading-relaxed' : 'text-sm'}`}>{project.description}</p>
+                  
+                  {/* Technologies Preview */}
+                  <div className="flex flex-wrap gap-1.5 flex-shrink-0 mt-auto">
+                    {project.technologies.slice(0, isMobile ? 2 : 3).map((tech, idx) => (
+                      <span
+                        key={idx}
+                        className={`bg-purple-100 text-purple-700 rounded ${isMobile ? 'px-2 py-1 text-xs' : 'px-2 py-0.5 text-xs'}`}
+                      >
+                        {tech}
+                      </span>
+                    ))}
+                    {project.technologies.length > (isMobile ? 2 : 3) && (
+                      <span className={`bg-gray-100 text-gray-600 rounded ${isMobile ? 'px-2 py-1 text-xs' : 'px-2 py-0.5 text-xs'}`}>
+                        +{project.technologies.length - (isMobile ? 2 : 3)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Portfolio() {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [deviceOrientation, setDeviceOrientation] = useState({ x: 0, y: 0 });
@@ -2216,18 +3210,18 @@ export default function Portfolio() {
       // Start smooth animation loop if not already running
       if (!mouseAnimationFrame.current) {
         const animate = () => {
-          // Much higher lerp factor (0.7) for immediate, responsive movement
+          // Higher lerp factor (0.85) for more immediate, responsive movement
           smoothMousePos.current = {
-            x: lerp(smoothMousePos.current.x, targetMousePos.current.x, 0.7),
-            y: lerp(smoothMousePos.current.y, targetMousePos.current.y, 0.7)
+            x: lerp(smoothMousePos.current.x, targetMousePos.current.x, 0.85),
+            y: lerp(smoothMousePos.current.y, targetMousePos.current.y, 0.85)
           };
           
           // Update state immediately with minimal threshold
           const dx = Math.abs(smoothMousePos.current.x - lastMousePosRef.current.x);
           const dy = Math.abs(smoothMousePos.current.y - lastMousePosRef.current.y);
           
-          // Very low threshold for immediate updates
-          if (dx > 0.001 || dy > 0.001) {
+          // Lower threshold for more frequent updates
+          if (dx > 0.0005 || dy > 0.0005) {
             lastMousePosRef.current = {
               x: smoothMousePos.current.x,
               y: smoothMousePos.current.y
@@ -2242,7 +3236,7 @@ export default function Portfolio() {
           const remainingDx = Math.abs(targetMousePos.current.x - smoothMousePos.current.x);
           const remainingDy = Math.abs(targetMousePos.current.y - smoothMousePos.current.y);
           
-          if (remainingDx > 0.0001 || remainingDy > 0.0001) {
+          if (remainingDx > 0.00005 || remainingDy > 0.00005) {
             mouseAnimationFrame.current = requestAnimationFrame(animate);
           } else {
             mouseAnimationFrame.current = null;
@@ -2268,6 +3262,8 @@ export default function Portfolio() {
   // On iPad/mobile ONLY: add device orientation to mouse movement
   // Smoothly combine mouse and device orientation for stable spatial effects
   useEffect(() => {
+    let animationFrame = null;
+    
     const updateSpatialPos = () => {
       let targetPos;
       
@@ -2283,18 +3279,18 @@ export default function Portfolio() {
         targetPos = mousePos;
       }
       
-      // Smooth interpolation for stability (lerp factor: 0.3 for smooth, stable movement)
-      const lerpFactor = 0.3;
+      // Higher lerp factor (0.65) for more responsive, quicker movement
+      const lerpFactor = 0.65;
       smoothedSpatialPos.current = {
         x: smoothedSpatialPos.current.x + (targetPos.x - smoothedSpatialPos.current.x) * lerpFactor,
         y: smoothedSpatialPos.current.y + (targetPos.y - smoothedSpatialPos.current.y) * lerpFactor
       };
       
-      // Update state with threshold to prevent micro-updates
+      // Update state with lower threshold for more frequent updates
       const dx = Math.abs(smoothedSpatialPos.current.x - lastSpatialPosRef.current.x);
       const dy = Math.abs(smoothedSpatialPos.current.y - lastSpatialPosRef.current.y);
       
-      if (dx > 0.001 || dy > 0.001) {
+      if (dx > 0.0005 || dy > 0.0005) {
         lastSpatialPosRef.current = {
           x: smoothedSpatialPos.current.x,
           y: smoothedSpatialPos.current.y
@@ -2304,25 +3300,32 @@ export default function Portfolio() {
           y: smoothedSpatialPos.current.y
         });
       }
+      
+      // Continue animation loop using requestAnimationFrame for better performance
+      animationFrame = requestAnimationFrame(updateSpatialPos);
     };
     
-    const interval = setInterval(updateSpatialPos, 16); // ~60fps updates
-    updateSpatialPos(); // Initial update
+    // Start the animation loop
+    animationFrame = requestAnimationFrame(updateSpatialPos);
     
-    return () => clearInterval(interval);
+    return () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+    };
   }, [isMobile, hasOrientationPermission, deviceOrientation, mousePos]);
 
   const icons = useMemo(() => [
     { type: 'glb', src: '/icons/weather.glb', label: 'Weather', depth: 1.4, scale: 0.475, action: 'weather' },
     { type: 'glb', src: '/icons/message.glb', label: 'Messages', depth: 1.5, scale: 0.48, action: 'messages' },
     { type: 'glb', src: '/icons/clock.glb', label: 'Clock', depth: 1.2, scale: 0.485, action: 'clock' },
-    { type: 'glb', src: '/icons/file.glb', label: 'My Projects', depth: 1.2, scale: 0.48 },
-    { type: 'glb', src: '/icons/music.glb', label: 'My Musics', depth: 1.3, scale: 0.48 },
-    { type: 'glb', src: '/icons/photo.glb', label: 'My Photographies', depth: 1.3, scale: 0.5 },
-    { type: 'glb', src: '/icons/video.glb', label: 'My Videographies', depth: 1.5, scale: 3 },
+    { type: 'glb', src: '/icons/file.glb', label: 'My Projects', depth: 1.2, scale: 0.48, action: 'projects' },
+    { type: 'glb', src: '/icons/music.glb', label: 'My Musics', depth: 1.3, scale: 0.48, action: 'music' },
+    { type: 'glb', src: '/icons/photo.glb', label: 'My Photographies', depth: 1.3, scale: 0.5, action: 'photos' },
+    { type: 'glb', src: '/icons/video.glb', label: 'My Videographies', depth: 1.5, scale: 3, action: 'videos' },
     { type: 'glb', src: '/icons/safari.glb', label: 'Jijun AI', depth: 1.4, scale: 0.5, action: 'ai' },
     { type: 'glb', src: '/icons/setting.glb', label: 'Settings', depth: 1.2, scale: 0.47, action: 'settings' },
-    { type: 'glb', src: '/icons/findmy.glb', label: 'Find My', depth: 1.3, scale: 0.5 },
+    { type: 'glb', src: '/icons/findmy.glb', label: 'Find My Journeys', depth: 1.3, scale: 0.5, action: 'journeys' },
   ], []);
 
   const handleIconClick = useCallback((index) => {
@@ -2675,9 +3678,119 @@ export default function Portfolio() {
       };
     }
     
+    if (type === 'projects') {
+      if (!isMobile) {
+        // Desktop: no slide down, no transform animation - just fade in place
+        return {
+          transform: `translate(-50%, -50%) rotateX(${spatialRotateX}deg) rotateY(${spatialRotateY}deg)`,
+          opacity: isActive ? 1 : 0,
+          zIndex: isActive ? 50 : -1,
+          pointerEvents: isActive ? 'auto' : 'none'
+        };
+      } else {
+        // Mobile: keep slide effect
+        return {
+          transform: isActive 
+            ? `translate(-50%, -50%) scale(1) rotateX(${spatialRotateX}deg) rotateY(${spatialRotateY}deg)`
+            : 'translate(-150%, -50%) scale(0.8)',
+          opacity: isActive ? 1 : 0,
+          zIndex: isActive ? 50 : -1,
+          pointerEvents: isActive ? 'auto' : 'none'
+        };
+      }
+    }
+    
+    if (type === 'music') {
+      if (!isMobile) {
+        // Desktop: no slide down, no transform animation - just fade in place
+        return {
+          transform: `translate(-50%, -50%) rotateX(${spatialRotateX}deg) rotateY(${spatialRotateY}deg)`,
+          opacity: isActive ? 1 : 0,
+          zIndex: isActive ? 50 : -1,
+          pointerEvents: isActive ? 'auto' : 'none'
+        };
+      } else {
+        // Mobile: keep slide effect
+        return {
+          transform: isActive 
+            ? `translate(-50%, -50%) scale(1) rotateX(${spatialRotateX}deg) rotateY(${spatialRotateY}deg)`
+            : 'translate(150%, -50%) scale(0.8)',
+          opacity: isActive ? 1 : 0,
+          zIndex: isActive ? 50 : -1,
+          pointerEvents: isActive ? 'auto' : 'none'
+        };
+      }
+    }
+    
+    if (type === 'photos') {
+      if (!isMobile) {
+        // Desktop: no slide down, no transform animation - just fade in place
+        return {
+          transform: `translate(-50%, -50%) rotateX(${spatialRotateX}deg) rotateY(${spatialRotateY}deg)`,
+          opacity: isActive ? 1 : 0,
+          zIndex: isActive ? 50 : -1,
+          pointerEvents: isActive ? 'auto' : 'none'
+        };
+      } else {
+        // Mobile: keep slide effect
+        return {
+          transform: isActive 
+            ? `translate(-50%, -50%) scale(1) rotateX(${spatialRotateX}deg) rotateY(${spatialRotateY}deg)`
+            : 'translate(150%, -50%) scale(0.8)',
+          opacity: isActive ? 1 : 0,
+          zIndex: isActive ? 50 : -1,
+          pointerEvents: isActive ? 'auto' : 'none'
+        };
+      }
+    }
+    
+    if (type === 'videos') {
+      if (!isMobile) {
+        // Desktop: no slide down, no transform animation - just fade in place
+        return {
+          transform: `translate(-50%, -50%) rotateX(${spatialRotateX}deg) rotateY(${spatialRotateY}deg)`,
+          opacity: isActive ? 1 : 0,
+          zIndex: isActive ? 50 : -1,
+          pointerEvents: isActive ? 'auto' : 'none'
+        };
+      } else {
+        // Mobile: keep slide effect
+        return {
+          transform: isActive 
+            ? `translate(-50%, -50%) scale(1) rotateX(${spatialRotateX}deg) rotateY(${spatialRotateY}deg)`
+            : 'translate(150%, -50%) scale(0.8)',
+          opacity: isActive ? 1 : 0,
+          zIndex: isActive ? 50 : -1,
+          pointerEvents: isActive ? 'auto' : 'none'
+        };
+      }
+    }
+    
+    if (type === 'journeys') {
+      if (!isMobile) {
+        // Desktop: no slide down, no transform animation - just fade in place
+        return {
+          transform: `translate(-50%, -50%) rotateX(${spatialRotateX}deg) rotateY(${spatialRotateY}deg)`,
+          opacity: isActive ? 1 : 0,
+          zIndex: isActive ? 50 : -1,
+          pointerEvents: isActive ? 'auto' : 'none'
+        };
+      } else {
+        // Mobile: keep slide effect
+        return {
+          transform: isActive 
+            ? `translate(-50%, -50%) scale(1) rotateX(${spatialRotateX}deg) rotateY(${spatialRotateY}deg)`
+            : 'translate(150%, -50%) scale(0.8)',
+          opacity: isActive ? 1 : 0,
+          zIndex: isActive ? 50 : -1,
+          pointerEvents: isActive ? 'auto' : 'none'
+        };
+      }
+    }
+    
     
     return {};
-  }, [expandedApp, spatialPos, isTransitioning]);
+  }, [expandedApp, spatialPos, isTransitioning, isMobile]);
 
   const handlePanelClick = useCallback((panelType, e) => {
     if (e.target !== e.currentTarget && panelType === 'icons') {
@@ -3244,6 +4357,226 @@ export default function Portfolio() {
           </button>
           
           <SettingsPanel isMobile={isMobile} settings={settings} updateSetting={updateSetting} />
+        </div>
+      </div>
+
+      <div 
+        className="absolute left-1/2 top-1/2 panel-container"
+        style={{
+          ...getExpandedPanelStyle('projects'),
+          transformStyle: 'preserve-3d',
+          transition: visionOSTransition,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div 
+          className="rounded-3xl panel-inner relative"
+          style={{ 
+            ...expandedPanelStyle,
+            width: isMobile 
+              ? 'clamp(300px, 92vw, 420px)' 
+              : 'clamp(600px, min(80vw, 90vw - 80px), 1000px)',
+            height: isMobile 
+              ? 'clamp(500px, 88vh, 680px)' 
+              : 'clamp(550px, min(75vh, 90vh - 60px), 800px)',
+            maxWidth: isMobile ? '92vw' : 'min(80vw, 90vw - 80px)',
+            maxHeight: isMobile ? '88vh' : 'min(75vh, 90vh - 60px)',
+            padding: isMobile ? 'clamp(12px, 3vw, 20px)' : 'clamp(20px, 2vw, 32px)',
+            overflow: 'visible'
+          }}
+        >
+          <button
+            onClick={closeExpandedApp}
+            className="absolute z-10 rounded-full bg-white/30 hover:bg-white/50 flex items-center justify-center transition-all"
+            style={{
+              top: isMobile ? 'clamp(8px, 2vw, 12px)' : 'clamp(12px, 1.5vw, 16px)',
+              right: isMobile ? 'clamp(8px, 2vw, 12px)' : 'clamp(12px, 1.5vw, 16px)',
+              width: isMobile ? 'clamp(28px, 7vw, 36px)' : 'clamp(32px, 3vw, 40px)',
+              height: isMobile ? 'clamp(28px, 7vw, 36px)' : 'clamp(32px, 3vw, 40px)',
+            }}
+          >
+            <X className="text-gray-700" style={{ width: isMobile ? 'clamp(14px, 3.5vw, 18px)' : 'clamp(16px, 1.5vw, 20px)', height: isMobile ? 'clamp(14px, 3.5vw, 18px)' : 'clamp(16px, 1.5vw, 20px)' }} />
+          </button>
+          
+          <div className="h-full w-full" style={{ overflow: 'visible', paddingBottom: isMobile ? '0' : '0' }}>
+            <ProjectsPanel isMobile={isMobile} />
+          </div>
+        </div>
+      </div>
+
+      <div 
+        className="absolute left-1/2 top-1/2 panel-container"
+        style={{
+          ...getExpandedPanelStyle('music'),
+          transformStyle: 'preserve-3d',
+          transition: visionOSTransition,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div 
+          className="rounded-3xl panel-inner relative"
+          style={{ 
+            ...expandedPanelStyle,
+            width: isMobile 
+              ? 'clamp(300px, 92vw, 420px)' 
+              : 'clamp(600px, min(80vw, 90vw - 80px), 1000px)',
+            height: isMobile 
+              ? 'clamp(500px, 88vh, 680px)' 
+              : 'clamp(550px, min(75vh, 90vh - 60px), 800px)',
+            maxWidth: isMobile ? '92vw' : 'min(80vw, 90vw - 80px)',
+            maxHeight: isMobile ? '88vh' : 'min(75vh, 90vh - 60px)',
+            padding: isMobile ? 'clamp(12px, 3vw, 20px)' : 'clamp(20px, 2vw, 32px)',
+            overflow: 'visible'
+          }}
+        >
+          <button
+            onClick={closeExpandedApp}
+            className="absolute z-10 rounded-full bg-white/30 hover:bg-white/50 flex items-center justify-center transition-all"
+            style={{
+              top: isMobile ? 'clamp(8px, 2vw, 12px)' : 'clamp(12px, 1.5vw, 16px)',
+              right: isMobile ? 'clamp(8px, 2vw, 12px)' : 'clamp(12px, 1.5vw, 16px)',
+              width: isMobile ? 'clamp(28px, 7vw, 36px)' : 'clamp(32px, 3vw, 40px)',
+              height: isMobile ? 'clamp(28px, 7vw, 36px)' : 'clamp(32px, 3vw, 40px)',
+            }}
+          >
+            <X className="text-gray-700" style={{ width: isMobile ? 'clamp(14px, 3.5vw, 18px)' : 'clamp(16px, 1.5vw, 20px)', height: isMobile ? 'clamp(14px, 3.5vw, 18px)' : 'clamp(16px, 1.5vw, 20px)' }} />
+          </button>
+          
+          <div className="h-full w-full" style={{ overflow: 'visible', paddingBottom: isMobile ? '0' : '0' }}>
+            <MusicPanel isMobile={isMobile} />
+          </div>
+        </div>
+      </div>
+
+      <div 
+        className="absolute left-1/2 top-1/2 panel-container"
+        style={{
+          ...getExpandedPanelStyle('photos'),
+          transformStyle: 'preserve-3d',
+          transition: visionOSTransition,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div 
+          className="rounded-3xl panel-inner relative"
+          style={{ 
+            ...expandedPanelStyle,
+            width: isMobile 
+              ? 'clamp(300px, 92vw, 420px)' 
+              : 'clamp(600px, min(80vw, 90vw - 80px), 1000px)',
+            height: isMobile 
+              ? 'clamp(500px, 88vh, 680px)' 
+              : 'clamp(550px, min(75vh, 90vh - 60px), 800px)',
+            maxWidth: isMobile ? '92vw' : 'min(80vw, 90vw - 80px)',
+            maxHeight: isMobile ? '88vh' : 'min(75vh, 90vh - 60px)',
+            padding: isMobile ? 'clamp(12px, 3vw, 20px)' : 'clamp(20px, 2vw, 32px)',
+            overflow: 'visible'
+          }}
+        >
+          <button
+            onClick={closeExpandedApp}
+            className="absolute z-10 rounded-full bg-white/30 hover:bg-white/50 flex items-center justify-center transition-all"
+            style={{
+              top: isMobile ? 'clamp(8px, 2vw, 12px)' : 'clamp(12px, 1.5vw, 16px)',
+              right: isMobile ? 'clamp(8px, 2vw, 12px)' : 'clamp(12px, 1.5vw, 16px)',
+              width: isMobile ? 'clamp(28px, 7vw, 36px)' : 'clamp(32px, 3vw, 40px)',
+              height: isMobile ? 'clamp(28px, 7vw, 36px)' : 'clamp(32px, 3vw, 40px)',
+            }}
+          >
+            <X className="text-gray-700" style={{ width: isMobile ? 'clamp(14px, 3.5vw, 18px)' : 'clamp(16px, 1.5vw, 20px)', height: isMobile ? 'clamp(14px, 3.5vw, 18px)' : 'clamp(16px, 1.5vw, 20px)' }} />
+          </button>
+          
+          <div className="h-full w-full" style={{ overflow: 'visible', paddingBottom: isMobile ? '0' : '0' }}>
+            <PhotoGallery isMobile={isMobile} />
+          </div>
+        </div>
+      </div>
+
+      <div 
+        className="absolute left-1/2 top-1/2 panel-container"
+        style={{
+          ...getExpandedPanelStyle('videos'),
+          transformStyle: 'preserve-3d',
+          transition: visionOSTransition,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div 
+          className="rounded-3xl panel-inner relative"
+          style={{ 
+            ...expandedPanelStyle,
+            width: isMobile 
+              ? 'clamp(300px, 92vw, 420px)' 
+              : 'clamp(600px, min(80vw, 90vw - 80px), 1000px)',
+            height: isMobile 
+              ? 'clamp(500px, 88vh, 680px)' 
+              : 'clamp(550px, min(75vh, 90vh - 60px), 800px)',
+            maxWidth: isMobile ? '92vw' : 'min(80vw, 90vw - 80px)',
+            maxHeight: isMobile ? '88vh' : 'min(75vh, 90vh - 60px)',
+            padding: isMobile ? 'clamp(12px, 3vw, 20px)' : 'clamp(20px, 2vw, 32px)',
+            overflow: 'visible'
+          }}
+        >
+          <button
+            onClick={closeExpandedApp}
+            className="absolute z-10 rounded-full bg-white/30 hover:bg-white/50 flex items-center justify-center transition-all"
+            style={{
+              top: isMobile ? 'clamp(8px, 2vw, 12px)' : 'clamp(12px, 1.5vw, 16px)',
+              right: isMobile ? 'clamp(8px, 2vw, 12px)' : 'clamp(12px, 1.5vw, 16px)',
+              width: isMobile ? 'clamp(28px, 7vw, 36px)' : 'clamp(32px, 3vw, 40px)',
+              height: isMobile ? 'clamp(28px, 7vw, 36px)' : 'clamp(32px, 3vw, 40px)',
+            }}
+          >
+            <X className="text-gray-700" style={{ width: isMobile ? 'clamp(14px, 3.5vw, 18px)' : 'clamp(16px, 1.5vw, 20px)', height: isMobile ? 'clamp(14px, 3.5vw, 18px)' : 'clamp(16px, 1.5vw, 20px)' }} />
+          </button>
+          
+          <div className="h-full w-full" style={{ overflow: 'visible', paddingBottom: isMobile ? '0' : '0' }}>
+            <VideoGallery isMobile={isMobile} />
+          </div>
+        </div>
+      </div>
+
+      <div 
+        className="absolute left-1/2 top-1/2 panel-container"
+        style={{
+          ...getExpandedPanelStyle('journeys'),
+          transformStyle: 'preserve-3d',
+          transition: visionOSTransition,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div 
+          className="rounded-3xl panel-inner relative"
+          style={{ 
+            ...expandedPanelStyle,
+            width: isMobile 
+              ? 'clamp(300px, 92vw, 420px)' 
+              : 'clamp(600px, min(80vw, 90vw - 80px), 1000px)',
+            height: isMobile 
+              ? 'clamp(500px, 88vh, 680px)' 
+              : 'clamp(550px, min(75vh, 90vh - 60px), 800px)',
+            maxWidth: isMobile ? '92vw' : 'min(80vw, 90vw - 80px)',
+            maxHeight: isMobile ? '88vh' : 'min(75vh, 90vh - 60px)',
+            padding: 0,
+            overflow: 'hidden'
+          }}
+        >
+          <button
+            onClick={closeExpandedApp}
+            className="absolute z-10 rounded-full bg-white/30 hover:bg-white/50 flex items-center justify-center transition-all"
+            style={{
+              top: isMobile ? 'clamp(8px, 2vw, 12px)' : 'clamp(12px, 1.5vw, 16px)',
+              right: isMobile ? 'clamp(8px, 2vw, 12px)' : 'clamp(12px, 1.5vw, 16px)',
+              width: isMobile ? 'clamp(28px, 7vw, 36px)' : 'clamp(32px, 3vw, 40px)',
+              height: isMobile ? 'clamp(28px, 7vw, 36px)' : 'clamp(32px, 3vw, 40px)',
+            }}
+          >
+            <X className="text-white" style={{ width: isMobile ? 'clamp(14px, 3.5vw, 18px)' : 'clamp(16px, 1.5vw, 20px)', height: isMobile ? 'clamp(14px, 3.5vw, 18px)' : 'clamp(16px, 1.5vw, 20px)' }} />
+          </button>
+          
+          <div className="h-full w-full">
+            <JourneysPanel isMobile={isMobile} />
+          </div>
         </div>
       </div>
 
