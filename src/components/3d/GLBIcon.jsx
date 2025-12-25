@@ -218,7 +218,7 @@ function IconModel({ url, isHovered, baseScale = 1, spatialPos = { x: 0, y: 0 } 
       <primitive 
         ref={modelRef} 
         object={clonedScene} 
-        scale={isHovered ? 0.6 * baseScale : 0.5 * baseScale}
+        scale={0.5 * baseScale}
       />
     </group>
   );

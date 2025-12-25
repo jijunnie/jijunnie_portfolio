@@ -3425,23 +3425,11 @@ export default function Portfolio() {
     const offsetX = Math.round((pos.x * 20 * depth) * 1000) / 1000;
     const offsetY = Math.round((pos.y * 20 * depth) * 1000) / 1000;
 
-    if (isHovered !== null) {
-      if (isHovered === index) {
-        return `translate(${offsetX}px, ${offsetY}px) scale(1.25)`;
-      } else {
-        const currentPos = positionsArray[index];
-        const hoveredPos = positionsArray[isHovered];
-        const dx = currentPos.x - hoveredPos.x;
-        const dy = currentPos.y - hoveredPos.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        const pushDistance = Math.max(0, 60 - distance * 150);
-        const pushX = Math.round(((dx / (distance || 1)) * pushDistance) * 1000) / 1000;
-        const pushY = Math.round(((dy / (distance || 1)) * pushDistance) * 1000) / 1000;
-        return `translate(${offsetX + pushX}px, ${offsetY + pushY}px) scale(0.9)`;
-      }
+    if (isHovered === index) {
+      return `translate(${offsetX}px, ${offsetY}px) scale(1.2)`;
     }
     return `translate(${offsetX}px, ${offsetY}px) scale(1)`;
-  }, [spatialPos, isHovered, positionsArray]);
+  }, [spatialPos, isHovered]);
 
   const visionOSPanelStyle = useMemo(() => ({
     background: 'linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0.15) 100%)',
@@ -4060,10 +4048,10 @@ export default function Portfolio() {
                   left: pos.x,
                   top: pos.y,
                   transform: `translate(-50%, -50%) ${getIconTransform(index, depth)}`,
-                  opacity: isHovered !== null && isHovered !== index ? 0.4 : 1,
+                  opacity: 1,
                   zIndex: isHovered === index ? 100 : index + 1,
-                  transition: 'opacity 0.05s linear, transform 0.1s ease-out',
-                  willChange: 'transform, opacity',
+                  transition: 'transform 0.2s ease-out',
+                  willChange: 'transform',
                   cursor: action ? 'pointer' : 'default',
                   width: iconSize,
                   height: iconSize,
