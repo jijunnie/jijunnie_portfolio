@@ -2640,8 +2640,8 @@ function ProjectsPanel({ isMobile }) {
   const projects = [
     {
       id: 1,
-      title: 'Portfolio Website',
-      description: 'A modern, user-interactive 3D AI-powered portfolio website built with React, Three.js, and Vite. Features include immersive 3D models with mouse-responsive rotation, AI-powered chat assistant (Claude API), VisionOS-inspired UI with spatial effects and floating panels, interactive 3D living room background, real-time weather integration, interactive 3D globe with travel markers, photo and video galleries, music player, customizable settings, responsive design with mobile device orientation support, and smooth animations throughout.',
+      title: 'Personal Portfolio',
+      description: 'A modern, AI-driven 3D portfolio experience engineered with React, Three.js, and Vite. The platform delivers an immersive, user-interactive environment featuring real-time, mouse-responsive 3D models; a VisionOS-inspired spatial interface with floating panels and depth-aware motion; and a fully interactive 3D living-room scene as the core visual canvas. Integrated AI intelligence via the Claude API powers a contextual chat assistant, while dynamic modules include live weather visualization, an interactive 3D globe with visited locations, rich photo and video galleries, an embedded music player, and customizable user settings. Built with performance and scalability in mind, the experience supports responsive layouts, mobile device-orientation controls, and fluid, cinematic animations throughout.',
       technologies: ['React', 'Three.js', 'Vite', 'Spline', 'Blender', 'Cursor', 'EmailJS', 'Mixamo', 'Ready Player Me', 'Cloudflare'],
       image: '/images/project-portfolio.jpg',
       link: 'https://jijunnie.com',
@@ -2650,7 +2650,7 @@ function ProjectsPanel({ isMobile }) {
     {
       id: 2,
       title: 'Variantz Company Website',
-      description: 'During my summer 2025 internship at Variantz, a Singapore-based e-commerce company, I led a comprehensive website transformation project. I revamped the entire website\'s UI and UX, creating a modern, user-friendly interface that significantly improved user engagement. I updated all 50+ SKUs with new product images, detailed product descriptions, and product videos, optimizing all content for better SEO and conversion rates. I created a comprehensive intern management page that manages and filters the past 10 years of interns at the company, providing an organized system for tracking and showcasing the company\'s intern program. Additionally, I set up and managed email marketing campaigns, implemented SEO strategies, and executed various digital marketing initiatives to drive traffic and growth.',
+      description: 'I led a website transformation for Variantz, a Singapore-based e-commerce company summer 2025. I redesigned the site\'s UI and UX to create a cleaner, more modern experience that made navigation more intuitive which improved overall user engagement. I refreshed over 50+ SKUs with new images, clearer descriptions, and product videos, ensuring all content was optimized for SEO and conversion. I also built an intern management page that organizes and filters records from the past 10 years, giving the company a clear and structured way to track and showcase its internship program. In addition to the website work, I supported growth initiatives by managing email marketing campaigns, implementing SEO improvements, and contributing to digital marketing efforts to increase traffic and visibility.',
       technologies: ['Wix', 'Adobe Photoshop', 'Canva', 'Nano Banana', 'Google Workspace', 'Microsoft Office Suite', 'JimengAI', '蝉镜'],
       image: '/images/project-ecommerce.jpg',
       link: 'https://variantz.com',
@@ -2658,8 +2658,8 @@ function ProjectsPanel({ isMobile }) {
     },
     {
       id: 3,
-      title: 'APAWLOGY Company Website',
-      description: 'During my 2025 internship at Variantz, I launched and created the complete website for APAWLOGY, a new IoT pet sub-brand. From concept to launch, I designed and developed everything on the website including all content creation, visual design, and brand storytelling. I set up the entire website system, integrated product pages with customer reviews, created a functional contact page, and developed the "Our Story" section that tells the brand creation journey. This project involved building a brand identity from the ground up, establishing the technical foundation, and creating a cohesive digital presence for the new sub-brand.',
+      title: 'APLG Company Website',
+      description: 'I launched and created the complete website for APLG, APAWLOGY, a pet sub brand. From concept to launch, I designed and developed everything on the website including all content creation, visual design, and brand storytelling. I set up the entire website system, integrated product pages with customer reviews, created a functional contact page, and developed the "Our Story" section that tells the brand creation journey. This project involved building a brand identity from the ground up, establishing the technical foundation, and creating a cohesive digital presence for the new sub-brand.',
       technologies: ['Wix', 'Canva', '蝉镜', 'Adobe Photoshop', 'Google Workspace', 'Microsoft Office Suite', 'Nano Banana', 'JimengAI'],
       image: '/images/project-analytics.jpg',
       link: 'https://apawlogy.com',
@@ -2667,21 +2667,21 @@ function ProjectsPanel({ isMobile }) {
     },
     {
       id: 4,
-      title: 'Mobile App',
-      description: 'Cross-platform mobile application with offline capabilities and push notifications.',
-      technologies: ['React Native', 'Firebase', 'Redux'],
+      title: 'AI-powered Game',
+      description: 'An intelligent Tic Tac Toe game powered by machine learning algorithms that has learned from thousands of strategic moves. Features adaptive AI opponents with multiple difficulty levels, from beginner-friendly to unbeatable expert mode. The AI continuously improves its gameplay through reinforcement learning, analyzing patterns and optimizing strategies. Built with a modern tech stack, the game offers a seamless user experience with real-time move analysis, game statistics tracking, and an intuitive interface that makes every match engaging and challenging.',
+      technologies: ['Python', 'TensorFlow', 'Reinforcement Learning', 'React', 'Machine Learning', 'Neural Networks'],
       image: '/images/project-mobile.jpg',
-      link: 'https://github.com/jijunnie/mobile-app',
-      category: 'Mobile Development'
+      link: 'https://github.com/jijunnie/ai-tic-tac-toe',
+      category: 'AI/ML Development'
     },
     {
       id: 5,
-      title: 'API Integration Service',
-      description: 'RESTful API service with authentication, rate limiting, and comprehensive documentation.',
+      title: 'E-commerce Platform',
+      description: 'Coming Soon...',
       technologies: ['Node.js', 'Express', 'JWT', 'Swagger'],
       image: '/images/project-api.jpg',
       link: 'https://github.com/jijunnie/api-service',
-      category: 'Backend'
+      category: 'E-commerce'
     }
   ];
 
@@ -2836,11 +2836,34 @@ function ProjectsPanel({ isMobile }) {
           }}
         >
           <div className="flex" style={{ width: 'max-content', paddingTop: isMobile ? '16px' : '0', paddingBottom: isMobile ? '20px' : '0', alignItems: 'stretch', height: isMobile ? '100%' : 'calc(100% - 40px)', gap: isMobile ? '16px' : '24px' }}>
-            {projects.map((project) => (
+            {projects.map((project) => {
+              const isComingSoon = project.description === 'Coming Soon...';
+              // Get background color based on project
+              const getBackgroundColor = () => {
+                if (project.id === 1) { // Personal Portfolio
+                  return 'bg-white';
+                } else if (project.id === 2) { // Variantz
+                  return 'bg-[#F5F1E8]'; // Light beige/off-white
+                } else if (project.id === 3) { // APAWLOGY
+                  return 'bg-[#E8EAE8]'; // Light desaturated grey with cool tint
+                }
+                return 'bg-white/50 backdrop-blur-sm';
+              };
+              
+              const bgColor = getBackgroundColor();
+              const isCustomBg = project.id === 1 || project.id === 2 || project.id === 3;
+              
+              return (
               <button
                 key={project.id}
-                onClick={() => setSelectedProject(project.id)}
-                className={`flex-shrink-0 bg-white/50 backdrop-blur-sm rounded-2xl hover:bg-white/70 transition-all hover:scale-105 hover:shadow-lg border border-white/40 flex flex-col cursor-pointer overflow-hidden ${
+                onClick={() => !isComingSoon && setSelectedProject(project.id)}
+                className={`flex-shrink-0 ${bgColor} ${!isCustomBg ? 'backdrop-blur-sm' : ''} rounded-2xl transition-all border border-white/40 flex flex-col overflow-hidden relative ${
+                  isComingSoon 
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : isCustomBg
+                      ? 'hover:opacity-90 hover:scale-105 hover:shadow-lg cursor-pointer'
+                      : 'hover:bg-white/70 hover:scale-105 hover:shadow-lg cursor-pointer'
+                } ${
                   isMobile ? 'w-[280px] p-5' : 'p-4'
                 }`}
                 style={{
@@ -2869,11 +2892,11 @@ function ProjectsPanel({ isMobile }) {
                   {/* Technologies Preview */}
                   <div className="flex flex-wrap gap-1.5 flex-shrink-0 mt-auto">
                     {(() => {
-                      // Custom preview count: Variantz shows 2, APAWLOGY shows 3, others show 2-3 based on mobile
+                      // Custom preview count: Variantz shows 2, APLG shows 3, others show 2-3 based on mobile
                       let previewCount;
                       if (project.id === 2) { // Variantz
                         previewCount = 2;
-                      } else if (project.id === 3) { // APAWLOGY
+                      } else if (project.id === 3) { // APLG
                         previewCount = 3;
                       } else {
                         previewCount = isMobile ? 2 : 3;
@@ -2899,7 +2922,8 @@ function ProjectsPanel({ isMobile }) {
                   </div>
                 </div>
               </button>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
