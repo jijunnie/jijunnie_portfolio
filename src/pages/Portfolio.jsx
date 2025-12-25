@@ -5,7 +5,7 @@ import { useGLTF } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import GLBIcon from '../components/3d/GLBIcon';
-import LivingRoomBackground from '../components/3d/LivingRoomBackground';
+import LivingRoomBackgroundWithMouseTracking from '../components/3d/LivingRoomBackground';
 import Globe from '../components/globe/Globe';
 import Borders from '../components/globe/Borders';
 import FilledRegions from '../components/globe/FilledRegions';
@@ -3829,16 +3829,19 @@ export default function Portfolio() {
 
   return (
     <div 
-      className="relative w-full h-screen bg-gradient-to-br from-slate-200 via-gray-200 to-slate-300 overflow-hidden"
+      className="relative bg-gradient-to-br from-slate-200 via-gray-200 to-slate-300 overflow-hidden"
+      style={{ 
+        width: '100vw', 
+        height: '100vh', 
+        position: 'relative',
+        overflow: 'hidden' 
+      }}
       onClick={handleBackgroundClick}
       onTouchStart={isMobile ? handleTouchStart : undefined}
       onTouchEnd={isMobile ? handleTouchEnd : undefined}
     >
       {/* Living Room 3D Background Model */}
-      <LivingRoomBackground 
-        spatialPos={spatialPos}
-        isMobile={isMobile}
-      />
+      <LivingRoomBackgroundWithMouseTracking />
 
       {/* Background Music */}
       {settings.music.enabled && (
@@ -3856,12 +3859,7 @@ export default function Portfolio() {
       <div 
         className="absolute inset-0 pointer-events-none bg-blobs" 
         style={{ 
-          transform: getTransform(0.3),
-          willChange: 'transform',
           zIndex: 1,
-          transformStyle: 'preserve-3d',
-          backfaceVisibility: 'hidden',
-          WebkitBackfaceVisibility: 'hidden',
           filter: `brightness(${settings.background.brightness}%)`,
           transition: settings.appearance.animations ? 'filter 0.3s ease-out' : 'none'
         }}
