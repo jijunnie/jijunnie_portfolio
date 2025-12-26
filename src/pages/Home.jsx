@@ -140,6 +140,7 @@ function ThreeBackground() {
     };
   }, []);
   
+  
   return (
     <canvas
       ref={canvasRef}
@@ -286,6 +287,7 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0] }) {
   );
 }
 useGLTF.preload('/models/avatar.glb');
+
 export default function Home() {
   const [showTitle, setShowTitle] = useState(false);
   const [showSubtitle, setShowSubtitle] = useState(false);
@@ -299,6 +301,11 @@ export default function Home() {
   const [showChatInput, setShowChatInput] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [isRespondingToUser, setIsRespondingToUser] = useState(false);
+  
+  // Preload animations to prevent flashing on first visit
+  useFBX('/animations/Waving.fbx');
+  useFBX('/animations/Talking.fbx');
+  useFBX('/animations/idle.fbx');
   
   // Step 1: Title dissolve in
   useEffect(() => {
