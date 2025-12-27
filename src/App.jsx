@@ -220,7 +220,7 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
       </div>
       <style jsx>{`
         .liquid-glass-nav {
-          background: rgba(255, 255, 255, 0.7);
+          background: #ffffff !important;
           backdrop-filter: blur(20px) saturate(180%);
           -webkit-backdrop-filter: blur(20px) saturate(180%);
           border: 1px solid rgba(255, 255, 255, 0.3);
@@ -231,16 +231,16 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
           transition: all 0.3s ease;
         }
         .liquid-glass-nav.globe-page-nav {
-          background: rgba(255, 255, 255, 0.95);
+          background: #ffffff !important;
         }
         .liquid-glass-nav:hover {
-          background: rgba(255, 255, 255, 0.75);
+          background: #ffffff !important;
           box-shadow:
             0 12px 40px 0 rgba(31, 38, 135, 0.15),
             inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
         }
         .liquid-glass-nav.globe-page-nav:hover {
-          background: rgba(255, 255, 255, 0.98);
+          background: #ffffff !important;
         }
         .nav-icon-link {
           position: relative;
@@ -324,12 +324,13 @@ function Layout({ children }) {
   const isHomePage = location.pathname === '/';
   const isGlobePage = location.pathname === '/globe';
   const isPortfolioPage = location.pathname === '/projects';
+  const isAboutPage = location.pathname === '/about';
   
   return (
     <>
       {children}
-      {/* Footer - hidden on home, globe, and portfolio pages since they use fixed positioning */}
-      {!isHomePage && !isGlobePage && !isPortfolioPage && (
+      {/* Footer - hidden on home, globe, portfolio, and about pages since they use fixed positioning */}
+      {!isHomePage && !isGlobePage && !isPortfolioPage && !isAboutPage && (
         <footer className="bg-gray-900 text-white py-8 px-4 sm:px-6 lg:px-8">
           <div className="max-w-6xl mx-auto text-center">
             <p>&copy; 2024 Jijun Nie. All rights reserved.</p>
@@ -346,9 +347,10 @@ function ContentWrapper({ children }) {
   const isHomePage = location.pathname === '/';
   const isGlobePage = location.pathname === '/globe';
   const isPortfolioPage = location.pathname === '/projects';
+  const isAboutPage = location.pathname === '/about';
   
   // Full-screen pages don't need padding wrapper
-  if (isHomePage || isGlobePage || isPortfolioPage) {
+  if (isHomePage || isGlobePage || isPortfolioPage || isAboutPage) {
     return <>{children}</>;
   }
   
@@ -382,9 +384,10 @@ function MainApp({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
   const isHomePage = location.pathname === '/';
   const isGlobePage = location.pathname === '/globe';
   const isPortfolioPage = location.pathname === '/projects';
+  const isAboutPage = location.pathname === '/about';
   
   // Full-screen pages have transparent/no background
-  const bgClass = (isHomePage || isGlobePage || isPortfolioPage) 
+  const bgClass = (isHomePage || isGlobePage || isPortfolioPage || isAboutPage) 
     ? 'min-h-screen' 
     : 'min-h-screen bg-gray-50';
   
