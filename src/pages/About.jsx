@@ -155,11 +155,11 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
           .fadeIn(fadeDuration)
           .play();
       } else {
+        // First animation (idle) should play immediately without fade-in delay
         newAction.reset()
           .setEffectiveTimeScale(1)
           .setEffectiveWeight(1)
-          .fadeIn(0.5)
-          .play();
+          .play(); // Play immediately, no fade-in for initial animation
       }
       
       currentActionRef.current = newAction;
@@ -224,8 +224,19 @@ export default function About() {
   const [modelCenterY, setModelCenterY] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [linePosition, setLinePosition] = useState(0); // 0 to 0.75 (0% to 75% of viewport - reaching bottom 25%)
+  const [scrollVelocity, setScrollVelocity] = useState(0);
   
+  const scrollTrackingRef = useRef({
+    lastScrollTop: 0,
+    lastScrollTime: Date.now(),
+    velocity: 0
+  });
+  
+  const [modelsVisible, setModelsVisible] = useState(false);
   const [mainTitleVisible, setMainTitleVisible] = useState(false);
+  const [titleTypingText, setTitleTypingText] = useState('');
+  const [titleComplete, setTitleComplete] = useState(false);
   const [subtitlePrefixVisible, setSubtitlePrefixVisible] = useState(false);
   const [typingText, setTypingText] = useState('');
   const [currentIdentityIndex, setCurrentIdentityIndex] = useState(0);
@@ -233,6 +244,8 @@ export default function About() {
   const [scriptVisible, setScriptVisible] = useState(false);
   
   const containerRef = useRef(null);
+  
+  const titleText = 'Hi, I am Jijun Nie';
   
   const identities = [
     'UF Sophomore Student',
@@ -253,28 +266,70 @@ export default function About() {
   
   useEffect(() => {
     setPageOpacity(1);
+    // 3D models fade in first
+    setModelsVisible(true);
   }, []);
   
+  // Title writing animation (smoother)
+  const titleTypingRef = useRef({ currentIndex: 0, timeoutId: null });
+  
   useEffect(() => {
+    if (!mainTitleVisible) return;
+    
+    // Reset state
+    titleTypingRef.current.currentIndex = 0;
+    setTitleTypingText('');
+    setTitleComplete(false);
+    
+    const typeTitle = () => {
+      const state = titleTypingRef.current;
+      if (state.currentIndex < titleText.length) {
+        setTitleTypingText(titleText.slice(0, state.currentIndex + 1));
+        state.currentIndex++;
+        // Smoother writing effect - faster delay for smoother animation
+        state.timeoutId = setTimeout(typeTitle, 60);
+      } else {
+        // Title complete
+        setTitleComplete(true);
+      }
+    };
+    
+    const timer = setTimeout(() => {
+      typeTitle();
+    }, 100);
+    
+    return () => {
+      clearTimeout(timer);
+      if (titleTypingRef.current.timeoutId) {
+        clearTimeout(titleTypingRef.current.timeoutId);
+      }
+    };
+  }, [mainTitleVisible]);
+  
+  useEffect(() => {
+    // Title typing animation starts after models appear
     const timer = setTimeout(() => {
       setMainTitleVisible(true);
-    }, 800);
+    }, 600);
     return () => clearTimeout(timer);
   }, []);
   
   useEffect(() => {
-    const timer = setTimeout(() => {
+    // Subtitle typing starts only after title completes
+    if (titleComplete) {
       setSubtitlePrefixVisible(true);
-    }, 1600);
-    return () => clearTimeout(timer);
-  }, []);
+    }
+  }, [titleComplete]);
   
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setScriptVisible(true);
-    }, 2400);
-    return () => clearTimeout(timer);
-  }, []);
+    // Script fades in 2 seconds after subtitle starts
+    if (subtitlePrefixVisible) {
+      const timer = setTimeout(() => {
+        setScriptVisible(true);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [subtitlePrefixVisible]);
   
   // Mouse parallax effect
   useEffect(() => {
@@ -288,7 +343,7 @@ export default function About() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
   
-  // Scroll progress tracking
+  // Scroll progress tracking and velocity calculation
   useEffect(() => {
     const handleScroll = () => {
       if (!containerRef.current) return;
@@ -297,12 +352,76 @@ export default function About() {
       const docHeight = document.documentElement.scrollHeight - window.innerHeight;
       const progress = Math.min(scrollTop / docHeight, 1);
       setScrollProgress(progress);
+      
+      // Calculate scroll velocity
+      const now = Date.now();
+      const timeDelta = (now - scrollTrackingRef.current.lastScrollTime) / 1000; // in seconds
+      const scrollDelta = scrollTop - scrollTrackingRef.current.lastScrollTop;
+      const velocity = timeDelta > 0 ? Math.abs(scrollDelta / timeDelta) : 0;
+      
+      setScrollVelocity(velocity);
+      scrollTrackingRef.current.lastScrollTop = scrollTop;
+      scrollTrackingRef.current.lastScrollTime = now;
+      scrollTrackingRef.current.velocity = velocity;
     };
     
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
     
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+  
+  // Animate line position based on scroll velocity
+  useEffect(() => {
+    let animationFrameId;
+    let lastUpdateTime = Date.now();
+    const velocityThreshold = 5; // Minimum velocity to consider scrolling active
+    
+    const animate = () => {
+      const now = Date.now();
+      const deltaTime = Math.min((now - lastUpdateTime) / 1000, 0.1); // Cap deltaTime for stability
+      lastUpdateTime = now;
+      
+      setLinePosition(prev => {
+        const currentVelocity = scrollVelocity;
+        
+        if (currentVelocity > velocityThreshold) {
+          // Scrolling is active - move line down proportionally to velocity
+          // Map velocity (0-1000+) to speed (0-0.15)
+          const normalizedVelocity = Math.min(currentVelocity, 1000) / 1000;
+          const speed = 0.15 * normalizedVelocity; // Max speed when velocity is high
+          const newPosition = Math.min(0.75, prev + speed * deltaTime * 60);
+          return newPosition;
+        } else {
+          // Scrolling stopped or slow - move line up smoothly
+          const retractSpeed = 0.08; // Smooth retraction speed
+          const newPosition = Math.max(0, prev - retractSpeed * deltaTime * 60);
+          return newPosition;
+        }
+      });
+      
+      animationFrameId = requestAnimationFrame(animate);
+    };
+    
+    animate();
+    
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [scrollVelocity]);
+  
+  // Update scroll velocity decay when scrolling stops
+  useEffect(() => {
+    const velocityDecayTimer = setInterval(() => {
+      setScrollVelocity(prev => {
+        // Decay velocity over time (faster decay for smoother stop)
+        return prev > 0 ? Math.max(0, prev * 0.7) : 0;
+      });
+    }, 100); // Check every 100ms
+    
+    return () => clearInterval(velocityDecayTimer);
   }, []);
   
   const typingStateRef = useRef({
@@ -326,7 +445,7 @@ export default function About() {
           setTypingText(prev => prev + char);
           state.currentCharIndex++;
           
-          const charDelay = 140;
+          const charDelay = 80;
           state.timeoutId = setTimeout(typeCharacter, charDelay);
         } else {
           state.timeoutId = setTimeout(() => {
@@ -339,7 +458,7 @@ export default function About() {
         if (state.currentCharIndex > 0) {
           setTypingText(prev => prev.slice(0, -1));
           state.currentCharIndex--;
-          state.timeoutId = setTimeout(typeCharacter, 90);
+          state.timeoutId = setTimeout(typeCharacter, 50);
         } else {
           state.timeoutId = setTimeout(() => {
             state.isDeleting = false;
@@ -383,6 +502,9 @@ export default function About() {
   }, []);
 
   useEffect(() => {
+    // Ensure idle animation is set from the start
+    setCurrentAnimation('/animations/idle.fbx');
+    
     let timeoutIds = [];
 
     const scheduleNextWaving = () => {
@@ -402,9 +524,11 @@ export default function About() {
       timeoutIds.push(wavingTimeout);
     };
 
+    // Trigger first wave immediately after fade-in completes (0.8s transition)
+    const fadeInDuration = 800; // Match the opacity transition duration
     const initialTimeout = setTimeout(() => {
-      triggerWaving();
-    }, 1000);
+      triggerWaving(); // First wave immediately after fade-in
+    }, fadeInDuration);
     timeoutIds.push(initialTimeout);
 
     return () => {
@@ -458,16 +582,17 @@ export default function About() {
       const scale = 0.85;
       return `${baseSize * scale}px`;
     } else if (screenWidth < 1440) {
-      // Small desktop: slightly smaller than base
-      const scale = 0.9;
+      // Small desktop: smaller
+      const scale = 0.8;
       return `${baseSize * scale}px`;
     } else if (screenWidth < 1920) {
-      // Medium desktop: slightly smaller than base
-      const scale = 0.95;
+      // Medium desktop: smaller
+      const scale = 0.85;
       return `${baseSize * scale}px`;
     } else {
-      // Large desktop: base size (reduced from 1.2x)
-      return `${Math.min(maxSize, baseSize)}px`;
+      // Large desktop: smaller
+      const scale = 0.9;
+      return `${Math.min(maxSize, baseSize * scale)}px`;
     }
   };
   
@@ -505,20 +630,26 @@ export default function About() {
   
   const calculateSplineSize = () => {
     const screenWidth = windowSize.width;
+    const screenHeight = windowSize.height;
     
     // Base dimensions at 1920px width
     const baseWidth = 1920;
-    const baseContainerSize = 600;
+    const baseContainerSize = 800; // Increased to show full room
     
     // Calculate scale factor based on screen width
     const scaleFactor = screenWidth / baseWidth;
     const containerSize = baseContainerSize * scaleFactor;
     
+    // Ensure the container doesn't exceed viewport
+    const maxWidth = screenWidth * 0.4; // Max 40% of screen width
+    const maxHeight = screenHeight * 0.6; // Max 60% of screen height
+    const finalSize = Math.min(containerSize, maxWidth, maxHeight);
+    
     return {
-      containerWidth: containerSize,
-      containerHeight: containerSize,
+      containerWidth: finalSize,
+      containerHeight: finalSize,
       // CSS transform scale to actually resize the Spline model
-      modelScale: scaleFactor
+      modelScale: 1 // Keep at 1 to show full room without scaling down
     };
   };
   
@@ -526,28 +657,42 @@ export default function About() {
   
   // Calculate dynamic transforms based on scroll
   const avatarTransform = `translateY(${scrollProgress * 30}%) scale(${1 - scrollProgress * 0.3})`;
-  const avatarOpacity = 1 - scrollProgress * 1.2;
+  // Avatar fades in on page load (same as Spline), then fades out on scroll
+  const avatarOpacity = modelsVisible ? Math.max(0, 1 - scrollProgress * 1.2) : 0;
   
   const textTransform = `translateX(${mousePosition.x * 10}px) translateY(${mousePosition.y * 10}px)`;
   
-  const connectionLineHeight = `${scrollProgress * 100}%`;
+  // Calculate line height as percentage of viewport (0 to 75% - reaching bottom 25%)
+  // linePosition goes from 0 to 0.75, so multiply by viewport height to get actual pixels
+  const actualLineHeight = `${linePosition * windowSize.height}px`;
   
   return (
     <div ref={containerRef} className="w-full" style={{ minHeight: '200vh', width: '100%', maxWidth: '100vw', position: 'relative', top: 0, left: 0, display: 'block', visibility: 'visible', opacity: 1, background: '#fafafa', overflowX: 'hidden' }}>
+      <style>{`
+        @keyframes blink {
+          0%, 50% { opacity: 1; }
+          51%, 100% { opacity: 0; }
+        }
+        @keyframes bounceDown {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(8px); }
+        }
+      `}</style>
       
       {/* Animated connection line */}
       <div 
         style={{
           position: 'fixed',
-          left: '37.5%',
+          left: windowSize.width >= 768 ? '32%' : '37.5%',
           top: `${navBarTotalHeight}px`,
           width: '2px',
-          height: connectionLineHeight,
+          height: actualLineHeight,
           background: 'linear-gradient(180deg, transparent 0%, #171717 20%, #171717 80%, transparent 100%)',
           transformOrigin: 'top',
-          transition: 'height 0.1s ease-out',
+          transition: 'opacity 0.3s ease-out',
           zIndex: 1,
-          opacity: scrollProgress > 0.05 ? 1 : 0
+          opacity: linePosition > 0.01 ? Math.min(1, linePosition * 4) : 0,
+          willChange: 'height, opacity'
         }}
       >
         {/* Animated dot at the end */}
@@ -560,7 +705,9 @@ export default function About() {
           height: '8px',
           borderRadius: '50%',
           background: '#171717',
-          boxShadow: '0 0 20px rgba(23, 23, 23, 0.5)'
+          boxShadow: '0 0 20px rgba(23, 23, 23, 0.5)',
+          opacity: linePosition > 0.01 ? 1 : 0,
+          transition: 'opacity 0.3s ease-out'
         }} />
       </div>
       
@@ -591,7 +738,7 @@ export default function About() {
             style={{
               top: `${navBarTotalHeight}px`,
               bottom: 0,
-              width: `${Math.max(windowSize.width * 0.375, 200)}px`,
+              width: `${windowSize.width >= 768 ? Math.max(windowSize.width * 0.32, 200) : Math.max(windowSize.width * 0.375, 200)}px`,
               height: `${availableHeight}px`,
               minWidth: '200px',
               minHeight: '100px',
@@ -600,7 +747,7 @@ export default function About() {
               filter: 'drop-shadow(0 10px 40px rgba(0, 0, 0, 0.08))',
               transform: avatarTransform,
               opacity: Math.max(0, avatarOpacity),
-              transition: 'transform 0.1s ease-out, opacity 0.1s ease-out'
+              transition: 'transform 0.1s ease-out, opacity 0.8s ease-in'
             }}
           >
             <Canvas 
@@ -656,12 +803,12 @@ export default function About() {
             opacity: pageOpacity,
             transition: 'opacity 0.8s ease-in',
             paddingLeft: windowSize.width >= 768 ? 'clamp(0.5rem, 1.5vw, 1.5rem)' : 'clamp(1rem, 2vw, 2rem)',
-            paddingRight: 'clamp(2rem, 4vw, 4rem)',
+            paddingTop: windowSize.width >= 768 ? 'clamp(4rem, 6vw, 8rem)' : 'clamp(2rem, 4vw, 4rem)',
             paddingBottom: 'clamp(4rem, 8vw, 8rem)',
-            transform: `${windowSize.width >= 768 ? 'translate(-4rem, -5%)' : 'translateY(-5%)'} translateY(${scrollProgress * -50}px)`,
+            transform: `${windowSize.width >= 768 ? 'translate(-6rem, -5%)' : 'translateY(-5%)'} translateY(${scrollProgress * -50}px)`,
             position: 'relative',
             zIndex: 10,
-            marginLeft: windowSize.width >= 768 ? '37.5%' : `${Math.max(windowSize.width * 0.375, 200) + 16}px`,
+            marginLeft: windowSize.width >= 768 ? '32%' : `${Math.max(windowSize.width * 0.375, 200) + 16}px`,
             maxWidth: windowSize.width >= 768 ? '50%' : `${windowSize.width - Math.max(windowSize.width * 0.375, 200) - 32}px`
           }}
         >
@@ -678,7 +825,14 @@ export default function About() {
               marginBottom: `${calculateSpacing(16)}px`
             }}
           >
-            Hi, I am Jijun Nie
+            {titleTypingText}
+            {mainTitleVisible && !titleComplete && (
+              <span style={{ 
+                opacity: 1,
+                marginLeft: '2px',
+                animation: 'blink 1s step-end infinite'
+              }}>|</span>
+            )}
           </h1>
           
           <div
@@ -723,7 +877,12 @@ export default function About() {
             }}
           >
             <p>
-              Your personal script about yourself will appear here. This text will fade in after the subtitle appears.
+              I'm a junior standing Industrial & Systems Engineering student at the University of Florida who thrives at the intersection of engineering, business, and technology. 
+              I specialize in elevating processes, teams, and experiences by turning insight into action, while continuously learning new skills, combine and master with what I already know to create smarter, more efficient solutions.
+            </p>
+            <p style={{ marginTop: `${calculateSpacing(20)}px` }}>
+              I also enjoy building intuitive digital products that blend creativity and functionality to make a meaningful impact on users. 
+              I look forward to transforming my skills and experiences into innovative, AI-driven ventures that deliver real-world value.
             </p>
           </div>
         </div>
@@ -732,16 +891,17 @@ export default function About() {
           <div 
             className="absolute pointer-events-auto"
             style={{
-              right: '3%',
-              bottom: '3%',
+              right: '2%',
+              bottom: '2%',
               width: `${splineSize.containerWidth}px`,
               height: `${splineSize.containerHeight}px`,
               transform: `translateY(${scrollProgress * 100}px) scale(${1 - scrollProgress * 0.2})`,
-              opacity: 1 - scrollProgress * 1.5,
+              opacity: Math.max(0, 1 - scrollProgress * 1.5),
               zIndex: 0,
               pointerEvents: 'auto',
               willChange: 'transform',
-              transition: 'transform 0.1s ease-out, opacity 0.1s ease-out'
+              transition: 'transform 0.1s ease-out, opacity 0.1s ease-out',
+              overflow: 'visible'
             }}
           >
             <div
@@ -749,8 +909,8 @@ export default function About() {
                 width: '100%',
                 height: '100%',
                 pointerEvents: 'auto',
-                transform: `scale(${splineSize.modelScale})`,
-                transformOrigin: 'center center'
+                transformOrigin: 'center center',
+                overflow: 'visible'
               }}
             >
               <Suspense fallback={null}>
@@ -758,7 +918,8 @@ export default function About() {
                   scene="https://prod.spline.design/RiI1HgjSIb8MFplx/scene.splinecode"
                   style={{
                     width: '100%',
-                    height: '100%'
+                    height: '100%',
+                    overflow: 'visible'
                   }}
                   onLoad={() => console.log('Spline scene loaded')}
                   onError={(error) => console.error('Spline error:', error)}
@@ -783,13 +944,12 @@ export default function About() {
           style={{
             minHeight: `calc(100vh - ${navBarTotalHeight}px)`,
             paddingLeft: windowSize.width >= 768 ? 'clamp(0.5rem, 1.5vw, 1.5rem)' : 'clamp(1rem, 2vw, 2rem)',
-            paddingRight: 'clamp(2rem, 4vw, 4rem)',
             transform: `${windowSize.width >= 768 ? 'translate(-4rem, 0)' : 'translate(0, 0)'} translateY(${Math.max(0, (scrollProgress - 0.3) * -100)}px)`,
             opacity: Math.min(1, Math.max(0, (scrollProgress - 0.3) * 3)),
             transition: 'transform 0.1s ease-out, opacity 0.3s ease-out',
             position: 'relative',
             zIndex: 10,
-            marginLeft: windowSize.width >= 768 ? '37.5%' : `${Math.max(windowSize.width * 0.375, 200) + 16}px`,
+            marginLeft: windowSize.width >= 768 ? '32%' : `${Math.max(windowSize.width * 0.375, 200) + 16}px`,
             maxWidth: windowSize.width >= 768 ? '50%' : `${windowSize.width - Math.max(windowSize.width * 0.375, 200) - 32}px`
           }}
         >
@@ -805,7 +965,7 @@ export default function About() {
               transition: 'transform 0.3s ease-out'
             }}
           >
-            More About Me
+            Learn Beyond Coursework
           </h2>
           
           <div
@@ -840,6 +1000,72 @@ export default function About() {
             </p>
           </div>
         </div>
+      </div>
+      
+      {/* Scroll Down Indicator */}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: '2rem',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '0.5rem',
+          zIndex: 100,
+          opacity: scrollProgress > 0.02 ? 0 : 1,
+          transition: 'opacity 0.5s ease-out',
+          pointerEvents: 'none'
+        }}
+      >
+        {/* Two animated arrows */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{
+              animation: 'bounceDown 1.5s ease-in-out infinite',
+              color: '#525252',
+              marginBottom: '-8px'
+            }}
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{
+              animation: 'bounceDown 1.5s ease-in-out infinite 0.3s',
+              color: '#525252'
+            }}
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </div>
+        {/* Scroll Down text */}
+        <span
+          style={{
+            fontSize: '14px',
+            color: '#525252',
+            fontWeight: 400,
+            letterSpacing: '0.05em'
+          }}
+        >
+          Scroll Down
+        </span>
       </div>
     </div>
   );
