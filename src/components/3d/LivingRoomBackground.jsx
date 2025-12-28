@@ -2,13 +2,20 @@ import { Suspense, useRef, useEffect, useState, Component } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useGLTF, Environment } from '@react-three/drei';
 
-// Preload 3D background model at module level
+// Preload 3D background model at module level - CRITICAL for instant display
 const backgroundModelUrl = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/cozy_living_room_baked.glb';
+
+// Preload immediately when module loads (before any component renders)
 try {
   useGLTF.preload(backgroundModelUrl);
-  console.log('✅ Preloaded 3D background');
+  console.log('✅ Preloaded 3D background at module level');
 } catch (error) {
-  console.warn('⚠️ Failed to preload 3D background:', error);
+  console.warn('⚠️ Failed to preload 3D background at module level:', error);
+}
+
+// Also preload in browser cache using fetch for maximum reliability
+if (typeof window !== 'undefined') {
+  fetch(backgroundModelUrl, { method: 'HEAD', cache: 'force-cache' }).catch(() => {});
 }
 
 // Error Boundary
@@ -33,7 +40,7 @@ class ModelErrorBoundary extends Component {
 }
 
 // Core 3D Model Component (Fixed for Instant Rotation)
-function LivingRoomModel({ mousePosRef, deviceOrientationRef, isMobile }) {
+function LivingRoomModel({ mousePosRef, deviceOrientationRef, isMobile, onModelReady }) {
   const modelUrl = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/cozy_living_room_baked.glb';
   const gltf = useGLTF(modelUrl);
   const groupRef = useRef();
@@ -50,6 +57,11 @@ function LivingRoomModel({ mousePosRef, deviceOrientationRef, isMobile }) {
       if (groupRef.current) {
         const baseRotationY = -20 * Math.PI / 180;
         groupRef.current.rotation.set(0, baseRotationY, 0);
+      }
+      
+      // Notify parent that model is ready
+      if (onModelReady && typeof onModelReady === 'function') {
+        onModelReady();
       }
     }
   }, [gltf]);
@@ -84,20 +96,20 @@ function LivingRoomModel({ mousePosRef, deviceOrientationRef, isMobile }) {
         rotateY = Math.max(-0.26, Math.min(0.26, rotateY)); // ±15°
       }
     }
-    // Mobile: Minimal smoothing (instant but jitter-free)
+    // Mobile: Stable device orientation with improved smoothing
     else if (isMobile && deviceOrientationRef?.current) {
       const deviceOrientation = deviceOrientationRef.current;
       if (typeof deviceOrientation.x === 'number' && typeof deviceOrientation.y === 'number') {
-        const deadZone = 0.03;
-        const processedX = Math.abs(deviceOrientation.x) < deadZone ? 0 : deviceOrientation.x;
-        const processedY = Math.abs(deviceOrientation.y) < deadZone ? 0 : deviceOrientation.y;
+        // Device orientation is already smoothed in the handler
+        // Apply gentle multiplier for natural movement
+        const deviceMultiplier = 2.5 * Math.PI / 180; // Slightly reduced for stability
         
-        const deviceMultiplier = 3 * Math.PI / 180;
-        rotateX = processedY * deviceMultiplier;
-        rotateY = processedX * deviceMultiplier;
+        rotateX = deviceOrientation.y * deviceMultiplier;
+        rotateY = deviceOrientation.x * deviceMultiplier;
         
-        rotateX = Math.max(-0.26, Math.min(0.26, rotateX));
-        rotateY = Math.max(-0.26, Math.min(0.26, rotateY));
+        // Clamp to prevent extreme rotations
+        rotateX = Math.max(-0.2, Math.min(0.2, rotateX)); // ±11.5°
+        rotateY = Math.max(-0.2, Math.min(0.2, rotateY)); // ±11.5°
       }
     }
     
@@ -122,6 +134,7 @@ function LivingRoomModel({ mousePosRef, deviceOrientationRef, isMobile }) {
 // Main Background Component (Fixed with proper mouse handling)
 function LivingRoomBackground({ mousePosRef, deviceOrientationRef, isMobile }) {
   const [hasWebGL, setHasWebGL] = useState(true);
+  const [modelReady, setModelReady] = useState(false);
   const handlersRef = useRef(null);
   const [scrollY, setScrollY] = useState(0);
 
@@ -184,7 +197,9 @@ function LivingRoomBackground({ mousePosRef, deviceOrientationRef, isMobile }) {
             alpha: true, 
             antialias: true,
             powerPreference: "high-performance",
-            stencil: false
+            stencil: false,
+            preserveDrawingBuffer: false, // Better performance
+            failIfMajorPerformanceCaveat: false
           }}
           style={{ 
             position: 'absolute',
@@ -193,8 +208,9 @@ function LivingRoomBackground({ mousePosRef, deviceOrientationRef, isMobile }) {
             height: '100%',
             pointerEvents: 'none'
           }}
-          dpr={[1, 2]} // Higher min DPR for smooth rendering
-          performance={{ min: 0.8 }} // Max frame rate for instant response
+          dpr={[1, typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1]} // Adaptive DPR, max 2x for performance
+          performance={{ min: 0.8, max: 0.9 }} // Balanced performance
+          frameloop="always" // Always render for smooth rotation
           onCreated={({ gl }) => {
             console.log('✅ Canvas created');
             
@@ -224,6 +240,7 @@ function LivingRoomBackground({ mousePosRef, deviceOrientationRef, isMobile }) {
                 mousePosRef={mousePosRef}
                 deviceOrientationRef={deviceOrientationRef}
                 isMobile={isMobile}
+                onModelReady={() => setModelReady(true)}
               />
               <Environment preset="city" />
             </Suspense>
@@ -284,14 +301,38 @@ export default function LivingRoomBackgroundWithMouseTracking() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [isMobile]);
 
-  // Mobile device orientation (optional, for mobile support)
+  // Mobile device orientation - STABLE with improved smoothing
   useEffect(() => {
     if (!isMobile) return;
     
+    // Smoothing state
+    const smoothedOrientation = { x: 0, y: 0 };
+    const smoothingFactor = 0.15; // Lower = smoother (prevents jitter)
+    const deadZone = 0.05; // Ignore tiny movements
+    
+    let lastUpdateTime = 0;
+    const minUpdateInterval = 16; // ~60fps max update rate
+    
     const handleOrientation = (e) => {
+      const now = performance.now();
+      if (now - lastUpdateTime < minUpdateInterval) return;
+      lastUpdateTime = now;
+      
+      // Normalize and clamp values
+      const rawX = Math.max(-1, Math.min(1, (e.gamma || 0) / 30));
+      const rawY = Math.max(-1, Math.min(1, ((e.beta || 0) - 45) / 30));
+      
+      // Apply exponential smoothing to reduce jitter
+      smoothedOrientation.x = smoothedOrientation.x + (rawX - smoothedOrientation.x) * smoothingFactor;
+      smoothedOrientation.y = smoothedOrientation.y + (rawY - smoothedOrientation.y) * smoothingFactor;
+      
+      // Apply dead zone to ignore micro-movements
+      const processedX = Math.abs(smoothedOrientation.x) < deadZone ? 0 : smoothedOrientation.x;
+      const processedY = Math.abs(smoothedOrientation.y) < deadZone ? 0 : smoothedOrientation.y;
+      
       deviceOrientationRef.current = {
-        x: e.beta / 90, // Normalize to -1 → 1
-        y: e.gamma / 90 // Normalize to -1 → 1
+        x: processedX,
+        y: processedY
       };
     };
 

@@ -467,6 +467,7 @@ export default function About() {
   const [scriptVisible, setScriptVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [galleryScroll, setGalleryScroll] = useState(0);
+  const [hoveredGalleryItem, setHoveredGalleryItem] = useState(null);
   
   const containerRef = useRef(null);
   const galleryRef = useRef(null);
@@ -720,6 +721,20 @@ export default function About() {
     };
   }, []);
 
+  // Set initial scroll position for gallery to show less of first box
+  useEffect(() => {
+    if (galleryRef.current) {
+      const boxWidth = windowSize.width >= 768 ? 340 : 250;
+      const scrollAmount = boxWidth * 0.65; // Scroll more to show less of first box
+      // Use setTimeout to ensure the gallery is fully rendered before scrolling
+      setTimeout(() => {
+        if (galleryRef.current) {
+          galleryRef.current.scrollLeft = scrollAmount;
+        }
+      }, 100);
+    }
+  }, [windowSize.width]);
+
   
   const calculateScale = () => {
     const screenWidth = windowSize.width;
@@ -853,7 +868,7 @@ export default function About() {
     translateYAmplitude: isDesktop ? 40 : 25
   };
   
-  const sectionTriggers = [0.08, 0.20, 0.32, 0.44, 0.56, 0.68, 0.76, 0.84];
+  const sectionTriggers = [0.08, 0.20, 0.32, 0.38, 0.56, 0.68, 0.76, 0.84];
 
   return (
     <div ref={containerRef} className="w-full" style={{ minHeight: '800vh', width: '100%', maxWidth: '100vw', position: 'relative', top: 0, left: 0, display: 'block', visibility: 'visible', opacity: 1, background: '#fafafa', overflowX: 'hidden' }}>
@@ -881,6 +896,10 @@ export default function About() {
         @keyframes float-3 {
           0%, 100% { transform: translate(-50%, -50%) translateY(0px); }
           50% { transform: translate(-50%, -50%) translateY(-13px); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
       
@@ -1643,7 +1662,7 @@ export default function About() {
               marginBottom: `${calculateSpacing(16)}px`
             }}
           >
-            Travel
+            Travel The World
           </h2>
           <p
             style={{
@@ -1655,8 +1674,7 @@ export default function About() {
               marginLeft: 'auto'
             }}
           >
-            Exploring new places expands my perspective and fuels curiosity. Each destination teaches me about
-            different cultures, ways of thinking, and the boundless possibilities that exist beyond familiar horizons.
+            Exploring new places is a defining part of my life, it broadens my perspective through diverse cultures, people, and ways of thinking. Immersing myself in the world's masterpieces and uncovering the boundless possibilities it offers is something I deeply value and genuinely love.
           </p>
         </div>
       </div>
@@ -1667,9 +1685,9 @@ export default function About() {
           minHeight: '100vh',
           background: '#ffffff',
           display: 'flex',
-          alignItems: 'center',
-          paddingTop: 'clamp(3rem, 6vw, 6rem)',
-          paddingBottom: 'clamp(3rem, 6vw, 6rem)'
+          alignItems: 'flex-start',
+          paddingTop: 'clamp(6rem, 10vw, 12rem)',
+          paddingBottom: 'clamp(6rem, 10vw, 12rem)'
         }}
       >
         <div 
@@ -1682,9 +1700,9 @@ export default function About() {
             marginRight: 'auto',
             transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[6]) * -sectionConfig.translateYAmplitude)}px)`,
             opacity: (() => {
-              // Start fading in much earlier and stay visible longer
-              const fadeInStart = sectionTriggers[6] - 0.12; // Start fading in 0.12 before trigger
-              const fadeInEnd = sectionTriggers[6] + 0.08; // Fully visible by 0.08 after trigger
+              // Start fading in much earlier - when Travel section appears
+              const fadeInStart = sectionTriggers[3] - 0.08; // Start fading in when Travel appears (0.38 - 0.08 = 0.30)
+              const fadeInEnd = sectionTriggers[3] + 0.06; // Fully visible shortly after Travel appears (0.38 + 0.06 = 0.44)
               const fadeOutStart = sectionTriggers[7] ? sectionTriggers[7] - 0.08 : 0.95; // Start fading out near next section
               
               if (scrollProgress < fadeInStart) return 0;
@@ -1710,9 +1728,9 @@ export default function About() {
           {/* Header Section */}
           <div style={{ marginBottom: `${calculateSpacing(40)}px` }}>
             {(() => {
-              // Header fade-in starts very early
-              const headerFadeInStart = sectionTriggers[6] - 0.22; // Start 0.22 before section trigger
-              const headerFadeInEnd = sectionTriggers[6] - 0.1; // Fully visible by 0.1 before trigger
+              // Header fade-in starts very early - appears when Travel section is at top
+              const headerFadeInStart = sectionTriggers[3] - 0.08; // Start when Travel section appears (0.38 - 0.08 = 0.30)
+              const headerFadeInEnd = sectionTriggers[3] + 0.04; // Fully visible shortly after Travel appears (0.38 + 0.04 = 0.42)
               
               let headerOpacity = 0;
               let headerTransform = 'translateY(20px)';
@@ -1817,9 +1835,10 @@ export default function About() {
                 display: 'flex',
                 gap: '20px',
                 overflowX: 'auto',
-                overflowY: 'hidden',
+                overflowY: 'visible',
                 scrollBehavior: 'smooth',
-                paddingBottom: '20px',
+                paddingTop: '80px',
+                paddingBottom: '80px',
                 scrollbarWidth: 'none',
                 msOverflowStyle: 'none',
                 WebkitScrollbar: { display: 'none' }
@@ -1831,17 +1850,31 @@ export default function About() {
               }}
             >
               {[
-                { title: 'Mountain Vista', description: 'Capturing the grandeur of nature\'s peaks and valleys', image: '/images/photography-1.jpg' },
-                { title: 'City Lights', description: 'The vibrant energy of urban landscapes at night', image: '/images/photography-2.jpg' },
-                { title: 'Portrait Moment', description: 'Capturing authentic emotions and human connections', image: '/images/photography-3.jpg' },
-                { title: 'Abstract Flow', description: 'Finding beauty in patterns and abstract compositions', image: '/images/photography-4.jpg' },
-                { title: 'Natural Harmony', description: 'The delicate balance of light and shadow in nature', image: '/images/photography-5.jpg' },
-                { title: 'Urban Rhythm', description: 'The pulse of city life through architectural details', image: '/images/photography-6.jpg' },
+                { title: 'Mountain Vista', description: 'Capturing the grandeur of nature\'s peaks and valleys', image: '/images/photography-1.jpg', location: 'Swiss Alps, Switzerland' },
+                { title: 'City Lights', description: 'The vibrant energy of urban landscapes at night', image: '/images/photography-2.jpg', location: 'Tokyo, Japan' },
+                { title: 'Portrait Moment', description: 'Capturing authentic emotions and human connections', image: '/images/photography-3.jpg', location: 'Paris, France' },
+                { title: 'Abstract Flow', description: 'Finding beauty in patterns and abstract compositions', image: '/images/photography-4.jpg', location: 'Iceland' },
+                { title: 'Natural Harmony', description: 'The delicate balance of light and shadow in nature', image: '/images/photography-5.jpg', location: 'Banff National Park, Canada' },
+                { title: 'Urban Rhythm', description: 'The pulse of city life through architectural details', image: '/images/photography-6.jpg', location: 'New York City, USA' },
+                { title: 'Coastal Sunset', description: 'Golden hour reflections on tranquil waters', image: '/images/photography-7.jpg', location: 'Santorini, Greece' },
+                { title: 'Forest Path', description: 'Wandering through nature\'s cathedral', image: '/images/photography-8.jpg', location: 'Redwood National Park, USA' },
+                { title: 'Desert Dunes', description: 'Endless waves of sand under starlit skies', image: '/images/photography-9.jpg', location: 'Sahara Desert, Morocco' },
+                { title: 'Mountain Lake', description: 'Crystal clear waters mirroring snow-capped peaks', image: '/images/photography-10.jpg', location: 'Lake Louise, Canada' },
+                { title: 'Historic Architecture', description: 'Timeless beauty in stone and glass', image: '/images/photography-11.jpg', location: 'Prague, Czech Republic' },
+                { title: 'Tropical Paradise', description: 'Palm trees swaying in ocean breeze', image: '/images/photography-12.jpg', location: 'Maldives' },
+                { title: 'Northern Lights', description: 'Dancing colors across the arctic sky', image: '/images/photography-13.jpg', location: 'Tromsø, Norway' },
+                { title: 'City Skyline', description: 'Urban canyons reaching for the clouds', image: '/images/photography-14.jpg', location: 'Hong Kong' },
+                { title: 'Mountain Peak', description: 'Conquering heights and breathtaking vistas', image: '/images/photography-15.jpg', location: 'Mount Fuji, Japan' },
+                { title: 'Rural Landscape', description: 'Rolling hills and pastoral beauty', image: '/images/photography-16.jpg', location: 'Tuscany, Italy' },
+                { title: 'Waterfall', description: 'Nature\'s power and grace in motion', image: '/images/photography-17.jpg', location: 'Iguazu Falls, Argentina' },
+                { title: 'Ancient Ruins', description: 'Echoes of civilizations past', image: '/images/photography-18.jpg', location: 'Machu Picchu, Peru' },
+                { title: 'Beach Scene', description: 'Where land meets endless ocean', image: '/images/photography-19.jpg', location: 'Bora Bora, French Polynesia' },
+                { title: 'Canyon View', description: 'Carved by time and water', image: '/images/photography-20.jpg', location: 'Grand Canyon, USA' },
               ].map((item, i) => {
-                // Calculate fade-in for each item - starts much earlier
-                const itemFadeInStart = sectionTriggers[6] - 0.2; // Start 0.2 before section trigger (very early)
-                const itemFadeInDelay = i * 0.03; // Stagger each item by 0.03
-                const itemFadeInEnd = itemFadeInStart + 0.15 + itemFadeInDelay; // Fade in over 0.15 + delay
+                // Calculate fade-in for each item - starts when Travel section appears
+                const itemFadeInStart = sectionTriggers[3] - 0.06; // Start when Travel section appears (0.38 - 0.06 = 0.32)
+                const itemFadeInDelay = i * 0.02; // Stagger each item by 0.02 (faster)
+                const itemFadeInEnd = itemFadeInStart + 0.12 + itemFadeInDelay; // Fade in over 0.12 + delay (quicker)
                 
                 let itemOpacity = 0;
                 let itemTransform = 'translateY(30px)';
@@ -1857,61 +1890,105 @@ export default function About() {
                   }
                 }
                 
+                // Staggered layout pattern: baseline, up, up (smaller height)
+                // Pattern repeats every 3 items: 0=baseline, 1=up, 2=up(top aligned with 1, smaller height)
+                const patternIndex = i % 3;
+                let verticalOffset = 0;
+                let boxHeight = windowSize.width >= 768 ? 400 : 300; // Default height
+                
+                if (patternIndex === 0) {
+                  verticalOffset = 0; // Baseline
+                } else if (patternIndex === 1) {
+                  verticalOffset = -60; // Up - shifted up from baseline
+                } else if (patternIndex === 2) {
+                  verticalOffset = -60; // Up - top aligned with second box (same Y position for top alignment)
+                  // Height calculated so gap between 3rd bottom and 2nd bottom equals gap between 2nd bottom and 1st bottom (60px)
+                  // Box 2 bottom: -60 + 400 = 340px, so box 3 bottom should be at 340 - 60 = 280px
+                  // Since box 3 top is at -60px, height = 280 - (-60) = 340px
+                  boxHeight = windowSize.width >= 768 ? 340 : 240; // Adjusted height to match gap spacing
+                }
+                
+                const baseTransform = `translateY(${verticalOffset}px)`;
+                const isHovered = hoveredGalleryItem === i;
+                
+                // Calculate final transform
+                let finalTransform = baseTransform;
+                if (isHovered) {
+                  // On hover: base offset + hover lift
+                  finalTransform = `translateY(${verticalOffset - 8}px)`;
+                } else if (itemOpacity < 1 && itemTransform.includes('translateY')) {
+                  // During fade-in: combine base offset with fade animation
+                  const fadeMatch = itemTransform.match(/translateY\(([^)]+)\)/);
+                  if (fadeMatch) {
+                    const fadeValue = parseFloat(fadeMatch[1]) || 0;
+                    finalTransform = `translateY(${verticalOffset + fadeValue}px)`;
+                  }
+                }
+                
                 return (
                 <div
                   key={i}
                   style={{
-                    minWidth: windowSize.width >= 768 ? '380px' : '280px',
-                    width: windowSize.width >= 768 ? '380px' : '280px',
+                    minWidth: windowSize.width >= 768 ? '340px' : '250px',
+                    width: windowSize.width >= 768 ? '340px' : '250px',
+                    height: `${boxHeight}px`,
                     borderRadius: '16px',
                     overflow: 'hidden',
                     background: '#fafafa',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-                    transition: 'transform 0.3s ease, box-shadow 0.3s ease, opacity 0.6s ease-out',
+                    boxShadow: isHovered ? '0 8px 30px rgba(0, 0, 0, 0.12)' : '0 4px 20px rgba(0, 0, 0, 0.08)',
+                    transition: 'transform 0.3s ease, box-shadow 0.3s ease, opacity 0.6s ease-out, height 0.3s ease',
                     cursor: 'pointer',
                     flexShrink: 0,
                     opacity: itemOpacity,
-                    transform: itemTransform
+                    transform: finalTransform,
+                    position: 'relative'
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-8px)';
-                    e.currentTarget.style.boxShadow = '0 8px 30px rgba(0, 0, 0, 0.12)';
+                  onMouseEnter={() => {
+                    setHoveredGalleryItem(i);
                   }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.08)';
+                  onMouseLeave={() => {
+                    setHoveredGalleryItem(null);
                   }}
                 >
                   <div style={{
                     width: '100%',
-                    height: windowSize.width >= 768 ? '280px' : '200px',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#ffffff',
-                    fontSize: '18px',
-                    fontWeight: 500
+                    height: '100%',
+                    position: 'relative',
+                    overflow: 'hidden'
                   }}>
-                    {item.title}
-                  </div>
-                  <div style={{ padding: '20px' }}>
-                    <h3 style={{
-                      fontSize: calculateFontSize(20, 16, 22),
-                      fontWeight: 600,
-                      color: '#0a0a0a',
-                      marginBottom: '8px'
-                    }}>
-                      {item.title}
-                    </h3>
-                    <p style={{
-                      fontSize: calculateFontSize(14, 12, 16),
-                      fontWeight: 400,
-                      color: '#525252',
-                      lineHeight: 1.5
-                    }}>
-                      {item.description}
-                    </p>
+                    <img 
+                      src={item.image} 
+                      alt={item.title}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        display: 'block'
+                      }}
+                      onError={(e) => {
+                        // Fallback to gradient if image fails to load
+                        e.target.style.display = 'none';
+                        e.target.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                      }}
+                    />
+                    {/* Location overlay on hover */}
+                    {isHovered && (
+                      <div style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        background: 'linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.5), transparent)',
+                        padding: '24px 20px 20px 20px',
+                        color: '#ffffff',
+                        fontSize: calculateFontSize(18, 16, 20),
+                        fontWeight: 600,
+                        transition: 'opacity 0.3s ease',
+                        animation: 'fadeIn 0.3s ease'
+                      }}>
+                        📍 {item.location}
+                      </div>
+                    )}
                   </div>
                 </div>
                 );

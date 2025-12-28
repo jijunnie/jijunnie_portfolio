@@ -16,11 +16,27 @@ import { markers } from '../data/visitedRegions';
 
 // Preload 3D background model at module level (runs immediately when file loads)
 const backgroundModelUrl = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/cozy_living_room_baked.glb';
+
+// Preload immediately when module loads (before any component renders)
 try {
   useGLTF.preload(backgroundModelUrl);
   console.log('✅ Preloaded 3D background at module level:', backgroundModelUrl);
 } catch (error) {
   console.warn('⚠️ Failed to preload 3D background at module level:', error);
+}
+
+// Also preload in browser cache using fetch for maximum reliability
+if (typeof window !== 'undefined') {
+  // Prefetch the model file to ensure it's in cache
+  const link = document.createElement('link');
+  link.rel = 'prefetch';
+  link.as = 'fetch';
+  link.href = backgroundModelUrl;
+  link.crossOrigin = 'anonymous';
+  document.head.appendChild(link);
+  
+  // Also do a HEAD request to warm up the connection
+  fetch(backgroundModelUrl, { method: 'HEAD', cache: 'force-cache' }).catch(() => {});
 }
 
 // Preload all icon GLB files at module level
@@ -3184,12 +3200,13 @@ export default function Portfolio() {
       const gamma = event.gamma || 0;
       const beta = event.beta || 0;
 
-      // Clamp raw values first
+      // Clamp raw values first with better normalization
       const rawX = Math.max(-1, Math.min(1, gamma / 30));
       const rawY = Math.max(-1, Math.min(1, (beta - 45) / 30));
 
       // Apply exponential smoothing at source to prevent violent shaking
-      const smoothingFactor = 0.25; // Lower = smoother (more aggressive)
+      // Increased smoothing for better stability on mobile
+      const smoothingFactor = 0.12; // Lower = smoother (more aggressive smoothing)
       orientationRef.current = {
         x: smoothedOrientationRef.current.x + (rawX - smoothedOrientationRef.current.x) * smoothingFactor,
         y: smoothedOrientationRef.current.y + (rawY - smoothedOrientationRef.current.y) * smoothingFactor
@@ -3207,9 +3224,9 @@ export default function Portfolio() {
           const dx = Math.abs(prev.x - x);
           const dy = Math.abs(prev.y - y);
           // Increased threshold to prevent micro-updates that cause shaking
-          if (dx > 0.02 || dy > 0.02) {
-            // Additional smoothing layer before setting state
-            const stateSmoothing = 0.3;
+          if (dx > 0.015 || dy > 0.015) {
+            // Additional smoothing layer before setting state - more aggressive for stability
+            const stateSmoothing = 0.2; // Reduced from 0.3 for smoother transitions
             return {
               x: prev.x + (x - prev.x) * stateSmoothing,
               y: prev.y + (y - prev.y) * stateSmoothing
