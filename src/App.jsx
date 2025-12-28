@@ -218,7 +218,7 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
           </div>
         )}
       </div>
-      <style jsx>{`
+      <style>{`
         .liquid-glass-nav {
           background: #ffffff !important;
           backdrop-filter: blur(20px) saturate(180%);

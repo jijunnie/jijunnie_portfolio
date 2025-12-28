@@ -1,3 +1,53 @@
+// Suppress FBXLoader texture warnings (these are harmless - FBX files load fine)
+// MUST be at the very top before any imports to catch warnings early
+(function() {
+  if (typeof console === 'undefined') return;
+  
+  const suppressFBXWarning = (message) => {
+    if (!message) return false;
+    const msg = String(message);
+    // Match the exact warning pattern: "FBXLoader: Image type "..." is not supported."
+    return (msg.includes('FBXLoader') && 
+            msg.includes('Image type') && 
+            (msg.includes('is not supported') || msg.includes('not supported'))) ||
+           // Also catch variations
+           msg.match(/FBXLoader.*Image type.*not supported/i);
+  };
+  
+  const wrapConsoleMethod = (original, methodName) => {
+    if (!original) return;
+    const wrapped = function(...args) {
+      // Check first argument (most common case) and all arguments
+      const shouldSuppress = args.some(arg => suppressFBXWarning(arg));
+      if (shouldSuppress) {
+        return; // Suppress these specific warnings
+      }
+      return original.apply(console, args);
+    };
+    // Preserve original properties
+    Object.setPrototypeOf(wrapped, original);
+    Object.defineProperty(wrapped, 'name', { value: methodName });
+    return wrapped;
+  };
+  
+  // Override console.warn and console.error
+  if (console.warn) {
+    console.warn = wrapConsoleMethod(console.warn, 'warn');
+  }
+  if (console.error) {
+    console.error = wrapConsoleMethod(console.error, 'error');
+  }
+  // Also check console.log just in case
+  if (console.log) {
+    const originalLog = console.log;
+    console.log = function(...args) {
+      const shouldSuppress = args.some(arg => suppressFBXWarning(arg));
+      if (shouldSuppress) return;
+      return originalLog.apply(console, args);
+    };
+  }
+})();
+
 import React, { useRef, useEffect, Suspense, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useGLTF, useFBX } from '@react-three/drei';
@@ -213,6 +263,184 @@ function CameraDrift() {
   return null;
 }
 
+// Neon Wave and Particle Background Component
+function NeonWaveBackground({ scrollProgress, sectionTrigger, fadeOffset, fadeInSpeed }) {
+  const canvasRef = useRef(null);
+  const animationFrameRef = useRef(null);
+  const timeRef = useRef(0);
+  const particlesRef = useRef([]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
+
+    // Initialize particles
+    const initParticles = () => {
+      particlesRef.current = [];
+      const particleCount = Math.floor((width * height) / 15000); // Adaptive particle count
+      for (let i = 0; i < particleCount; i++) {
+        particlesRef.current.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: (Math.random() - 0.5) * 0.5,
+          size: Math.random() * 2 + 0.5,
+          opacity: Math.random() * 0.5 + 0.2,
+          hue: Math.random() * 60 + 200 // Purple to cyan range (200-260)
+        });
+      }
+    };
+
+    initParticles();
+
+    const handleResize = () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      initParticles();
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    const drawWave = (ctx, time, offsetY, amplitude, frequency, speed, color, lineWidth) => {
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth;
+      ctx.shadowBlur = 25;
+      ctx.shadowColor = color;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      for (let x = 0; x <= width; x += 1.5) {
+        const wave = Math.sin((x * frequency + time * speed) * 0.01) * amplitude;
+        const y = offsetY + wave;
+        if (x === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.stroke();
+    };
+
+    const drawParticles = (ctx, particles) => {
+      particles.forEach(particle => {
+        // Update particle position
+        particle.x += particle.vx;
+        particle.y += particle.vy;
+
+        // Wrap around edges
+        if (particle.x < 0) particle.x = width;
+        if (particle.x > width) particle.x = 0;
+        if (particle.y < 0) particle.y = height;
+        if (particle.y > height) particle.y = 0;
+
+        // Draw particle with glow
+        const gradient = ctx.createRadialGradient(
+          particle.x, particle.y, 0,
+          particle.x, particle.y, particle.size * 3
+        );
+        gradient.addColorStop(0, `hsla(${particle.hue}, 100%, 60%, ${particle.opacity})`);
+        gradient.addColorStop(1, `hsla(${particle.hue}, 100%, 60%, 0)`);
+
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    };
+
+    const animate = () => {
+      ctx.clearRect(0, 0, width, height);
+      
+      timeRef.current += 0.02;
+
+      // Calculate opacity based on scroll
+      const opacity = Math.min(1, Math.max(0, (scrollProgress - (sectionTrigger - fadeOffset)) * fadeInSpeed)) * 0.7;
+      
+      if (opacity > 0) {
+        ctx.globalAlpha = opacity;
+
+        // Draw multiple wave layers with different colors and speeds - clearer
+        const waveColors = [
+          'rgba(138, 43, 226, 0.85)',  // Purple - brighter
+          'rgba(59, 130, 246, 0.8)',   // Blue - brighter
+          'rgba(147, 51, 234, 0.75)',  // Violet - brighter
+          'rgba(79, 70, 229, 0.7)',   // Indigo - brighter
+        ];
+
+        // Draw waves at different Y positions - original 3 waves
+        const wavePositions = [height * 0.3, height * 0.5, height * 0.7];
+        wavePositions.forEach((yPos, i) => {
+          const amplitude = 30 + i * 10;
+          const frequency = 0.5 + i * 0.2;
+          const speed = 1 + i * 0.3;
+          drawWave(
+            ctx,
+            timeRef.current,
+            yPos,
+            amplitude,
+            frequency,
+            speed,
+            waveColors[i % waveColors.length],
+            2.5
+          );
+        });
+
+        // Draw additional flowing waves - original 3 waves
+        for (let i = 0; i < 3; i++) {
+          const yPos = height * 0.4 + Math.sin(timeRef.current * 0.5 + i) * 50;
+          const amplitude = 25 + Math.sin(timeRef.current + i) * 10;
+          drawWave(
+            ctx,
+            timeRef.current * (1 + i * 0.2),
+            yPos,
+            amplitude,
+            0.4,
+            1.5,
+            `rgba(${100 + i * 30}, ${50 + i * 40}, ${200 + i * 20}, 0.65)`,
+            2
+          );
+        }
+
+        // Draw particles
+        drawParticles(ctx, particlesRef.current);
+
+        ctx.globalAlpha = 1;
+      }
+
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animate();
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [scrollProgress, sectionTrigger, fadeOffset, fadeInSpeed]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: 0,
+        pointerEvents: 'none'
+      }}
+    />
+  );
+}
+
 export default function About() {
   const [currentAnimation, setCurrentAnimation] = useState('/animations/idle.fbx');
   const [windowSize, setWindowSize] = useState(() => {
@@ -225,6 +453,8 @@ export default function About() {
   const [singingModelCenterY, setSingingModelCenterY] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const previousScrollProgress = useRef(0);
+  const scrollDirection = useRef('down'); // 'up' or 'down'
   
   const [modelsVisible, setModelsVisible] = useState(false);
   const [mainTitleVisible, setMainTitleVisible] = useState(false);
@@ -235,8 +465,11 @@ export default function About() {
   const [currentIdentityIndex, setCurrentIdentityIndex] = useState(0);
   const [pageOpacity, setPageOpacity] = useState(0);
   const [scriptVisible, setScriptVisible] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [galleryScroll, setGalleryScroll] = useState(0);
   
   const containerRef = useRef(null);
+  const galleryRef = useRef(null);
   
   const titleText = 'Hi, I am Jijun Nie';
   
@@ -261,25 +494,25 @@ export default function About() {
   // Define all icons from icons2 folder (all PNG files)
   const learningIcons = [
     { url: '/icons2/asana.png', name: 'Asana' },
-    { url: '/icons2/blender.png', name: 'Blender' },
-    { url: '/icons2/canva.png', name: 'Canva' },
+    { url: '/icons2/three.js.png', name: 'Three.js' },
+    { url: '/icons2/google.png', name: 'Google' },
     { url: '/icons2/capcut.png', name: 'CapCut' },
-    { url: '/icons2/chanjing.png', name: 'ChanJing' },
+    { url: '/icons2/solidwork.png', name: 'SolidWorks' },
     { url: '/icons2/chatgpt.png', name: 'ChatGPT' },
     { url: '/icons2/claude.png', name: 'Claude' },
     { url: '/icons2/coursera.png', name: 'Coursera' },
     { url: '/icons2/cursor.png', name: 'Cursor' },
     { url: '/icons2/dji.png', name: 'DJI' },
-    { url: '/icons2/google.png', name: 'Google' },
+    { url: '/icons2/canva.png', name: 'Canva' },
     { url: '/icons2/jimengai.png', name: 'JiMengAI' },
-    { url: '/icons2/meitu.png', name: 'Meitu' },
     { url: '/icons2/microsoft.png', name: 'Microsoft' },
-    { url: '/icons2/react.png', name: 'React' },
-    { url: '/icons2/solidwork.png', name: 'SolidWorks' },
-    { url: '/icons2/spline.png', name: 'Spline' },
-    { url: '/icons2/SQL.png', name: 'SQL' },
-    { url: '/icons2/three.js.png', name: 'Three.js' },
     { url: '/icons2/vite.png', name: 'Vite' },
+    { url: '/icons2/react.png', name: 'React' },
+    { url: '/icons2/spline.png', name: 'Spline' },
+    { url: '/icons2/chanjing.png', name: 'ChanJing' },
+    { url: '/icons2/meitu.png', name: 'Meitu' },
+    { url: '/icons2/blender.png', name: 'Blender' },
+    { url: '/icons2/SQL.png', name: 'SQL' },
     { url: '/icons2/vscode.png', name: 'VS Code' },
   ];
   
@@ -360,6 +593,15 @@ export default function About() {
       const scrollTop = window.scrollY;
       const docHeight = document.documentElement.scrollHeight - window.innerHeight;
       const progress = Math.min(scrollTop / docHeight, 1);
+      
+      // Determine scroll direction
+      if (progress < previousScrollProgress.current) {
+        scrollDirection.current = 'up';
+      } else if (progress > previousScrollProgress.current) {
+        scrollDirection.current = 'down';
+      }
+      
+      previousScrollProgress.current = progress;
       setScrollProgress(progress);
     };
     
@@ -607,7 +849,7 @@ export default function About() {
 
   const sectionConfig = {
     fadeInSpeed: isDesktop ? 8 : 12,
-    fadeOffset: isDesktop ? 0.03 : 0.01,
+    fadeOffset: isDesktop ? 0.05 : 0.03,
     translateYAmplitude: isDesktop ? 40 : 25
   };
   
@@ -873,20 +1115,6 @@ export default function About() {
           overflow: 'visible'
         }}
       >
-        {/* Radial blur background effect - creates blur from center */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 2,
-            pointerEvents: 'none',
-            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[0] - sectionConfig.fadeOffset)) * (sectionConfig.fadeInSpeed * 1.5))),
-            background: 'radial-gradient(circle at center, rgba(250, 250, 250, 0.98) 0%, rgba(250, 250, 250, 0.9) 15%, rgba(250, 250, 250, 0.7) 30%, rgba(250, 250, 250, 0.5) 45%, rgba(250, 250, 250, 0.3) 60%, rgba(250, 250, 250, 0.1) 75%, rgba(250, 250, 250, 0) 100%)'
-          }}
-        />
         <div 
           className="w-full flex flex-col items-center justify-center"
           style={{
@@ -895,7 +1123,13 @@ export default function About() {
             paddingLeft: 'clamp(1.5rem, 4vw, 4rem)',
             paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
             transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[0]) * -sectionConfig.translateYAmplitude)}px)`,
-            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[0] - sectionConfig.fadeOffset)) * (sectionConfig.fadeInSpeed * 1.5))),
+            opacity: (() => {
+              // Use faster fade speed when scrolling up, but slower overall
+              const fadeSpeed = scrollDirection.current === 'up' ? sectionConfig.fadeInSpeed * 2.0 : sectionConfig.fadeInSpeed * 1.2;
+              const fadeIn = Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[0] - sectionConfig.fadeOffset)) * fadeSpeed));
+              const fadeOut = Math.max(0, Math.min(1, (scrollProgress - (sectionTriggers[1] - 0.08)) / 0.07));
+              return fadeIn * (1 - fadeOut);
+            })(),
             transition: 'transform 0.8s ease-out, opacity 0.5s ease-out',
             maxWidth: '900px',
             marginLeft: 'auto',
@@ -905,6 +1139,27 @@ export default function About() {
             zIndex: 10
           }}
         >
+          {/* Radial blur background effect - blurs icons behind text */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: -1,
+              pointerEvents: 'none',
+              opacity: (() => {
+                const fadeSpeed = scrollDirection.current === 'up' ? sectionConfig.fadeInSpeed * 2.0 : sectionConfig.fadeInSpeed * 1.2;
+                return Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[0] - sectionConfig.fadeOffset)) * fadeSpeed));
+              })(),
+              backdropFilter: 'blur(25px)',
+              WebkitBackdropFilter: 'blur(25px)',
+              background: 'radial-gradient(ellipse at center, rgba(250, 250, 250, 0.9) 0%, rgba(250, 250, 250, 0.75) 25%, rgba(250, 250, 250, 0.6) 45%, rgba(250, 250, 250, 0.4) 65%, rgba(250, 250, 250, 0.2) 80%, rgba(250, 250, 250, 0) 100%)',
+              borderRadius: '20px',
+              transition: 'opacity 0.5s ease-out'
+            }}
+          />
           <h2
             style={{
               fontSize: calculateFontSize(64, 32, 80),
@@ -951,7 +1206,7 @@ export default function About() {
         >
           {learningIcons.map((icon, i) => {
             const sectionProgress = Math.max(0, Math.min(1, (scrollProgress - (sectionTriggers[0] - sectionConfig.fadeOffset)) / 0.05));
-            const fadeOutProgress = Math.max(0, Math.min(1, (scrollProgress - (sectionTriggers[1] - 0.05)) / 0.08));
+            const fadeOutProgress = Math.max(0, Math.min(1, (scrollProgress - (sectionTriggers[1] - 0.08)) / 0.07));
             
             const iconOpacity = sectionProgress * (1 - fadeOutProgress);
             
@@ -992,14 +1247,34 @@ export default function About() {
             const centerY = (windowSize.height * config.y) / 100;
             
             const finalX = centerX + Math.cos(angle) * spiralRadius * sectionProgress;
-            const finalY = centerY + Math.sin(angle) * spiralRadius * sectionProgress;
+            let finalY = centerY + Math.sin(angle) * spiralRadius * sectionProgress;
+            
+            // Special adjustment for Meitu icon to shift it up
+            if (icon.name === 'Meitu') {
+              finalY -= 50;
+            }
+            
+            // Special adjustment for Blender icon to shift it down
+            if (icon.name === 'Blender') {
+              finalY += 80;
+            }
             
             // Scale animation
             const scale = 0.3 + (sectionProgress * 0.7);
             
-            const iconSize = windowSize.width < 640 ? 44 : 
+            const baseIconSize = windowSize.width < 640 ? 44 : 
                             windowSize.width < 768 ? 52 :
                             windowSize.width < 1024 ? 60 : 70;
+            
+            // Make SolidWorks bigger, Google and Microsoft a little bigger, Blender a tiny bit bigger
+            let iconSize = baseIconSize;
+            if (icon.name === 'SolidWorks') {
+              iconSize = baseIconSize * 1.6;
+            } else if (icon.name === 'Google' || icon.name === 'Microsoft') {
+              iconSize = baseIconSize * 1.3;
+            } else if (icon.name === 'Blender') {
+              iconSize = baseIconSize * 1.15;
+            }
             
             return (
               <div
@@ -1016,7 +1291,10 @@ export default function About() {
                   pointerEvents: iconOpacity > 0.3 ? 'auto' : 'none',
                   cursor: 'pointer',
                   filter: `blur(${(1 - sectionProgress) * 8}px) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))`,
-                  animation: iconOpacity > 0 ? `float-${orbitIndex} 3s ease-in-out infinite` : 'none',
+                  animationName: iconOpacity > 0 ? `float-${orbitIndex}` : 'none',
+                  animationDuration: iconOpacity > 0 ? '3s' : 'none',
+                  animationTimingFunction: iconOpacity > 0 ? 'ease-in-out' : 'none',
+                  animationIterationCount: iconOpacity > 0 ? 'infinite' : 'none',
                   animationDelay: `${itemInOrbit * 0.2}s`
                 }}
                 title={icon.name}
@@ -1049,9 +1327,18 @@ export default function About() {
           minHeight: '100vh',
           background: '#fafafa',
           display: 'flex',
-          alignItems: 'center'
+          alignItems: 'center',
+          overflow: 'hidden',
+          position: 'relative'
         }}
       >
+        {/* Neon Wave and Particle Background */}
+        <NeonWaveBackground 
+          scrollProgress={scrollProgress}
+          sectionTrigger={sectionTriggers[1]}
+          fadeOffset={sectionConfig.fadeOffset}
+          fadeInSpeed={sectionConfig.fadeInSpeed}
+        />
         <div 
           className="w-full"
           style={{
@@ -1062,9 +1349,11 @@ export default function About() {
             maxWidth: '1400px',
             marginLeft: 'auto',
             marginRight: 'auto',
-            transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[1]) * -sectionConfig.translateYAmplitude)}px)`,
+            transform: `translateY(${-100 + Math.max(0, (scrollProgress - sectionTriggers[1]) * -sectionConfig.translateYAmplitude)}px)`,
             opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[1] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
-            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out'
+            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out',
+            position: 'relative',
+            zIndex: 1
           }}
         >
           <div style={{ textAlign: 'left', marginBottom: `${calculateSpacing(60)}px` }}>
@@ -1089,8 +1378,7 @@ export default function About() {
                 maxWidth: '700px'
               }}
             >
-              I thrive on improving processes through innovation, optimization, and systematic thinking—
-              turning complexity into elegant solutions that drive real impact.
+              I also enjoy designing and developing web experiences that blend creative, thoughtful design with clear, user‑centered thinking. I care deeply about usability, accessibility, and performance of my projects, turning complex problems into elegant products that people enjoy using.
             </p>
           </div>
 
@@ -1100,9 +1388,9 @@ export default function About() {
             gap: `${calculateSpacing(32)}px`
           }}>
             {[
-              { title: 'Innovation', description: 'Transforming ideas into breakthrough solutions that challenge the status quo' },
-              { title: 'Optimization', description: 'Refining processes to achieve maximum efficiency and measurable results' },
-              { title: 'Systems Thinking', description: 'Understanding interconnections to create holistic, sustainable improvements' }
+              { title: 'Innovative Solutions', description: 'Develop projects that create meaningful, measurable impact for communities' },
+              { title: 'User Experience', description: 'Deliver projects with accessible, interactive experiences that attract and retain users.' },
+              { title: 'Visual Appearance', description: 'Design intuitive, memorable projects with thoughtful typography, color and motion' }
             ].map((item, i) => (
               <div
                 key={i}
@@ -1304,7 +1592,7 @@ export default function About() {
               marginBottom: `${calculateSpacing(16)}px`
             }}
           >
-            Sing Out the Voices
+            Sing Out Voices
           </h2>
           <p
             style={{
@@ -1315,8 +1603,7 @@ export default function About() {
               maxWidth: '700px'
             }}
           >
-            Music is my emotional outlet and creative expression. Through singing, I connect with stories,
-            convey emotions, and share experiences that words alone cannot capture.
+            Music is my emotional outlet and creative way of expression. Through singing, I connect stories with lyrics, convey emotions with rhythm and share experiences that words alone cannot capture.
           </p>
         </div>
       </div>
@@ -1324,8 +1611,8 @@ export default function About() {
       <div 
         className="relative w-full"
         style={{ 
-          minHeight: '100vh',
-          background: '#fafafa',
+          minHeight: '80vh',
+          background: '#ffffff',
           display: 'flex',
           alignItems: 'center'
         }}
@@ -1340,7 +1627,7 @@ export default function About() {
             maxWidth: '1200px',
             marginLeft: 'auto',
             marginRight: 'auto',
-            textAlign: 'center',
+            textAlign: 'right',
             transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[3]) * -sectionConfig.translateYAmplitude)}px)`,
             opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[3] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
             transition: 'transform 0.8s ease-out, opacity 0.8s ease-out'
@@ -1356,7 +1643,7 @@ export default function About() {
               marginBottom: `${calculateSpacing(16)}px`
             }}
           >
-            Capture the Beauty
+            Travel
           </h2>
           <p
             style={{
@@ -1365,13 +1652,361 @@ export default function About() {
               lineHeight: 1.6,
               color: '#525252',
               maxWidth: '800px',
-              marginLeft: 'auto',
-              marginRight: 'auto'
+              marginLeft: 'auto'
             }}
           >
-            Photography allows me to freeze moments in time, finding beauty in the everyday and extraordinary.
-            Each shot tells a story, preserving memories and perspectives that inspire and connect.
+            Exploring new places expands my perspective and fuels curiosity. Each destination teaches me about
+            different cultures, ways of thinking, and the boundless possibilities that exist beyond familiar horizons.
           </p>
+        </div>
+      </div>
+
+      <div 
+        className="relative w-full"
+        style={{ 
+          minHeight: '100vh',
+          background: '#ffffff',
+          display: 'flex',
+          alignItems: 'center',
+          paddingTop: 'clamp(3rem, 6vw, 6rem)',
+          paddingBottom: 'clamp(3rem, 6vw, 6rem)'
+        }}
+      >
+        <div 
+          className="w-full"
+          style={{
+            paddingLeft: 'clamp(1.5rem, 4vw, 4rem)',
+            paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
+            maxWidth: '1400px',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[6]) * -sectionConfig.translateYAmplitude)}px)`,
+            opacity: (() => {
+              // Start fading in much earlier and stay visible longer
+              const fadeInStart = sectionTriggers[6] - 0.12; // Start fading in 0.12 before trigger
+              const fadeInEnd = sectionTriggers[6] + 0.08; // Fully visible by 0.08 after trigger
+              const fadeOutStart = sectionTriggers[7] ? sectionTriggers[7] - 0.08 : 0.95; // Start fading out near next section
+              
+              if (scrollProgress < fadeInStart) return 0;
+              if (scrollProgress >= fadeInStart && scrollProgress <= fadeInEnd) {
+                // Smooth fade in
+                const fadeProgress = (scrollProgress - fadeInStart) / (fadeInEnd - fadeInStart);
+                return Math.min(1, fadeProgress);
+              }
+              if (scrollProgress > fadeInEnd && scrollProgress < fadeOutStart) {
+                // Fully visible
+                return 1;
+              }
+              if (scrollProgress >= fadeOutStart) {
+                // Smooth fade out
+                const fadeOutProgress = (scrollProgress - fadeOutStart) / 0.12;
+                return Math.max(0, 1 - fadeOutProgress);
+              }
+              return 1;
+            })(),
+            transition: 'transform 0.8s ease-out, opacity 0.5s ease-out'
+          }}
+        >
+          {/* Header Section */}
+          <div style={{ marginBottom: `${calculateSpacing(40)}px` }}>
+            {(() => {
+              // Header fade-in starts very early
+              const headerFadeInStart = sectionTriggers[6] - 0.22; // Start 0.22 before section trigger
+              const headerFadeInEnd = sectionTriggers[6] - 0.1; // Fully visible by 0.1 before trigger
+              
+              let headerOpacity = 0;
+              let headerTransform = 'translateY(20px)';
+              
+              if (scrollProgress >= headerFadeInStart) {
+                if (scrollProgress < headerFadeInEnd) {
+                  const fadeProgress = (scrollProgress - headerFadeInStart) / (headerFadeInEnd - headerFadeInStart);
+                  headerOpacity = Math.min(1, Math.max(0, fadeProgress));
+                  headerTransform = `translateY(${20 * (1 - fadeProgress)}px)`;
+                } else {
+                  headerOpacity = 1;
+                  headerTransform = 'translateY(0)';
+                }
+              }
+              
+              return (
+                <>
+                  <h2
+                    style={{
+                      fontSize: calculateFontSize(56, 28, 72),
+                      fontWeight: 600,
+                      lineHeight: 1.1,
+                      letterSpacing: '-0.03em',
+                      color: '#0a0a0a',
+                      marginBottom: `${calculateSpacing(20)}px`,
+                      textAlign: 'left',
+                      opacity: headerOpacity,
+                      transform: headerTransform,
+                      transition: 'opacity 0.6s ease-out, transform 0.6s ease-out'
+                    }}
+                  >
+                    Capture the Beauty
+                  </h2>
+                  <p
+                    style={{
+                      fontSize: calculateFontSize(20, 14, 24),
+                      fontWeight: 400,
+                      lineHeight: 1.6,
+                      color: '#525252',
+                      maxWidth: '800px',
+                      marginBottom: `${calculateSpacing(32)}px`,
+                      opacity: headerOpacity,
+                      transform: headerTransform,
+                      transition: 'opacity 0.6s ease-out, transform 0.6s ease-out'
+                    }}
+                  >
+                    Photography allows me to freeze moments in time, finding beauty in the everyday and extraordinary.
+                    Each shot tells a story, preserving memories and perspectives that inspire and connect.
+                  </p>
+                  
+                  {/* Category Buttons */}
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: '12px', 
+                    flexWrap: 'wrap',
+                    marginBottom: `${calculateSpacing(32)}px`,
+                    opacity: headerOpacity,
+                    transform: headerTransform,
+                    transition: 'opacity 0.6s ease-out, transform 0.6s ease-out'
+                  }}>
+              {['All', 'Nature', 'Urban', 'Portrait', 'Abstract'].map((category) => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  style={{
+                    padding: '10px 24px',
+                    borderRadius: '24px',
+                    border: 'none',
+                    background: selectedCategory === category ? '#0a0a0a' : '#f5f5f5',
+                    color: selectedCategory === category ? '#ffffff' : '#525252',
+                    fontSize: calculateFontSize(16, 14, 18),
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    whiteSpace: 'nowrap'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (selectedCategory !== category) {
+                      e.currentTarget.style.background = '#e5e5e5';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (selectedCategory !== category) {
+                      e.currentTarget.style.background = '#f5f5f5';
+                    }
+                  }}
+                >
+                  {category}
+                </button>
+              ))}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Horizontal Scrollable Gallery */}
+          <div style={{ position: 'relative', width: '100%' }}>
+            <div
+              ref={galleryRef}
+              style={{
+                display: 'flex',
+                gap: '20px',
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                scrollBehavior: 'smooth',
+                paddingBottom: '20px',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                WebkitScrollbar: { display: 'none' }
+              }}
+              onScroll={(e) => {
+                const scrollLeft = e.target.scrollLeft;
+                const scrollWidth = e.target.scrollWidth - e.target.clientWidth;
+                setGalleryScroll(scrollWidth > 0 ? scrollLeft / scrollWidth : 0);
+              }}
+            >
+              {[
+                { title: 'Mountain Vista', description: 'Capturing the grandeur of nature\'s peaks and valleys', image: '/images/photography-1.jpg' },
+                { title: 'City Lights', description: 'The vibrant energy of urban landscapes at night', image: '/images/photography-2.jpg' },
+                { title: 'Portrait Moment', description: 'Capturing authentic emotions and human connections', image: '/images/photography-3.jpg' },
+                { title: 'Abstract Flow', description: 'Finding beauty in patterns and abstract compositions', image: '/images/photography-4.jpg' },
+                { title: 'Natural Harmony', description: 'The delicate balance of light and shadow in nature', image: '/images/photography-5.jpg' },
+                { title: 'Urban Rhythm', description: 'The pulse of city life through architectural details', image: '/images/photography-6.jpg' },
+              ].map((item, i) => {
+                // Calculate fade-in for each item - starts much earlier
+                const itemFadeInStart = sectionTriggers[6] - 0.2; // Start 0.2 before section trigger (very early)
+                const itemFadeInDelay = i * 0.03; // Stagger each item by 0.03
+                const itemFadeInEnd = itemFadeInStart + 0.15 + itemFadeInDelay; // Fade in over 0.15 + delay
+                
+                let itemOpacity = 0;
+                let itemTransform = 'translateY(30px)';
+                
+                if (scrollProgress >= itemFadeInStart) {
+                  if (scrollProgress < itemFadeInEnd) {
+                    const fadeProgress = (scrollProgress - itemFadeInStart) / (itemFadeInEnd - itemFadeInStart);
+                    itemOpacity = Math.min(1, Math.max(0, fadeProgress));
+                    itemTransform = `translateY(${30 * (1 - fadeProgress)}px)`;
+                  } else {
+                    itemOpacity = 1;
+                    itemTransform = 'translateY(0)';
+                  }
+                }
+                
+                return (
+                <div
+                  key={i}
+                  style={{
+                    minWidth: windowSize.width >= 768 ? '380px' : '280px',
+                    width: windowSize.width >= 768 ? '380px' : '280px',
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    background: '#fafafa',
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+                    transition: 'transform 0.3s ease, box-shadow 0.3s ease, opacity 0.6s ease-out',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    opacity: itemOpacity,
+                    transform: itemTransform
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-8px)';
+                    e.currentTarget.style.boxShadow = '0 8px 30px rgba(0, 0, 0, 0.12)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.08)';
+                  }}
+                >
+                  <div style={{
+                    width: '100%',
+                    height: windowSize.width >= 768 ? '280px' : '200px',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#ffffff',
+                    fontSize: '18px',
+                    fontWeight: 500
+                  }}>
+                    {item.title}
+                  </div>
+                  <div style={{ padding: '20px' }}>
+                    <h3 style={{
+                      fontSize: calculateFontSize(20, 16, 22),
+                      fontWeight: 600,
+                      color: '#0a0a0a',
+                      marginBottom: '8px'
+                    }}>
+                      {item.title}
+                    </h3>
+                    <p style={{
+                      fontSize: calculateFontSize(14, 12, 16),
+                      fontWeight: 400,
+                      color: '#525252',
+                      lineHeight: 1.5
+                    }}>
+                      {item.description}
+                    </p>
+                  </div>
+                </div>
+                );
+              })}
+            </div>
+
+            {/* Navigation Controls */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '16px',
+              marginTop: '24px'
+            }}>
+              <button
+                onClick={() => {
+                  if (galleryRef.current) {
+                    galleryRef.current.scrollBy({ left: -400, behavior: 'smooth' });
+                  }
+                }}
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  border: '1px solid #e5e5e5',
+                  background: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#0a0a0a';
+                  e.currentTarget.style.background = '#fafafa';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#e5e5e5';
+                  e.currentTarget.style.background = '#ffffff';
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
+              </button>
+              
+              <div style={{
+                flex: 1,
+                maxWidth: '200px',
+                height: '4px',
+                background: '#e5e5e5',
+                borderRadius: '2px',
+                overflow: 'hidden'
+              }}>
+                <div style={{
+                  width: `${Math.max(10, galleryScroll * 100)}%`,
+                  height: '100%',
+                  background: '#0a0a0a',
+                  transition: 'width 0.3s ease'
+                }} />
+              </div>
+              
+              <button
+                onClick={() => {
+                  if (galleryRef.current) {
+                    galleryRef.current.scrollBy({ left: 400, behavior: 'smooth' });
+                  }
+                }}
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  border: '1px solid #e5e5e5',
+                  background: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#0a0a0a';
+                  e.currentTarget.style.background = '#fafafa';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#e5e5e5';
+                  e.currentTarget.style.background = '#ffffff';
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1482,58 +2117,6 @@ export default function About() {
         </div>
       </div>
 
-      <div 
-        className="relative w-full"
-        style={{ 
-          minHeight: '80vh',
-          background: '#ffffff',
-          display: 'flex',
-          alignItems: 'center'
-        }}
-      >
-        <div 
-          className="w-full"
-          style={{
-            paddingTop: 'clamp(3rem, 6vw, 6rem)',
-            paddingBottom: 'clamp(3rem, 6vw, 6rem)',
-            paddingLeft: 'clamp(1.5rem, 4vw, 4rem)',
-            paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
-            maxWidth: '1200px',
-            marginLeft: 'auto',
-            marginRight: 'auto',
-            textAlign: 'right',
-            transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[6]) * -sectionConfig.translateYAmplitude)}px)`,
-            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[6] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
-            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out'
-          }}
-        >
-          <h2
-            style={{
-              fontSize: calculateFontSize(56, 28, 72),
-              fontWeight: 600,
-              lineHeight: 1.1,
-              letterSpacing: '-0.03em',
-              color: '#0a0a0a',
-              marginBottom: `${calculateSpacing(16)}px`
-            }}
-          >
-            Travel
-          </h2>
-          <p
-            style={{
-              fontSize: calculateFontSize(20, 14, 24),
-              fontWeight: 400,
-              lineHeight: 1.6,
-              color: '#525252',
-              maxWidth: '800px',
-              marginLeft: 'auto'
-            }}
-          >
-            Exploring new places expands my perspective and fuels curiosity. Each destination teaches me about
-            different cultures, ways of thinking, and the boundless possibilities that exist beyond familiar horizons.
-          </p>
-        </div>
-      </div>
 
       <div 
         className="relative w-full"
