@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import Spline from '@splinetool/react-spline';
 
 // 3D Avatar Component
-function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundingBoxCalculated }) {
+function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundingBoxCalculated, noRotation = false, rotation = null }) {
   const group = useRef();
   const mixer = useRef();
   const currentActionRef = useRef();
@@ -155,11 +155,10 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
           .fadeIn(fadeDuration)
           .play();
       } else {
-        // First animation (idle) should play immediately without fade-in delay
         newAction.reset()
           .setEffectiveTimeScale(1)
           .setEffectiveWeight(1)
-          .play(); // Play immediately, no fade-in for initial animation
+          .play();
       }
       
       currentActionRef.current = newAction;
@@ -187,14 +186,15 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
   
   if (!clonedAvatar) return null;
   
-  const backwardRotation = 15 * (Math.PI / 180);
+  const backwardRotation = noRotation ? 0 : 15 * (Math.PI / 180);
+  const finalRotation = rotation !== null ? rotation : [backwardRotation, 0, 0];
   
   return (
     <group 
       ref={group} 
       position={position} 
       scale={scale} 
-      rotation={[backwardRotation, 0, 0]}
+      rotation={finalRotation}
       dispose={null}
     >
       <primitive object={clonedAvatar} />
@@ -222,16 +222,9 @@ export default function About() {
     return { width: 1920, height: 1080 };
   });
   const [modelCenterY, setModelCenterY] = useState(0);
+  const [singingModelCenterY, setSingingModelCenterY] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [linePosition, setLinePosition] = useState(0); // 0 to 0.75 (0% to 75% of viewport - reaching bottom 25%)
-  const [scrollVelocity, setScrollVelocity] = useState(0);
-  
-  const scrollTrackingRef = useRef({
-    lastScrollTop: 0,
-    lastScrollTime: Date.now(),
-    velocity: 0
-  });
   
   const [modelsVisible, setModelsVisible] = useState(false);
   const [mainTitleVisible, setMainTitleVisible] = useState(false);
@@ -263,20 +256,43 @@ export default function About() {
   
   useFBX('/animations/idle.fbx');
   useFBX('/animations/Waving.fbx');
+  useFBX('/animations/Singing.fbx');
+  
+  // Define all icons from icons2 folder (all PNG files)
+  const learningIcons = [
+    { url: '/icons2/asana.png', name: 'Asana' },
+    { url: '/icons2/blender.png', name: 'Blender' },
+    { url: '/icons2/canva.png', name: 'Canva' },
+    { url: '/icons2/capcut.png', name: 'CapCut' },
+    { url: '/icons2/chanjing.png', name: 'ChanJing' },
+    { url: '/icons2/chatgpt.png', name: 'ChatGPT' },
+    { url: '/icons2/claude.png', name: 'Claude' },
+    { url: '/icons2/coursera.png', name: 'Coursera' },
+    { url: '/icons2/cursor.png', name: 'Cursor' },
+    { url: '/icons2/dji.png', name: 'DJI' },
+    { url: '/icons2/google.png', name: 'Google' },
+    { url: '/icons2/jimengai.png', name: 'JiMengAI' },
+    { url: '/icons2/meitu.png', name: 'Meitu' },
+    { url: '/icons2/microsoft.png', name: 'Microsoft' },
+    { url: '/icons2/react.png', name: 'React' },
+    { url: '/icons2/solidwork.png', name: 'SolidWorks' },
+    { url: '/icons2/spline.png', name: 'Spline' },
+    { url: '/icons2/SQL.png', name: 'SQL' },
+    { url: '/icons2/three.js.png', name: 'Three.js' },
+    { url: '/icons2/vite.png', name: 'Vite' },
+    { url: '/icons2/vscode.png', name: 'VS Code' },
+  ];
   
   useEffect(() => {
     setPageOpacity(1);
-    // 3D models fade in first
     setModelsVisible(true);
   }, []);
   
-  // Title writing animation (smoother)
   const titleTypingRef = useRef({ currentIndex: 0, timeoutId: null });
   
   useEffect(() => {
     if (!mainTitleVisible) return;
     
-    // Reset state
     titleTypingRef.current.currentIndex = 0;
     setTitleTypingText('');
     setTitleComplete(false);
@@ -286,10 +302,8 @@ export default function About() {
       if (state.currentIndex < titleText.length) {
         setTitleTypingText(titleText.slice(0, state.currentIndex + 1));
         state.currentIndex++;
-        // Smoother writing effect - faster delay for smoother animation
         state.timeoutId = setTimeout(typeTitle, 60);
       } else {
-        // Title complete
         setTitleComplete(true);
       }
     };
@@ -307,31 +321,27 @@ export default function About() {
   }, [mainTitleVisible]);
   
   useEffect(() => {
-    // Title typing animation starts after models appear
     const timer = setTimeout(() => {
       setMainTitleVisible(true);
-    }, 600);
+    }, 300);
     return () => clearTimeout(timer);
   }, []);
   
   useEffect(() => {
-    // Subtitle typing starts only after title completes
     if (titleComplete) {
       setSubtitlePrefixVisible(true);
     }
   }, [titleComplete]);
   
   useEffect(() => {
-    // Script fades in 2 seconds after subtitle starts
     if (subtitlePrefixVisible) {
       const timer = setTimeout(() => {
         setScriptVisible(true);
-      }, 2000);
+      }, 800);
       return () => clearTimeout(timer);
     }
   }, [subtitlePrefixVisible]);
   
-  // Mouse parallax effect
   useEffect(() => {
     const handleMouseMove = (e) => {
       const x = (e.clientX / window.innerWidth - 0.5) * 2;
@@ -343,7 +353,6 @@ export default function About() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
   
-  // Scroll progress tracking and velocity calculation
   useEffect(() => {
     const handleScroll = () => {
       if (!containerRef.current) return;
@@ -352,76 +361,12 @@ export default function About() {
       const docHeight = document.documentElement.scrollHeight - window.innerHeight;
       const progress = Math.min(scrollTop / docHeight, 1);
       setScrollProgress(progress);
-      
-      // Calculate scroll velocity
-      const now = Date.now();
-      const timeDelta = (now - scrollTrackingRef.current.lastScrollTime) / 1000; // in seconds
-      const scrollDelta = scrollTop - scrollTrackingRef.current.lastScrollTop;
-      const velocity = timeDelta > 0 ? Math.abs(scrollDelta / timeDelta) : 0;
-      
-      setScrollVelocity(velocity);
-      scrollTrackingRef.current.lastScrollTop = scrollTop;
-      scrollTrackingRef.current.lastScrollTime = now;
-      scrollTrackingRef.current.velocity = velocity;
     };
     
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
     
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-  
-  // Animate line position based on scroll velocity
-  useEffect(() => {
-    let animationFrameId;
-    let lastUpdateTime = Date.now();
-    const velocityThreshold = 5; // Minimum velocity to consider scrolling active
-    
-    const animate = () => {
-      const now = Date.now();
-      const deltaTime = Math.min((now - lastUpdateTime) / 1000, 0.1); // Cap deltaTime for stability
-      lastUpdateTime = now;
-      
-      setLinePosition(prev => {
-        const currentVelocity = scrollVelocity;
-        
-        if (currentVelocity > velocityThreshold) {
-          // Scrolling is active - move line down proportionally to velocity
-          // Map velocity (0-1000+) to speed (0-0.15)
-          const normalizedVelocity = Math.min(currentVelocity, 1000) / 1000;
-          const speed = 0.15 * normalizedVelocity; // Max speed when velocity is high
-          const newPosition = Math.min(0.75, prev + speed * deltaTime * 60);
-          return newPosition;
-        } else {
-          // Scrolling stopped or slow - move line up smoothly
-          const retractSpeed = 0.08; // Smooth retraction speed
-          const newPosition = Math.max(0, prev - retractSpeed * deltaTime * 60);
-          return newPosition;
-        }
-      });
-      
-      animationFrameId = requestAnimationFrame(animate);
-    };
-    
-    animate();
-    
-    return () => {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
-    };
-  }, [scrollVelocity]);
-  
-  // Update scroll velocity decay when scrolling stops
-  useEffect(() => {
-    const velocityDecayTimer = setInterval(() => {
-      setScrollVelocity(prev => {
-        // Decay velocity over time (faster decay for smoother stop)
-        return prev > 0 ? Math.max(0, prev * 0.7) : 0;
-      });
-    }, 100); // Check every 100ms
-    
-    return () => clearInterval(velocityDecayTimer);
   }, []);
   
   const typingStateRef = useRef({
@@ -476,8 +421,7 @@ export default function About() {
     
     const initialTimeout = setTimeout(() => {
       typeCharacter();
-    }, 800);
-    
+    }, 400);
     return () => {
       clearTimeout(initialTimeout);
       if (state.timeoutId) clearTimeout(state.timeoutId);
@@ -502,7 +446,6 @@ export default function About() {
   }, []);
 
   useEffect(() => {
-    // Ensure idle animation is set from the start
     setCurrentAnimation('/animations/idle.fbx');
     
     let timeoutIds = [];
@@ -524,10 +467,9 @@ export default function About() {
       timeoutIds.push(wavingTimeout);
     };
 
-    // Trigger first wave immediately after fade-in completes (0.8s transition)
-    const fadeInDuration = 800; // Match the opacity transition duration
+    const fadeInDuration = 800;
     const initialTimeout = setTimeout(() => {
-      triggerWaving(); // First wave immediately after fade-in
+      triggerWaving();
     }, fadeInDuration);
     timeoutIds.push(initialTimeout);
 
@@ -564,44 +506,33 @@ export default function About() {
     return scale;
   };
   
-  // Calculate proportional font sizes based on screen width
-  // Desktop gets bigger, mobile gets smaller
   const calculateFontSize = (baseSize, minSize, maxSize) => {
     const screenWidth = windowSize.width;
     
-    // Use viewport-based scaling with wider range
     if (screenWidth < 640) {
-      // Mobile: smaller sizes
-      return `${minSize * 0.85}px`; // Make mobile even smaller
+      return `${minSize * 0.85}px`;
     } else if (screenWidth < 768) {
-      // Small tablet: slightly larger than mobile
       const scale = 0.7;
       return `${Math.max(minSize, baseSize * scale)}px`;
     } else if (screenWidth < 1024) {
-      // Tablet: medium sizes
       const scale = 0.85;
       return `${baseSize * scale}px`;
     } else if (screenWidth < 1440) {
-      // Small desktop: smaller
       const scale = 0.8;
       return `${baseSize * scale}px`;
     } else if (screenWidth < 1920) {
-      // Medium desktop: smaller
       const scale = 0.85;
       return `${baseSize * scale}px`;
     } else {
-      // Large desktop: smaller
       const scale = 0.9;
       return `${Math.min(maxSize, baseSize * scale)}px`;
     }
   };
   
-  // Calculate proportional spacing
   const calculateSpacing = (baseValue) => {
     const screenWidth = windowSize.width;
     
     if (screenWidth < 640) {
-      // Mobile: smaller spacing
       return baseValue * 0.6;
     } else if (screenWidth < 768) {
       return baseValue * 0.7;
@@ -612,7 +543,6 @@ export default function About() {
     } else if (screenWidth < 1920) {
       return baseValue;
     } else {
-      // Large desktop: bigger spacing
       return baseValue * 1.2;
     }
   };
@@ -632,42 +562,59 @@ export default function About() {
     const screenWidth = windowSize.width;
     const screenHeight = windowSize.height;
     
-    // Base dimensions at 1920px width
     const baseWidth = 1920;
-    const baseContainerSize = 800; // Increased to show full room
+    const baseContainerSize = 800;
     
-    // Calculate scale factor based on screen width
     const scaleFactor = screenWidth / baseWidth;
     const containerSize = baseContainerSize * scaleFactor;
     
-    // Ensure the container doesn't exceed viewport
-    const maxWidth = screenWidth * 0.4; // Max 40% of screen width
-    const maxHeight = screenHeight * 0.6; // Max 60% of screen height
+    const maxWidth = screenWidth * 0.4;
+    const maxHeight = screenHeight * 0.6;
     const finalSize = Math.min(containerSize, maxWidth, maxHeight);
     
     return {
       containerWidth: finalSize,
       containerHeight: finalSize,
-      // CSS transform scale to actually resize the Spline model
-      modelScale: 1 // Keep at 1 to show full room without scaling down
+      modelScale: 1
     };
   };
   
-  const splineSize = calculateSplineSize();
+  const calculateBottomRightSplineSize = () => {
+    const screenWidth = windowSize.width;
+    const screenHeight = windowSize.height;
+    
+    if (screenWidth < 640) {
+      return { width: 120, height: 120 };
+    } else if (screenWidth < 768) {
+      return { width: 150, height: 150 };
+    } else if (screenWidth < 1024) {
+      return { width: 200, height: 200 };
+    } else if (screenWidth < 1440) {
+      return { width: 250, height: 250 };
+    } else {
+      return { width: 300, height: 300 };
+    }
+  };
   
-  // Calculate dynamic transforms based on scroll
-  const avatarTransform = `translateY(${scrollProgress * 30}%) scale(${1 - scrollProgress * 0.3})`;
-  // Avatar fades in on page load (same as Spline), then fades out on scroll
-  const avatarOpacity = modelsVisible ? Math.max(0, 1 - scrollProgress * 1.2) : 0;
+  const splineSize = calculateSplineSize();
+  const bottomRightSplineSize = calculateBottomRightSplineSize();
+  
+  const avatarTransform = `translateY(${scrollProgress * 15}%) scale(${1 - scrollProgress * 0.15})`;
+  // Avatar completely disappears before "Learning Beyond Classroom" section appears (fades from 0.03 to 0.05)
+  const avatarOpacity = modelsVisible ? Math.max(0, 1 - Math.max(0, (scrollProgress - 0.03) * 50)) : 0;
   
   const textTransform = `translateX(${mousePosition.x * 10}px) translateY(${mousePosition.y * 10}px)`;
+
+  const sectionConfig = {
+    fadeInSpeed: isDesktop ? 8 : 12,
+    fadeOffset: isDesktop ? 0.03 : 0.01,
+    translateYAmplitude: isDesktop ? 40 : 25
+  };
   
-  // Calculate line height as percentage of viewport (0 to 75% - reaching bottom 25%)
-  // linePosition goes from 0 to 0.75, so multiply by viewport height to get actual pixels
-  const actualLineHeight = `${linePosition * windowSize.height}px`;
-  
+  const sectionTriggers = [0.08, 0.20, 0.32, 0.44, 0.56, 0.68, 0.76, 0.84];
+
   return (
-    <div ref={containerRef} className="w-full" style={{ minHeight: '200vh', width: '100%', maxWidth: '100vw', position: 'relative', top: 0, left: 0, display: 'block', visibility: 'visible', opacity: 1, background: '#fafafa', overflowX: 'hidden' }}>
+    <div ref={containerRef} className="w-full" style={{ minHeight: '800vh', width: '100%', maxWidth: '100vw', position: 'relative', top: 0, left: 0, display: 'block', visibility: 'visible', opacity: 1, background: '#fafafa', overflowX: 'hidden' }}>
       <style>{`
         @keyframes blink {
           0%, 50% { opacity: 1; }
@@ -677,41 +624,24 @@ export default function About() {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(8px); }
         }
+        @keyframes float-0 {
+          0%, 100% { transform: translate(-50%, -50%) translateY(0px); }
+          50% { transform: translate(-50%, -50%) translateY(-12px); }
+        }
+        @keyframes float-1 {
+          0%, 100% { transform: translate(-50%, -50%) translateY(0px); }
+          50% { transform: translate(-50%, -50%) translateY(-15px); }
+        }
+        @keyframes float-2 {
+          0%, 100% { transform: translate(-50%, -50%) translateY(0px); }
+          50% { transform: translate(-50%, -50%) translateY(-10px); }
+        }
+        @keyframes float-3 {
+          0%, 100% { transform: translate(-50%, -50%) translateY(0px); }
+          50% { transform: translate(-50%, -50%) translateY(-13px); }
+        }
       `}</style>
       
-      {/* Animated connection line */}
-      <div 
-        style={{
-          position: 'fixed',
-          left: windowSize.width >= 768 ? '32%' : '37.5%',
-          top: `${navBarTotalHeight}px`,
-          width: '2px',
-          height: actualLineHeight,
-          background: 'linear-gradient(180deg, transparent 0%, #171717 20%, #171717 80%, transparent 100%)',
-          transformOrigin: 'top',
-          transition: 'opacity 0.3s ease-out',
-          zIndex: 1,
-          opacity: linePosition > 0.01 ? Math.min(1, linePosition * 4) : 0,
-          willChange: 'height, opacity'
-        }}
-      >
-        {/* Animated dot at the end */}
-        <div style={{
-          position: 'absolute',
-          bottom: 0,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: '8px',
-          height: '8px',
-          borderRadius: '50%',
-          background: '#171717',
-          boxShadow: '0 0 20px rgba(23, 23, 23, 0.5)',
-          opacity: linePosition > 0.01 ? 1 : 0,
-          transition: 'opacity 0.3s ease-out'
-        }} />
-      </div>
-      
-      {/* Floating particles */}
       {[...Array(6)].map((_, i) => (
         <div
           key={i}
@@ -747,7 +677,8 @@ export default function About() {
               filter: 'drop-shadow(0 10px 40px rgba(0, 0, 0, 0.08))',
               transform: avatarTransform,
               opacity: Math.max(0, avatarOpacity),
-              transition: 'transform 0.1s ease-out, opacity 0.8s ease-in'
+              transition: 'transform 0.3s ease-out, opacity 1.2s ease-in',
+              pointerEvents: scrollProgress >= 0.2 ? 'none' : 'auto'
             }}
           >
             <Canvas 
@@ -801,11 +732,11 @@ export default function About() {
           style={{
             minHeight: `calc(100vh - ${navBarTotalHeight}px)`,
             opacity: pageOpacity,
-            transition: 'opacity 0.8s ease-in',
+            transition: 'opacity 1.2s ease-in',
             paddingLeft: windowSize.width >= 768 ? 'clamp(0.5rem, 1.5vw, 1.5rem)' : 'clamp(1rem, 2vw, 2rem)',
             paddingTop: windowSize.width >= 768 ? 'clamp(4rem, 6vw, 8rem)' : 'clamp(2rem, 4vw, 4rem)',
             paddingBottom: 'clamp(4rem, 8vw, 8rem)',
-            transform: `${windowSize.width >= 768 ? 'translate(-6rem, -5%)' : 'translateY(-5%)'} translateY(${scrollProgress * -50}px)`,
+            transform: `${windowSize.width >= 768 ? 'translate(-6rem, -5%)' : 'translateY(-5%)'} translateY(${scrollProgress * -30}px)`,
             position: 'relative',
             zIndex: 10,
             marginLeft: windowSize.width >= 768 ? '32%' : `${Math.max(windowSize.width * 0.375, 200) + 16}px`,
@@ -819,9 +750,9 @@ export default function About() {
               lineHeight: 1.1,
               letterSpacing: '-0.03em',
               color: '#0a0a0a',
-              opacity: mainTitleVisible ? (1 - scrollProgress * 0.8) : 0,
+              opacity: mainTitleVisible ? (1 - scrollProgress * 0.4) : 0,
               transform: `${mainTitleVisible ? 'translateY(0)' : 'translateY(8px)'} ${textTransform}`,
-              transition: 'opacity 0.3s ease-out, transform 0.3s ease-out',
+              transition: 'opacity 0.6s ease-out, transform 0.6s ease-out',
               marginBottom: `${calculateSpacing(16)}px`
             }}
           >
@@ -843,13 +774,13 @@ export default function About() {
               color: '#525252',
               minHeight: '1.4em',
               transform: textTransform,
-              transition: 'transform 0.3s ease-out'
+              transition: 'transform 0.6s ease-out'
             }}
           >
             <span
               style={{
-                opacity: subtitlePrefixVisible ? (1 - scrollProgress * 0.8) : 0,
-                transition: 'opacity 0.3s ease-out'
+                opacity: subtitlePrefixVisible ? (1 - scrollProgress * 0.4) : 0,
+                transition: 'opacity 0.6s ease-out'
               }}
             >
               I am a{' '}
@@ -857,7 +788,7 @@ export default function About() {
             <span style={{ 
               fontWeight: 500, 
               color: '#171717',
-              opacity: 1 - scrollProgress * 0.8 
+              opacity: 1 - scrollProgress * 0.4
             }}>{typingText}</span>
           </div>
           
@@ -869,9 +800,9 @@ export default function About() {
               fontWeight: 400,
               lineHeight: 1.7,
               color: '#525252',
-              opacity: scriptVisible ? (1 - scrollProgress * 0.8) : 0,
+              opacity: scriptVisible ? (1 - scrollProgress * 0.4) : 0,
               transform: `${scriptVisible ? 'translateY(0)' : 'translateY(8px)'} ${textTransform}`,
-              transition: 'opacity 0.3s ease-out, transform 0.3s ease-out',
+              transition: 'opacity 0.6s ease-out, transform 0.6s ease-out',
               paddingLeft: `${calculateSpacing(24)}px`,
               borderLeft: `${calculateSpacing(2)}px solid #e5e5e5`
             }}
@@ -895,12 +826,12 @@ export default function About() {
               bottom: '2%',
               width: `${splineSize.containerWidth}px`,
               height: `${splineSize.containerHeight}px`,
-              transform: `translateY(${scrollProgress * 100}px) scale(${1 - scrollProgress * 0.2})`,
-              opacity: Math.max(0, 1 - scrollProgress * 1.5),
+              transform: `translateY(${scrollProgress * 60}px) scale(${1 - scrollProgress * 0.1})`,
+              opacity: modelsVisible ? Math.max(0, avatarOpacity) : 0,
               zIndex: 0,
-              pointerEvents: 'auto',
+              pointerEvents: scrollProgress >= 0.2 ? 'none' : 'auto',
               willChange: 'transform',
-              transition: 'transform 0.1s ease-out, opacity 0.1s ease-out',
+              transition: 'transform 0.6s ease-out, opacity 1.2s ease-in',
               overflow: 'visible'
             }}
           >
@@ -934,75 +865,731 @@ export default function About() {
         className="relative w-full"
         style={{ 
           minHeight: '100vh',
-          paddingBottom: 'clamp(4rem, 8vw, 8rem)',
-          background: '#ffffff',
-          paddingTop: '5rem'
+          background: '#fafafa',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          overflow: 'visible'
         }}
       >
-        <div 
-          className="w-full flex flex-col justify-center"
+        {/* Radial blur background effect - creates blur from center */}
+        <div
           style={{
-            minHeight: `calc(100vh - ${navBarTotalHeight}px)`,
-            paddingLeft: windowSize.width >= 768 ? 'clamp(0.5rem, 1.5vw, 1.5rem)' : 'clamp(1rem, 2vw, 2rem)',
-            transform: `${windowSize.width >= 768 ? 'translate(-4rem, 0)' : 'translate(0, 0)'} translateY(${Math.max(0, (scrollProgress - 0.3) * -100)}px)`,
-            opacity: Math.min(1, Math.max(0, (scrollProgress - 0.3) * 3)),
-            transition: 'transform 0.1s ease-out, opacity 0.3s ease-out',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 2,
+            pointerEvents: 'none',
+            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[0] - sectionConfig.fadeOffset)) * (sectionConfig.fadeInSpeed * 1.5))),
+            background: 'radial-gradient(circle at center, rgba(250, 250, 250, 0.98) 0%, rgba(250, 250, 250, 0.9) 15%, rgba(250, 250, 250, 0.7) 30%, rgba(250, 250, 250, 0.5) 45%, rgba(250, 250, 250, 0.3) 60%, rgba(250, 250, 250, 0.1) 75%, rgba(250, 250, 250, 0) 100%)'
+          }}
+        />
+        <div 
+          className="w-full flex flex-col items-center justify-center"
+          style={{
+            paddingTop: 'clamp(3rem, 6vw, 6rem)',
+            paddingBottom: 'clamp(3rem, 6vw, 6rem)',
+            paddingLeft: 'clamp(1.5rem, 4vw, 4rem)',
+            paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
+            transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[0]) * -sectionConfig.translateYAmplitude)}px)`,
+            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[0] - sectionConfig.fadeOffset)) * (sectionConfig.fadeInSpeed * 1.5))),
+            transition: 'transform 0.8s ease-out, opacity 0.5s ease-out',
+            maxWidth: '900px',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            textAlign: 'center',
             position: 'relative',
-            zIndex: 10,
-            marginLeft: windowSize.width >= 768 ? '32%' : `${Math.max(windowSize.width * 0.375, 200) + 16}px`,
-            maxWidth: windowSize.width >= 768 ? '50%' : `${windowSize.width - Math.max(windowSize.width * 0.375, 200) - 32}px`
+            zIndex: 10
           }}
         >
           <h2
             style={{
-              fontSize: calculateFontSize(64, 24, 80),
-              fontWeight: 500,
-              lineHeight: 1.2,
-              letterSpacing: '-0.02em',
+              fontSize: calculateFontSize(64, 32, 80),
+              fontWeight: 600,
+              lineHeight: 1.1,
+              letterSpacing: '-0.03em',
               color: '#0a0a0a',
-              marginBottom: `${calculateSpacing(40)}px`,
-              transform: `translateY(${Math.max(0, (0.5 - scrollProgress) * 50)}px)`,
-              transition: 'transform 0.3s ease-out'
+              marginBottom: `${calculateSpacing(20)}px`,
+              textAlign: 'center'
             }}
           >
-            Learn Beyond Coursework
+            Learning Beyond Classroom
           </h2>
           
-          <div
+          <p
             style={{
-              fontSize: calculateFontSize(20, 12, 24),
+              fontSize: calculateFontSize(22, 16, 28),
               fontWeight: 400,
-              lineHeight: 1.8,
+              lineHeight: 1.5,
               color: '#525252',
-              maxWidth: `${calculateSpacing(700)}px`
+              maxWidth: '700px',
+              textAlign: 'center',
+              marginBottom: 0,
+              marginLeft: 'auto',
+              marginRight: 'auto'
             }}
           >
-            <p style={{ 
-              marginBottom: `${calculateSpacing(32)}px`, 
-              paddingLeft: `${calculateSpacing(24)}px`,
-              borderLeft: `${calculateSpacing(2)}px solid #e5e5e5`,
-              transform: `translateY(${Math.max(0, (0.5 - scrollProgress) * 60)}px)`,
-              opacity: Math.min(1, Math.max(0, (scrollProgress - 0.35) * 3)),
-              transition: 'transform 0.3s ease-out, opacity 0.3s ease-out'
-            }}>
-              This is a new section where you can add more content about yourself. 
-              You can include your background, interests, achievements, or anything else you'd like to share.
+            I enjoy expanding my skill set beyond the classroom by turning curiosity into hands-on execution during free times. I continuously integrate new tools and methods with previously learned skills, using each project to strengthen fundamentals while uncovering how cross-disciplinary skills can compound into scalable, high-impact solutions.
+          </p>
+        </div>
+        
+        {/* Floating icons with orbital animation */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            pointerEvents: 'none',
+            zIndex: 1,
+            overflow: 'visible'
+          }}
+        >
+          {learningIcons.map((icon, i) => {
+            const sectionProgress = Math.max(0, Math.min(1, (scrollProgress - (sectionTriggers[0] - sectionConfig.fadeOffset)) / 0.05));
+            const fadeOutProgress = Math.max(0, Math.min(1, (scrollProgress - (sectionTriggers[1] - 0.05)) / 0.08));
+            
+            const iconOpacity = sectionProgress * (1 - fadeOutProgress);
+            
+            // Create multiple orbital paths - ensure equal distribution across 4 orbits
+            // Use round-robin distribution: icon 0→orbit0, icon 1→orbit1, icon 2→orbit2, icon 3→orbit3, icon 4→orbit0, etc.
+            const orbitIndex = i % 4;
+            
+            // Count how many icons are in this orbit
+            const iconsInThisOrbit = Math.floor((learningIcons.length - orbitIndex + 3) / 4);
+            
+            // Calculate which icon this is within its orbit (0-based)
+            const itemInOrbit = Math.floor(i / 4);
+            
+            const totalInOrbit = iconsInThisOrbit;
+            
+            // Different orbit radii and positions
+            const orbitConfigs = [
+              { x: 23, y: 20, radius: 180, rotation: 0 },     // Top left orbit
+              { x: 77, y: 20, radius: 180, rotation: 90 },    // Top right orbit
+              { x: 23, y: 80, radius: 180, rotation: 180 },   // Bottom left orbit
+              { x: 77, y: 80, radius: 180, rotation: 270 }    // Bottom right orbit
+            ];
+            
+            const config = orbitConfigs[orbitIndex];
+            const baseRadius = windowSize.width < 640 ? config.radius * 0.5 : 
+                              windowSize.width < 768 ? config.radius * 0.65 :
+                              windowSize.width < 1024 ? config.radius * 0.8 : config.radius;
+            
+            // Spiral outward as items increase - made smaller at final state
+            const spiralRadius = (baseRadius + (itemInOrbit * 40)) * 0.75;
+            
+            // Angle based on position in orbit
+            const angleOffset = (itemInOrbit / totalInOrbit) * 360;
+            const angle = (config.rotation + angleOffset + sectionProgress * 180) * (Math.PI / 180);
+            
+            // Calculate position
+            const centerX = (windowSize.width * config.x) / 100;
+            const centerY = (windowSize.height * config.y) / 100;
+            
+            const finalX = centerX + Math.cos(angle) * spiralRadius * sectionProgress;
+            const finalY = centerY + Math.sin(angle) * spiralRadius * sectionProgress;
+            
+            // Scale animation
+            const scale = 0.3 + (sectionProgress * 0.7);
+            
+            const iconSize = windowSize.width < 640 ? 44 : 
+                            windowSize.width < 768 ? 52 :
+                            windowSize.width < 1024 ? 60 : 70;
+            
+            return (
+              <div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  left: `${finalX}px`,
+                  top: `${finalY}px`,
+                  width: `${iconSize}px`,
+                  height: `${iconSize}px`,
+                  transform: `translate(-50%, -50%) scale(${scale}) rotate(${-angle * (180 / Math.PI)}deg)`,
+                  opacity: iconOpacity,
+                  transition: 'opacity 0.3s ease-out, transform 0.3s ease-out',
+                  pointerEvents: iconOpacity > 0.3 ? 'auto' : 'none',
+                  cursor: 'pointer',
+                  filter: `blur(${(1 - sectionProgress) * 8}px) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))`,
+                  animation: iconOpacity > 0 ? `float-${orbitIndex} 3s ease-in-out infinite` : 'none',
+                  animationDelay: `${itemInOrbit * 0.2}s`
+                }}
+                title={icon.name}
+              >
+                <img 
+                  src={icon.url} 
+                  alt={icon.name}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.2) rotate(5deg)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
+                  }}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div 
+        className="relative w-full"
+        style={{ 
+          minHeight: '100vh',
+          background: '#fafafa',
+          display: 'flex',
+          alignItems: 'center'
+        }}
+      >
+        <div 
+          className="w-full"
+          style={{
+            paddingTop: 'clamp(2rem, 4vw, 4rem)',
+            paddingBottom: 'clamp(3rem, 6vw, 6rem)',
+            paddingLeft: 'clamp(1.5rem, 4vw, 4rem)',
+            paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
+            maxWidth: '1400px',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[1]) * -sectionConfig.translateYAmplitude)}px)`,
+            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[1] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
+            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out'
+          }}
+        >
+          <div style={{ textAlign: 'left', marginBottom: `${calculateSpacing(60)}px` }}>
+            <h2
+              style={{
+                fontSize: calculateFontSize(56, 28, 72),
+                fontWeight: 600,
+                lineHeight: 1.1,
+                letterSpacing: '-0.03em',
+                color: '#0a0a0a',
+                marginBottom: `${calculateSpacing(16)}px`
+              }}
+            >
+              Develop With Creativity
+            </h2>
+            <p
+              style={{
+                fontSize: calculateFontSize(20, 14, 24),
+                fontWeight: 400,
+                lineHeight: 1.6,
+                color: '#525252',
+                maxWidth: '700px'
+              }}
+            >
+              I thrive on improving processes through innovation, optimization, and systematic thinking—
+              turning complexity into elegant solutions that drive real impact.
             </p>
-            <p style={{ 
-              paddingLeft: `${calculateSpacing(24)}px`,
-              borderLeft: `${calculateSpacing(2)}px solid #e5e5e5`,
-              transform: `translateY(${Math.max(0, (0.6 - scrollProgress) * 70)}px)`,
-              opacity: Math.min(1, Math.max(0, (scrollProgress - 0.4) * 3)),
-              transition: 'transform 0.3s ease-out, opacity 0.3s ease-out'
-            }}>
-              Feel free to customize this section with your own content, images, or any other elements 
-              that help tell your story.
-            </p>
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: windowSize.width >= 1024 ? 'repeat(3, 1fr)' : windowSize.width >= 640 ? 'repeat(2, 1fr)' : '1fr',
+            gap: `${calculateSpacing(32)}px`
+          }}>
+            {[
+              { title: 'Innovation', description: 'Transforming ideas into breakthrough solutions that challenge the status quo' },
+              { title: 'Optimization', description: 'Refining processes to achieve maximum efficiency and measurable results' },
+              { title: 'Systems Thinking', description: 'Understanding interconnections to create holistic, sustainable improvements' }
+            ].map((item, i) => (
+              <div
+                key={i}
+                style={{
+                  background: '#ffffff',
+                  padding: `${calculateSpacing(32)}px`,
+                  borderRadius: '16px',
+                  boxShadow: '0 4px 24px rgba(0, 0, 0, 0.06)',
+                  transform: `translateY(${Math.max(0, (sectionTriggers[1] - scrollProgress) * (20 + i * 5))}px)`,
+                  transition: 'transform 0.6s ease-out, box-shadow 0.3s ease',
+                  cursor: 'default'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.12)';
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 24px rgba(0, 0, 0, 0.06)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                <h3 style={{
+                  fontSize: calculateFontSize(28, 20, 32),
+                  fontWeight: 600,
+                  color: '#0a0a0a',
+                  marginBottom: `${calculateSpacing(12)}px`
+                }}>
+                  {item.title}
+                </h3>
+                <p style={{
+                  fontSize: calculateFontSize(16, 13, 18),
+                  fontWeight: 400,
+                  lineHeight: 1.6,
+                  color: '#525252'
+                }}>
+                  {item.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        <div
+          style={{
+            position: 'absolute',
+            right: windowSize.width < 640 ? '1rem' : '2rem',
+            bottom: windowSize.width < 640 ? '1rem' : '2rem',
+            width: windowSize.width < 640 ? 'clamp(120px, 25vw, 150px)' : 
+                   windowSize.width < 768 ? 'clamp(150px, 30vw, 200px)' :
+                   windowSize.width < 1024 ? 'clamp(200px, 35vw, 300px)' :
+                   windowSize.width < 1440 ? 'clamp(250px, 40vw, 400px)' : 'clamp(300px, 40vw, 500px)',
+            aspectRatio: '1 / 1',
+            zIndex: 20,
+            pointerEvents: 'auto',
+            overflow: 'hidden',
+            borderRadius: '8px',
+            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[1] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed))
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              overflow: 'hidden',
+              borderRadius: '8px'
+            }}
+          >
+            <Suspense fallback={
+              <div style={{ 
+                width: '100%', 
+                height: '100%', 
+                background: 'rgba(240, 240, 240, 0.5)', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                borderRadius: '8px',
+                position: 'absolute',
+                top: 0,
+                left: 0
+              }}>
+                <div style={{ color: '#666', fontSize: '12px' }}>Loading...</div>
+              </div>
+            }>
+              <Spline 
+                scene="https://prod.spline.design/o2BjYpYprFxeYswd/scene.splinecode"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'block',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0
+                }}
+                onLoad={() => console.log('Develop section Spline scene loaded')}
+                onError={(error) => console.error('Develop section Spline error:', error)}
+              />
+            </Suspense>
           </div>
         </div>
       </div>
+
+      <div 
+        className="relative w-full"
+        style={{ 
+          minHeight: '100vh',
+          background: '#ffffff',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        {/* 3D Avatar at the top */}
+        {windowSize.width > 0 && (
+          <div 
+            className="absolute left-0 right-0 overflow-hidden flex items-center"
+            style={{
+              top: 0,
+              height: '75%',
+              width: '100%',
+              zIndex: 10,
+              justifyContent: windowSize.width >= 768 ? 'flex-start' : 'center',
+              paddingLeft: windowSize.width >= 768 ? 'clamp(1.5rem, 4vw, 4rem)' : '0'
+            }}
+          >
+            <Canvas 
+              camera={{ position: [0, 0, 5], fov: 50, up: [0, 1, 0] }}
+              gl={{ 
+                antialias: true, 
+                alpha: true,
+                premultipliedAlpha: false,
+                powerPreference: "high-performance",
+                preserveDrawingBuffer: true,
+                failIfMajorPerformanceCaveat: false
+              }}
+              onCreated={({ gl }) => {
+                gl.setClearColor('#ffffff', 0);
+              }}
+              style={{ 
+                background: 'transparent', 
+                width: '100%', 
+                height: '100%',
+                overflow: 'hidden'
+              }}
+            >
+              <ambientLight intensity={1.5} />
+              <directionalLight position={[5, 8, 5]} intensity={2.5} />
+              <directionalLight position={[0, 3, 8]} intensity={2} />
+              <directionalLight position={[-5, 5, -5]} intensity={1.2} color="#a5b4fc" />
+              <pointLight position={[8, 2, 3]} intensity={1} color="#fbbf24" />
+              <pointLight position={[-8, 2, 3]} intensity={1} color="#60a5fa" />
+              <hemisphereLight skyColor="#ffffff" groundColor="#b0b0b0" intensity={1.2} />
+              
+              <Suspense fallback={null}>
+                <Avatar 
+                  animationPath="/animations/Singing.fbx"
+                  scale={avatarScale}
+                  position={[windowSize.width >= 768 ? -3.5 : 0, -singingModelCenterY - 0.5, 0]}
+                  onBoundingBoxCalculated={setSingingModelCenterY}
+                  noRotation={true}
+                  rotation={[0, 10 * (Math.PI / 180), -5 * (Math.PI / 180)]}
+                />
+              </Suspense>
+            </Canvas>
+          </div>
+        )}
+        
+        {/* Text at the bottom 25% */}
+        <div 
+          className="absolute left-0 right-0"
+          style={{
+            bottom: 0,
+            height: '25%',
+            paddingLeft: 'clamp(1.5rem, 4vw, 4rem)',
+            paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
+            paddingBottom: 'clamp(3rem, 6vw, 6rem)',
+            paddingTop: 'clamp(2rem, 4vw, 4rem)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-end',
+            alignItems: 'flex-start',
+            maxWidth: '1200px',
+            width: '100%',
+            textAlign: 'left',
+            transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[2]) * -sectionConfig.translateYAmplitude)}px)`,
+            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[2] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
+            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out',
+            zIndex: 5
+          }}
+        >
+          <h2
+            style={{
+              fontSize: calculateFontSize(56, 28, 72),
+              fontWeight: 600,
+              lineHeight: 1.1,
+              letterSpacing: '-0.03em',
+              color: '#0a0a0a',
+              marginBottom: `${calculateSpacing(16)}px`
+            }}
+          >
+            Sing Out the Voices
+          </h2>
+          <p
+            style={{
+              fontSize: calculateFontSize(20, 14, 24),
+              fontWeight: 400,
+              lineHeight: 1.6,
+              color: '#525252',
+              maxWidth: '700px'
+            }}
+          >
+            Music is my emotional outlet and creative expression. Through singing, I connect with stories,
+            convey emotions, and share experiences that words alone cannot capture.
+          </p>
+        </div>
+      </div>
+
+      <div 
+        className="relative w-full"
+        style={{ 
+          minHeight: '100vh',
+          background: '#fafafa',
+          display: 'flex',
+          alignItems: 'center'
+        }}
+      >
+        <div 
+          className="w-full"
+          style={{
+            paddingTop: 'clamp(3rem, 6vw, 6rem)',
+            paddingBottom: 'clamp(3rem, 6vw, 6rem)',
+            paddingLeft: 'clamp(1.5rem, 4vw, 4rem)',
+            paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
+            maxWidth: '1200px',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            textAlign: 'center',
+            transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[3]) * -sectionConfig.translateYAmplitude)}px)`,
+            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[3] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
+            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out'
+          }}
+        >
+          <h2
+            style={{
+              fontSize: calculateFontSize(56, 28, 72),
+              fontWeight: 600,
+              lineHeight: 1.1,
+              letterSpacing: '-0.03em',
+              color: '#0a0a0a',
+              marginBottom: `${calculateSpacing(16)}px`
+            }}
+          >
+            Capture the Beauty
+          </h2>
+          <p
+            style={{
+              fontSize: calculateFontSize(20, 14, 24),
+              fontWeight: 400,
+              lineHeight: 1.6,
+              color: '#525252',
+              maxWidth: '800px',
+              marginLeft: 'auto',
+              marginRight: 'auto'
+            }}
+          >
+            Photography allows me to freeze moments in time, finding beauty in the everyday and extraordinary.
+            Each shot tells a story, preserving memories and perspectives that inspire and connect.
+          </p>
+        </div>
+      </div>
+
+      <div 
+        className="relative w-full"
+        style={{ 
+          minHeight: '100vh',
+          background: '#ffffff',
+          display: 'flex',
+          alignItems: 'center'
+        }}
+      >
+        <div 
+          className="w-full"
+          style={{
+            paddingTop: 'clamp(3rem, 6vw, 6rem)',
+            paddingBottom: 'clamp(3rem, 6vw, 6rem)',
+            paddingLeft: 'clamp(1.5rem, 4vw, 4rem)',
+            paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
+            maxWidth: '1200px',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            textAlign: 'left',
+            transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[4]) * -sectionConfig.translateYAmplitude)}px)`,
+            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[4] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
+            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out'
+          }}
+        >
+          <h2
+            style={{
+              fontSize: calculateFontSize(56, 28, 72),
+              fontWeight: 600,
+              lineHeight: 1.1,
+              letterSpacing: '-0.03em',
+              color: '#0a0a0a',
+              marginBottom: `${calculateSpacing(16)}px`
+            }}
+          >
+            Compete for Greatness
+          </h2>
+          <p
+            style={{
+              fontSize: calculateFontSize(20, 14, 24),
+              fontWeight: 400,
+              lineHeight: 1.6,
+              color: '#525252',
+              maxWidth: '800px'
+            }}
+          >
+            Competitive gaming taught me focus, resilience, and strategic thinking. It shaped my never-give-up
+            mentality—every match is a lesson in adaptation, teamwork, and the relentless pursuit of excellence.
+            The discipline and concentration from gaming translate directly into how I approach challenges in life.
+          </p>
+        </div>
+      </div>
+
+      <div 
+        className="relative w-full"
+        style={{ 
+          minHeight: '80vh',
+          background: '#fafafa',
+          display: 'flex',
+          alignItems: 'center'
+        }}
+      >
+        <div 
+          className="w-full"
+          style={{
+            paddingTop: 'clamp(3rem, 6vw, 6rem)',
+            paddingBottom: 'clamp(3rem, 6vw, 6rem)',
+            paddingLeft: 'clamp(1.5rem, 4vw, 4rem)',
+            paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
+            maxWidth: '1200px',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            textAlign: 'center',
+            transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[5]) * -sectionConfig.translateYAmplitude)}px)`,
+            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[5] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
+            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out'
+          }}
+        >
+          <h2
+            style={{
+              fontSize: calculateFontSize(56, 28, 72),
+              fontWeight: 600,
+              lineHeight: 1.1,
+              letterSpacing: '-0.03em',
+              color: '#0a0a0a',
+              marginBottom: `${calculateSpacing(16)}px`
+            }}
+          >
+            Music for Life
+          </h2>
+          <p
+            style={{
+              fontSize: calculateFontSize(20, 14, 24),
+              fontWeight: 400,
+              lineHeight: 1.6,
+              color: '#525252',
+              maxWidth: '800px',
+              marginLeft: 'auto',
+              marginRight: 'auto'
+            }}
+          >
+            Music is the soundtrack to my journey—fueling creativity, providing comfort, and energizing my pursuits.
+            From indie melodies to powerful anthems, every genre adds color to my life's narrative.
+          </p>
+        </div>
+      </div>
+
+      <div 
+        className="relative w-full"
+        style={{ 
+          minHeight: '80vh',
+          background: '#ffffff',
+          display: 'flex',
+          alignItems: 'center'
+        }}
+      >
+        <div 
+          className="w-full"
+          style={{
+            paddingTop: 'clamp(3rem, 6vw, 6rem)',
+            paddingBottom: 'clamp(3rem, 6vw, 6rem)',
+            paddingLeft: 'clamp(1.5rem, 4vw, 4rem)',
+            paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
+            maxWidth: '1200px',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            textAlign: 'right',
+            transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[6]) * -sectionConfig.translateYAmplitude)}px)`,
+            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[6] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
+            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out'
+          }}
+        >
+          <h2
+            style={{
+              fontSize: calculateFontSize(56, 28, 72),
+              fontWeight: 600,
+              lineHeight: 1.1,
+              letterSpacing: '-0.03em',
+              color: '#0a0a0a',
+              marginBottom: `${calculateSpacing(16)}px`
+            }}
+          >
+            Travel
+          </h2>
+          <p
+            style={{
+              fontSize: calculateFontSize(20, 14, 24),
+              fontWeight: 400,
+              lineHeight: 1.6,
+              color: '#525252',
+              maxWidth: '800px',
+              marginLeft: 'auto'
+            }}
+          >
+            Exploring new places expands my perspective and fuels curiosity. Each destination teaches me about
+            different cultures, ways of thinking, and the boundless possibilities that exist beyond familiar horizons.
+          </p>
+        </div>
+      </div>
+
+      <div 
+        className="relative w-full"
+        style={{ 
+          minHeight: '80vh',
+          background: '#fafafa',
+          display: 'flex',
+          alignItems: 'center'
+        }}
+      >
+        <div 
+          className="w-full"
+          style={{
+            paddingTop: 'clamp(3rem, 6vw, 6rem)',
+            paddingBottom: 'clamp(4rem, 8vw, 8rem)',
+            paddingLeft: 'clamp(1.5rem, 4vw, 4rem)',
+            paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
+            maxWidth: '1200px',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            textAlign: 'center',
+            transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[7]) * -sectionConfig.translateYAmplitude)}px)`,
+            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[7] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
+            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out'
+          }}
+        >
+          <h2
+            style={{
+              fontSize: calculateFontSize(56, 28, 72),
+              fontWeight: 600,
+              lineHeight: 1.1,
+              letterSpacing: '-0.03em',
+              color: '#0a0a0a',
+              marginBottom: `${calculateSpacing(16)}px`
+            }}
+          >
+            Sport & Teamwork
+          </h2>
+          <p
+            style={{
+              fontSize: calculateFontSize(20, 14, 24),
+              fontWeight: 400,
+              lineHeight: 1.6,
+              color: '#525252',
+              maxWidth: '800px',
+              marginLeft: 'auto',
+              marginRight: 'auto'
+            }}
+          >
+            Sports taught me the power of collaboration, trust, and collective achievement. Working towards
+            shared goals with others has shaped my understanding of leadership, communication, and the
+            strength that comes from unified effort.
+          </p>
+        </div>
+      </div>
       
-      {/* Scroll Down Indicator */}
       <div
         style={{
           position: 'fixed',
@@ -1014,12 +1601,11 @@ export default function About() {
           alignItems: 'center',
           gap: '0.5rem',
           zIndex: 100,
-          opacity: scrollProgress > 0.02 ? 0 : 1,
-          transition: 'opacity 0.5s ease-out',
+          opacity: scrollProgress > 0.05 ? 0 : 1,
+          transition: 'opacity 0.8s ease-out',
           pointerEvents: 'none'
         }}
       >
-        {/* Two animated arrows */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
           <svg
             width="24"
@@ -1055,7 +1641,6 @@ export default function About() {
             <path d="M6 9l6 6 6-6" />
           </svg>
         </div>
-        {/* Scroll Down text */}
         <span
           style={{
             fontSize: '14px',
