@@ -269,6 +269,13 @@ function NeonWaveBackground({ scrollProgress, sectionTrigger, fadeOffset, fadeIn
   const animationFrameRef = useRef(null);
   const timeRef = useRef(0);
   const particlesRef = useRef([]);
+  const isInitializedRef = useRef(false);
+  const scrollProgressRef = useRef(scrollProgress);
+
+  // Update scroll progress ref without triggering re-render
+  useEffect(() => {
+    scrollProgressRef.current = scrollProgress;
+  }, [scrollProgress]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -300,7 +307,11 @@ function NeonWaveBackground({ scrollProgress, sectionTrigger, fadeOffset, fadeIn
       }
     };
 
-    initParticles();
+    // Only initialize particles once
+    if (!isInitializedRef.current) {
+      initParticles();
+      isInitializedRef.current = true;
+    }
 
     const handleResize = () => {
       // Use fixed height, only update width
@@ -364,13 +375,17 @@ function NeonWaveBackground({ scrollProgress, sectionTrigger, fadeOffset, fadeIn
     };
 
     const animate = () => {
+      // Check if canvas still exists
+      if (!canvasRef.current) return;
+      
       ctx.clearRect(0, 0, width, height);
       
       // Slower animation on mobile for better performance
       timeRef.current += isMobile ? 0.015 : 0.02;
 
-      // Calculate opacity based on scroll
-      const opacity = Math.min(1, Math.max(0, (scrollProgress - (sectionTrigger - fadeOffset)) * fadeInSpeed)) * 0.7;
+      // Calculate opacity based on scroll - use ref to avoid dependency
+      const currentScrollProgress = scrollProgressRef.current;
+      const opacity = Math.min(1, Math.max(0, (currentScrollProgress - (sectionTrigger - fadeOffset)) * fadeInSpeed)) * 0.7;
       
       if (opacity > 0) {
         ctx.globalAlpha = opacity;
@@ -430,15 +445,19 @@ function NeonWaveBackground({ scrollProgress, sectionTrigger, fadeOffset, fadeIn
       animationFrameRef.current = requestAnimationFrame(animate);
     };
 
-    animate();
+    // Only start animation if not already running
+    if (!animationFrameRef.current) {
+      animate();
+    }
 
     return () => {
       window.removeEventListener('resize', handleResize);
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
       }
     };
-  }, [scrollProgress, sectionTrigger, fadeOffset, fadeInSpeed]);
+  }, [sectionTrigger, fadeOffset, fadeInSpeed]); // Removed scrollProgress from dependencies
 
   return (
     <canvas
@@ -509,6 +528,7 @@ export default function About() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const previousScrollProgress = useRef(0);
   const scrollDirection = useRef('down'); // 'up' or 'down'
+  const lastVideoCheckProgress = useRef(0);
   
   const [modelsVisible, setModelsVisible] = useState(false);
   const [mainTitleVisible, setMainTitleVisible] = useState(false);
@@ -716,11 +736,15 @@ export default function About() {
   
   useEffect(() => {
     const isMobile = windowSize.width < 768;
-    // Use longer throttle on mobile to reduce updates and prevent lag
-    const throttleTime = isMobile ? 150 : 16; // 150ms on mobile (reduced from 100ms), 16ms on desktop
+    const rafIdRef = { current: null };
+    let ticking = false;
+    let isMounted = true;
     
-    const handleScroll = throttle(() => {
-      if (!containerRef.current) return;
+    const updateScrollProgress = () => {
+      if (!isMounted || !containerRef.current) {
+        ticking = false;
+        return;
+      }
       
       const scrollTop = window.scrollY;
       // Use fixed viewport height to prevent content shift
@@ -729,10 +753,10 @@ export default function About() {
       // Prevent division by zero and NaN
       const progress = docHeight > 0 ? Math.min(Math.max(0, scrollTop / docHeight), 1) : 0;
       
-      
-      // Only update if progress changed significantly on mobile to reduce re-renders
-      // Increased threshold from 0.01 to 0.02 for better performance
-      if (isMobile && Math.abs(progress - previousScrollProgress.current) < 0.02) {
+      // Only update if progress changed significantly to prevent unnecessary re-renders
+      const progressDiff = Math.abs(progress - previousScrollProgress.current);
+      if (progressDiff < 0.001) {
+        ticking = false;
         return;
       }
       
@@ -744,20 +768,55 @@ export default function About() {
       }
       
       previousScrollProgress.current = progress;
-      setScrollProgress(progress);
-    }, throttleTime);
+      
+      // Use requestAnimationFrame to batch state updates
+      try {
+        setScrollProgress(progress);
+      } catch (error) {
+        console.error('Error updating scroll progress:', error);
+      }
+      
+      ticking = false;
+      rafIdRef.current = null;
+    };
     
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
+    const handleScroll = () => {
+      if (!isMounted || ticking) return;
+      
+      ticking = true;
+      // Cancel any pending animation frame
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+      // Use requestAnimationFrame for smooth updates
+      rafIdRef.current = requestAnimationFrame(updateScrollProgress);
+    };
+    
+    // Throttle scroll event listener more aggressively on mobile
+    const throttleTime = isMobile ? 100 : 16;
+    const throttledHandleScroll = throttle(handleScroll, throttleTime);
+    
+    window.addEventListener('scroll', throttledHandleScroll, { passive: true });
+    // Initial call with delay to avoid blocking
+    setTimeout(() => {
+      if (isMounted) {
+        handleScroll();
+      }
+    }, 0);
     
     return () => {
-      window.removeEventListener('scroll', handleScroll);
-      // Clean up throttle function
-      if (handleScroll.cancel) {
-        handleScroll.cancel();
+      isMounted = false;
+      window.removeEventListener('scroll', throttledHandleScroll);
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
       }
+      if (throttledHandleScroll.cancel) {
+        throttledHandleScroll.cancel();
+      }
+      ticking = false;
     };
-  }, [windowSize.width]); // isMobile is derived from windowSize.width, so we don't need it in deps
+  }, [windowSize.width]);
   
   const typingStateRef = useRef({
     currentCharIndex: 0,
@@ -818,11 +877,16 @@ export default function About() {
     };
   }, [subtitlePrefixVisible]);
   
-  // Set viewport height and handle mobile address bar collapse
+  // Set viewport height and handle mobile address bar collapse - unified for all browsers
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const updateViewportHeight = () => {
         const currentVh = window.innerHeight;
+        
+        // Detect browser for better compatibility
+        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+        const isSafari = /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
+        const isMobile = window.innerWidth < 768;
         
         // On first load, always use current viewport height
         // After that, only update if viewport gets LARGER (prevents shrinking when address bar hides)
@@ -830,10 +894,21 @@ export default function About() {
           const vh = currentVh * 0.01;
           fixedViewportHeight.current = currentVh;
           
-          // Set CSS variables
+          // Set CSS variables - ensure they're set for all browsers
           document.documentElement.style.setProperty('--vh', `${vh}px`);
           document.documentElement.style.setProperty('--fixed-vh', `${vh}px`);
           document.documentElement.style.setProperty('--fixed-vh-px', `${currentVh}px`);
+          
+          // For Chrome on mobile, use a more stable approach
+          if (isChrome && isMobile) {
+            // Chrome may need a slight delay to get accurate viewport height
+            setTimeout(() => {
+              const stableVh = window.innerHeight;
+              const stableVhPx = stableVh * 0.01;
+              document.documentElement.style.setProperty('--vh', `${stableVhPx}px`);
+              fixedViewportHeight.current = stableVh;
+            }, 50);
+          }
           
           // Update window size state
           setWindowSize({ width: window.innerWidth, height: currentVh });
@@ -843,10 +918,16 @@ export default function About() {
       // Set immediately on mount
       updateViewportHeight();
       
-      // Set again after short delay for iOS Safari
+      // Set again after short delay for better browser compatibility
       const timeoutId = setTimeout(updateViewportHeight, 100);
       
-      return () => clearTimeout(timeoutId);
+      // Additional delay for Chrome mobile
+      const chromeTimeoutId = setTimeout(updateViewportHeight, 300);
+      
+      return () => {
+        clearTimeout(timeoutId);
+        clearTimeout(chromeTimeoutId);
+      };
     }
   }, []);
   
@@ -961,57 +1042,88 @@ export default function About() {
     }
   }, [windowSize.width]);
 
-  // Control video playback based on scroll position
+  // Control video playback based on scroll position - throttled to prevent crashes
   useEffect(() => {
+    const checkInterval = 0.02; // Only check every 2% scroll progress change
+    
+    // Skip if change is too small to reduce unnecessary video operations
+    if (Math.abs(scrollProgress - lastVideoCheckProgress.current) < checkInterval) {
+      return;
+    }
+    
+    lastVideoCheckProgress.current = scrollProgress;
+    
     const travelSectionTrigger = 0.38; // sectionTriggers[3]
     const developSectionTrigger = 0.20; // sectionTriggers[1]
     
     const shouldPlayTravel = scrollProgress >= travelSectionTrigger - 0.05 && scrollProgress <= travelSectionTrigger + 0.15;
     const shouldPlayDevelop = scrollProgress >= developSectionTrigger - 0.05 && scrollProgress <= developSectionTrigger + 0.15;
     
-    if (travelVideoRef.current) {
-      if (shouldPlayTravel) {
-        travelVideoRef.current.play().catch(err => {
-          console.warn('Video autoplay prevented:', err);
-        });
-      } else {
-        travelVideoRef.current.pause();
+    // Use requestAnimationFrame to batch video operations and prevent blocking
+    const rafId = requestAnimationFrame(() => {
+      try {
+        if (travelVideoRef.current) {
+          if (shouldPlayTravel) {
+            travelVideoRef.current.play().catch(err => {
+              console.warn('Video autoplay prevented:', err);
+            });
+          } else {
+            travelVideoRef.current.pause();
+          }
+        }
+        
+        if (developVideoRef.current) {
+          if (shouldPlayDevelop) {
+            developVideoRef.current.play().catch(err => {
+              console.warn('Develop video autoplay prevented:', err);
+            });
+          } else {
+            developVideoRef.current.pause();
+          }
+        }
+      } catch (error) {
+        console.error('Error controlling video playback:', error);
       }
-    }
+    });
     
-    if (developVideoRef.current) {
-      if (shouldPlayDevelop) {
-        developVideoRef.current.play().catch(err => {
-          console.warn('Develop video autoplay prevented:', err);
-        });
-      } else {
-        developVideoRef.current.pause();
+    return () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
       }
-    }
+    };
   }, [scrollProgress]);
   
   // Sing Out Voices carousel initialization - trigger animation when section starts appearing, then auto-rotate
   useEffect(() => {
+    // Skip if already animated to avoid unnecessary checks
+    if (hasAnimated) return;
+    
     const sectionStart = 0.32; // sectionTriggers[2] - Sing Out Voices section
     const sectionEnd = 0.38; // sectionTriggers[3]
-    const fadeOffset = windowSize.width >= 768 ? 0.05 : 0.03; // sectionConfig.fadeOffset
+    const fadeOffset = sectionConfig.fadeOffset; // Use unified fadeOffset
     const fadeInStart = sectionStart - fadeOffset; // When section starts appearing
     
     // Trigger animation when section starts appearing (not at midpoint)
-    if (scrollProgress >= fadeInStart && !hasAnimated) {
-      // Use timer-based approach for reliability
+    if (scrollProgress >= fadeInStart) {
+      // Use timer-based approach for reliability and to prevent blocking
       const timer = setTimeout(() => {
-        setHasAnimated(true);
-        setIsAnimating(true);
-        
-        // Store animation timer in ref so it persists even if effect re-runs
-        animationTimerRef.current = setTimeout(() => {
-          setIsAnimating(false);
-          animationTimerRef.current = null;
-        }, 2700);
+        try {
+          setHasAnimated(true);
+          setIsAnimating(true);
+          
+          // Store animation timer in ref so it persists even if effect re-runs
+          if (animationTimerRef.current) {
+            clearTimeout(animationTimerRef.current);
+          }
+          animationTimerRef.current = setTimeout(() => {
+            setIsAnimating(false);
+            animationTimerRef.current = null;
+          }, 2700);
+        } catch (error) {
+          console.error('Error setting carousel animation:', error);
+        }
       }, 100);
       
-      // Only clear the outer timer, not the animationTimerRef (it needs to complete)
       return () => {
         clearTimeout(timer);
       };
@@ -1030,11 +1142,19 @@ export default function About() {
   
   // Fallback: If user scrolls past section without triggering, still enable auto-rotation
   useEffect(() => {
+    // Only check if we haven't animated yet to avoid unnecessary checks
+    if (hasAnimated) return;
+    
     const sectionEnd = 0.38; // sectionTriggers[3]
     // If we're well past the section and haven't animated, just enable auto-rotation
-    if (scrollProgress > sectionEnd + 0.1 && !hasAnimated) {
-      setHasAnimated(true);
-      setIsAnimating(false); // Skip the initial animation, go straight to auto-rotation
+    if (scrollProgress > sectionEnd + 0.1) {
+      // Use setTimeout to avoid state updates during render
+      const timer = setTimeout(() => {
+        setHasAnimated(true);
+        setIsAnimating(false); // Skip the initial animation, go straight to auto-rotation
+      }, 0);
+      
+      return () => clearTimeout(timer);
     }
   }, [scrollProgress, hasAnimated]);
   
@@ -1297,9 +1417,9 @@ export default function About() {
   const bottomRightSplineSize = calculateBottomRightSplineSize();
   
   const sectionConfig = {
-    fadeInSpeed: isDesktop ? 8 : 10,  // Adjusted for better mobile animation
-    fadeOffset: isDesktop ? 0.05 : 0.05,  // Same fadeOffset for mobile to match desktop
-    translateYAmplitude: isDesktop ? 40 : 35  // Increased for better mobile animation
+    fadeInSpeed: 8,  // Same for both mobile and desktop for consistent animation
+    fadeOffset: 0.05,  // Same for both mobile and desktop
+    translateYAmplitude: 40  // Same for both mobile and desktop
   };
   
   const sectionTriggers = [0.08, 0.20, 0.32, 0.38, 0.56, 0.68, 0.76, 0.84];
@@ -1349,17 +1469,21 @@ export default function About() {
           overflow-x: hidden;
           /* Prevent overscroll bounce */
           overscroll-behavior-y: none;
-          /* Use fixed viewport height to prevent shift */
+          /* Use fixed viewport height to prevent shift - unified for all browsers */
           min-height: 100vh;
+          min-height: 100dvh;
           min-height: calc(var(--vh, 1vh) * 100);
+          /* Safari fallback */
           min-height: -webkit-fill-available;
         }
         
-        /* Main container uses fixed vh */
+        /* Main container uses fixed vh - unified for all browsers */
         #root {
           width: 100%;
           min-height: 100vh;
+          min-height: 100dvh;
           min-height: calc(var(--vh, 1vh) * 100);
+          /* Safari fallback */
           min-height: -webkit-fill-available;
         }
         
@@ -1992,9 +2116,7 @@ export default function About() {
               const fadeOut = Math.max(0, Math.min(1, (scrollProgress - (sectionTriggers[1] - 0.08)) / 0.07));
               return fadeIn * (1 - fadeOut);
             })(),
-            transition: windowSize.width >= 768 
-              ? 'transform 0.8s ease-out, opacity 0.5s ease-out'
-              : 'transform 0.6s ease-out, opacity 0.4s ease-out',  // Faster transition on mobile
+            transition: 'transform 0.8s ease-out, opacity 0.5s ease-out',  // Same transition for mobile and desktop
             maxWidth: '900px',
             marginLeft: 'auto',
             marginRight: 'auto',
@@ -2423,7 +2545,7 @@ export default function About() {
           justifyContent: 'center',
           opacity: (() => {
             const sectionStart = 0.32; // sectionTriggers[2]
-            const fadeOffset = windowSize.width >= 768 ? 0.05 : 0.03; // sectionConfig.fadeOffset
+            const fadeOffset = sectionConfig.fadeOffset; // Use unified fadeOffset
             const fadeInStart = sectionStart - fadeOffset;
             const fadeInEnd = sectionStart + 0.03;
             

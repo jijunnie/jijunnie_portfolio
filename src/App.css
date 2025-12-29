@@ -2,16 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Base styles */
+/* Base styles - unified viewport height for all browsers */
 html, body {
   width: 100%;
   min-height: 100%;
+  /* Fallback for older browsers */
+  min-height: 100vh;
+  /* Modern browsers with dynamic viewport */
   min-height: 100dvh;
+  /* Use CSS variable as final fallback for consistency */
+  min-height: calc(var(--vh, 1vh) * 100);
 }
 
 #root {
   min-height: 100%;
+  /* Fallback for older browsers */
+  min-height: 100vh;
+  /* Modern browsers with dynamic viewport */
   min-height: 100dvh;
+  /* Use CSS variable as final fallback for consistency */
+  min-height: calc(var(--vh, 1vh) * 100);
 }
 
 /* Fixed viewport height to prevent content shift on mobile address bar collapse */
