@@ -1795,7 +1795,7 @@ export default function About() {
           <h1
             style={{
               fontSize: windowSize.width < 768 
-                ? `clamp(24px, 5.5vw, 80px)`  // Bigger text on mobile
+                ? `clamp(22px, 5.2vw, 80px)`  // Slightly smaller text on mobile
                 : calculateFontSize(80, 28, 100),
               fontWeight: 500,
               lineHeight: 1.1,
@@ -1822,7 +1822,7 @@ export default function About() {
           <div
             style={{
               fontSize: windowSize.width < 768 
-                ? `clamp(14px, 3vw, 28px)`  // Bigger subtitle on mobile
+                ? `clamp(13px, 2.8vw, 28px)`  // Slightly smaller subtitle on mobile
                 : calculateFontSize(28, 12, 36),
               fontWeight: 400,
               lineHeight: 1.4,
@@ -1858,7 +1858,7 @@ export default function About() {
                   ? `${Math.min(calculateSpacing(600), windowSize.width * 0.85)}px` 
                   : `${calculateSpacing(600)}px`,
               fontSize: windowSize.width < 768 
-                ? calculateFontSize(20, 12, 24)  // Bigger description text on mobile
+                ? calculateFontSize(20, 11, 24)  // Slightly smaller description text on mobile
                 : calculateFontSize(20, 12, 24),
               fontWeight: 400,
               lineHeight: 1.7,
@@ -1887,7 +1887,7 @@ export default function About() {
             style={{
               right: windowSize.width >= 768 ? '2%' : 'auto',
               left: windowSize.width >= 768 ? 'auto' : '50%',
-              bottom: windowSize.width >= 768 ? '0%' : '15%',  // Shift up on mobile
+              bottom: windowSize.width >= 768 ? '0%' : '10%',  // Shift down a bit on mobile
               top: windowSize.width >= 768 ? 'auto' : 'auto',
               width: windowSize.width >= 768 
                 ? `${splineSize.containerWidth}px`
