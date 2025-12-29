@@ -466,7 +466,6 @@ export default function About() {
   const [pageOpacity, setPageOpacity] = useState(0);
   const [pageReady, setPageReady] = useState(false);
   const [scriptVisible, setScriptVisible] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('All');
   const [galleryScroll, setGalleryScroll] = useState(0);
   const [hoveredGalleryItem, setHoveredGalleryItem] = useState(null);
   
@@ -1009,42 +1008,71 @@ export default function About() {
   
   const calculateFontSize = (baseSize, minSize, maxSize) => {
     const screenWidth = windowSize.width;
+    const screenHeight = windowSize.height;
     
-    if (screenWidth < 640) {
-      return `${minSize * 0.85}px`;
+    // 增强的响应式计算，更细粒度的断点和更激进的移动端缩放
+    // 基础缩放基于屏幕宽度，确保在最小值和最大值之间平滑过渡
+    let scale = 1;
+    
+    // 更细粒度的断点控制
+    if (screenWidth < 360) {
+      // 超小屏幕（小手机）
+      scale = Math.max(0.35, screenWidth / 1024);
+    } else if (screenWidth < 480) {
+      // 超小屏幕（手机竖屏）- 更激进的缩小
+      scale = 0.4 + (screenWidth - 360) / 120 * 0.15; // 0.4 到 0.55
+    } else if (screenWidth < 640) {
+      // 小屏幕（手机横屏/小平板）- 明显缩小
+      scale = 0.55 + (screenWidth - 480) / 160 * 0.2; // 0.55 到 0.75
     } else if (screenWidth < 768) {
-      const scale = 0.7;
-      return `${Math.max(minSize, baseSize * scale)}px`;
+      // 中等屏幕（平板竖屏）
+      scale = 0.7 + (screenWidth - 640) / 128 * 0.15; // 0.7 到 0.85
     } else if (screenWidth < 1024) {
-      const scale = 0.85;
-      return `${baseSize * scale}px`;
+      // 大屏幕（平板横屏/小笔记本）
+      scale = 0.8 + (screenWidth - 768) / 256 * 0.1; // 0.8 到 0.9
+    } else if (screenWidth < 1280) {
+      // 超大屏幕（笔记本）
+      scale = 0.85 + (screenWidth - 1024) / 256 * 0.1; // 0.85 到 0.95
     } else if (screenWidth < 1440) {
-      const scale = 0.8;
-      return `${baseSize * scale}px`;
+      // 超宽屏幕（桌面显示器）
+      scale = 0.9 + (screenWidth - 1280) / 160 * 0.05; // 0.9 到 0.95
     } else if (screenWidth < 1920) {
-      const scale = 0.85;
-      return `${baseSize * scale}px`;
+      // 超宽屏幕（大桌面显示器）
+      scale = 0.95 + (screenWidth - 1440) / 480 * 0.05; // 0.95 到 1.0
     } else {
-      const scale = 0.9;
-      return `${Math.min(maxSize, baseSize * scale)}px`;
+      // 超大屏幕（4K等）
+      scale = 1.0 + Math.min(0.05, (screenWidth - 1920) / 1000 * 0.05); // 1.0 到 1.05
     }
+    
+    // 考虑屏幕高度，如果屏幕很高但很窄，稍微减小字体
+    if (screenHeight > screenWidth * 1.5) {
+      scale *= 0.95;
+    }
+    
+    // 计算最终大小，确保在最小值和最大值之间
+    const calculatedSize = baseSize * scale;
+    const clampedSize = Math.max(minSize, Math.min(maxSize, calculatedSize));
+    
+    return `${clampedSize}px`;
   };
   
   const calculateSpacing = (baseValue) => {
     const screenWidth = windowSize.width;
     
-    if (screenWidth < 640) {
-      return baseValue * 0.6;
+    if (screenWidth < 480) {
+      return baseValue * 0.4; // 超小屏幕，更激进的缩小
+    } else if (screenWidth < 640) {
+      return baseValue * 0.5; // 小屏幕
     } else if (screenWidth < 768) {
-      return baseValue * 0.7;
+      return baseValue * 0.65; // 中等屏幕
     } else if (screenWidth < 1024) {
-      return baseValue * 0.85;
+      return baseValue * 0.8; // 大屏幕
     } else if (screenWidth < 1440) {
-      return baseValue * 0.95;
+      return baseValue * 0.9; // 超大屏幕
     } else if (screenWidth < 1920) {
-      return baseValue;
+      return baseValue; // 超宽屏幕
     } else {
-      return baseValue * 1.2;
+      return baseValue * 1.1; // 超大屏幕
     }
   };
   
@@ -1100,12 +1128,6 @@ export default function About() {
   const splineSize = calculateSplineSize();
   const bottomRightSplineSize = calculateBottomRightSplineSize();
   
-  const avatarTransform = `translateY(${scrollProgress * 15}%) scale(${1 - scrollProgress * 0.15})`;
-  // Avatar completely disappears before "Learning Beyond Classroom" section appears (fades from 0.03 to 0.05)
-  const avatarOpacity = modelsVisible ? Math.max(0, 1 - Math.max(0, (scrollProgress - 0.03) * 50)) : 0;
-  
-  const textTransform = `translateX(${mousePosition.x * 10}px) translateY(${mousePosition.y * 10}px)`;
-
   const sectionConfig = {
     fadeInSpeed: isDesktop ? 8 : 12,
     fadeOffset: isDesktop ? 0.05 : 0.03,
@@ -1113,9 +1135,15 @@ export default function About() {
   };
   
   const sectionTriggers = [0.08, 0.20, 0.32, 0.38, 0.56, 0.68, 0.76, 0.84];
+  
+  const avatarTransform = `translateY(${scrollProgress * 15}%) scale(${1 - scrollProgress * 0.15})`;
+  // Avatar completely disappears when "Learning Beyond Classroom" section appears (fades out by sectionTriggers[0] = 0.08)
+  const avatarOpacity = modelsVisible ? Math.max(0, 1 - Math.max(0, (scrollProgress - 0.03) / (sectionTriggers[0] - 0.03) * 1)) : 0;
+  
+  const textTransform = `translateX(${mousePosition.x * 10}px) translateY(${mousePosition.y * 10}px)`;
 
   return (
-    <div ref={containerRef} className="w-full" style={{ minHeight: '800vh', width: '100%', maxWidth: '100vw', position: 'relative', top: 0, left: 0, display: 'block', visibility: 'visible', opacity: 1, background: '#fafafa', overflowX: 'hidden' }}>
+    <div ref={containerRef} className="w-full" style={{ minHeight: '800vh', width: '100%', maxWidth: '100vw', position: 'relative', top: 0, left: 0, display: 'block', visibility: 'visible', opacity: 1, background: '#fafafa', overflowX: 'visible', overflowY: 'visible' }}>
       <style>{`
         @keyframes blink {
           0%, 50% { opacity: 1; }
@@ -1444,24 +1472,27 @@ export default function About() {
         />
       ))}
       
-      <div className="relative w-full" style={{ minHeight: '100vh', paddingTop: `${navBarTotalHeight}px` }}>
+      <div className="relative w-full" style={{ minHeight: '100vh', paddingTop: `${navBarTotalHeight}px`, overflow: 'visible' }}>
         {availableHeight > 0 && windowSize.width > 0 && (
           <div 
-            className="fixed left-0 overflow-hidden flex items-end justify-center"
+            className="fixed overflow-visible flex items-end justify-center"
             style={{
+              left: windowSize.width >= 768 ? '-40px' : '0',
               top: `${navBarTotalHeight}px`,
               bottom: 0,
               width: `${windowSize.width >= 768 ? Math.max(windowSize.width * 0.32, 200) : Math.max(windowSize.width * 0.375, 200)}px`,
               height: `${availableHeight}px`,
               minWidth: '200px',
               minHeight: '100px',
-              paddingBottom: '10%',
+              paddingBottom: windowSize.width >= 768 ? '10%' : '5%',
               zIndex: 5,
               filter: 'drop-shadow(0 10px 40px rgba(0, 0, 0, 0.08))',
-              transform: avatarTransform,
-              opacity: Math.max(0, avatarOpacity),
-              transition: 'transform 0.3s ease-out, opacity 1.2s ease-in',
-              pointerEvents: scrollProgress >= 0.2 ? 'none' : 'auto'
+              transform: windowSize.width >= 768 
+                ? avatarTransform 
+                : `${avatarTransform} translateY(-${windowSize.height * 0.15}px)`,
+              opacity: avatarOpacity,
+              transition: 'transform 0.3s ease-out, opacity 0.6s ease-out',
+              pointerEvents: 'auto'
             }}
           >
             <Canvas 
@@ -1516,27 +1547,52 @@ export default function About() {
             minHeight: `calc(100vh - ${navBarTotalHeight}px)`,
             opacity: pageOpacity,
             transition: 'opacity 1.2s ease-in',
-            paddingLeft: windowSize.width >= 768 ? 'clamp(0.5rem, 1.5vw, 1.5rem)' : 'clamp(1rem, 2vw, 2rem)',
-            paddingTop: windowSize.width >= 768 ? 'clamp(4rem, 6vw, 8rem)' : 'clamp(2rem, 4vw, 4rem)',
-            paddingBottom: 'clamp(4rem, 8vw, 8rem)',
-            transform: `${windowSize.width >= 768 ? 'translate(-6rem, -5%)' : 'translateY(-5%)'} translateY(${scrollProgress * -30}px)`,
+            paddingLeft: windowSize.width >= 768 
+              ? 'clamp(0.5rem, 1.5vw, 1.5rem)' 
+              : windowSize.width < 480 
+                ? '0' 
+                : 'clamp(0.25rem, 1vw, 0.5rem)',
+            paddingTop: windowSize.width >= 768 
+              ? 'clamp(4rem, 6vw, 8rem)' 
+              : windowSize.width < 480 
+                ? 'clamp(0.5rem, 2vw, 1rem)' 
+                : 'clamp(1rem, 3vw, 2rem)',
+            paddingBottom: windowSize.width < 480 
+              ? 'clamp(2rem, 4vw, 3rem)' 
+              : 'clamp(4rem, 8vw, 8rem)',
+            paddingRight: windowSize.width < 480 ? 'clamp(0.75rem, 2vw, 1rem)' : '0',
+            transform: windowSize.width >= 768 
+              ? `translate(-6rem, -5%) translateY(${scrollProgress * -30}px)`
+              : `translateX(-8px) translateY(-15%) translateY(${scrollProgress * -30}px)`,
             position: 'relative',
             zIndex: 10,
-            marginLeft: windowSize.width >= 768 ? '32%' : `${Math.max(windowSize.width * 0.375, 200) + 16}px`,
-            maxWidth: windowSize.width >= 768 ? '50%' : `${windowSize.width - Math.max(windowSize.width * 0.375, 200) - 32}px`
+            marginLeft: windowSize.width >= 768 
+              ? '32%' 
+              : windowSize.width < 480 
+                ? `${Math.max(windowSize.width * 0.375, 200) - 8}px` 
+                : `${Math.max(windowSize.width * 0.375, 200) - 4}px`,
+            maxWidth: windowSize.width >= 768 
+              ? '50%' 
+              : windowSize.width < 480 
+                ? `${Math.max(windowSize.width - Math.max(windowSize.width * 0.375, 200) - 8, windowSize.width * 0.9)}px` 
+                : `${windowSize.width - Math.max(windowSize.width * 0.375, 200) - 16}px`
           }}
         >
           <h1
             style={{
-              fontSize: calculateFontSize(80, 28, 100),
+              fontSize: windowSize.width < 768 
+                ? `clamp(20px, 5vw, 80px)`
+                : calculateFontSize(80, 28, 100),
               fontWeight: 500,
               lineHeight: 1.1,
               letterSpacing: '-0.03em',
               color: '#0a0a0a',
               opacity: mainTitleVisible ? (1 - scrollProgress * 0.4) : 0,
               transform: `${mainTitleVisible ? 'translateY(0)' : 'translateY(8px)'} ${textTransform}`,
-              transition: 'opacity 0.6s ease-out, transform 0.6s ease-out',
-              marginBottom: `${calculateSpacing(16)}px`
+              transition: 'opacity 0.6s ease-out, transform 0.6s ease-out, fontSize 0.3s ease-out',
+              marginBottom: `${calculateSpacing(16)}px`,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden'
             }}
           >
             {titleTypingText}
@@ -1551,13 +1607,17 @@ export default function About() {
           
           <div
             style={{
-              fontSize: calculateFontSize(28, 12, 36),
+              fontSize: windowSize.width < 768 
+                ? `clamp(12px, 2.5vw, 28px)`
+                : calculateFontSize(28, 12, 36),
               fontWeight: 400,
               lineHeight: 1.4,
               color: '#525252',
               minHeight: '1.4em',
               transform: textTransform,
-              transition: 'transform 0.6s ease-out'
+              transition: 'transform 0.6s ease-out, fontSize 0.3s ease-out',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden'
             }}
           >
             <span
@@ -1578,15 +1638,21 @@ export default function About() {
           <div
             style={{
               marginTop: `${calculateSpacing(40)}px`,
-              maxWidth: `${calculateSpacing(600)}px`,
-              fontSize: calculateFontSize(20, 12, 24),
+              maxWidth: windowSize.width < 480 
+                ? `${Math.min(calculateSpacing(600), windowSize.width * 0.9)}px` 
+                : windowSize.width < 640 
+                  ? `${Math.min(calculateSpacing(600), windowSize.width * 0.85)}px` 
+                  : `${calculateSpacing(600)}px`,
+              fontSize: windowSize.width < 768 
+                ? calculateFontSize(20, 10, 24)
+                : calculateFontSize(20, 12, 24),
               fontWeight: 400,
               lineHeight: 1.7,
               color: '#525252',
               opacity: scriptVisible ? (1 - scrollProgress * 0.4) : 0,
               transform: `${scriptVisible ? 'translateY(0)' : 'translateY(8px)'} ${textTransform}`,
-              transition: 'opacity 0.6s ease-out, transform 0.6s ease-out',
-              paddingLeft: `${calculateSpacing(24)}px`,
+              transition: 'opacity 0.6s ease-out, transform 0.6s ease-out, fontSize 0.3s ease-out',
+              paddingLeft: windowSize.width < 480 ? `${calculateSpacing(16)}px` : `${calculateSpacing(24)}px`,
               borderLeft: `${calculateSpacing(2)}px solid #e5e5e5`
             }}
           >
@@ -1605,16 +1671,26 @@ export default function About() {
           <div 
             className="absolute pointer-events-auto"
             style={{
-              right: '2%',
-              bottom: '2%',
-              width: `${splineSize.containerWidth}px`,
-              height: `${splineSize.containerHeight}px`,
-              transform: avatarTransform,
-              opacity: modelsVisible ? Math.max(0, avatarOpacity) : 0,
+              right: windowSize.width >= 768 ? '2%' : 'auto',
+              left: windowSize.width >= 768 ? 'auto' : '50%',
+              bottom: windowSize.width >= 768 ? '0%' : '0%',
+              top: windowSize.width >= 768 ? 'auto' : 'auto',
+              width: windowSize.width >= 768 
+                ? `${splineSize.containerWidth}px`
+                : `${Math.max(splineSize.containerWidth, windowSize.width * 0.9)}px`,
+              height: windowSize.width >= 768 
+                ? `${splineSize.containerHeight}px`
+                : `${Math.max(splineSize.containerHeight, windowSize.width * 0.9)}px`,
+              minWidth: windowSize.width < 768 ? `${windowSize.width * 0.8}px` : 'auto',
+              minHeight: windowSize.width < 768 ? `${windowSize.width * 0.8}px` : 'auto',
+              transform: windowSize.width >= 768 
+                ? `${avatarTransform} translateY(40px)`
+                : `translateX(-50%) translateY(40px) ${avatarTransform}`,
+              opacity: avatarOpacity,
               zIndex: 0,
-              pointerEvents: scrollProgress >= 0.2 ? 'none' : 'auto',
+              pointerEvents: 'auto',
               willChange: 'transform',
-              transition: 'transform 0.6s ease-out, opacity 1.2s ease-in',
+              transition: 'transform 0.6s ease-out, opacity 0.6s ease-out',
               overflow: 'visible'
             }}
           >
@@ -1624,12 +1700,15 @@ export default function About() {
                 height: '100%',
                 pointerEvents: 'auto',
                 transformOrigin: 'center center',
-                overflow: 'visible'
+                overflow: 'visible',
+                position: 'relative'
               }}
             >
               <Suspense fallback={null}>
                 <Spline 
-                  scene="https://prod.spline.design/RiI1HgjSIb8MFplx/scene.splinecode"
+                  scene={windowSize.width >= 768 
+                    ? "https://prod.spline.design/RiI1HgjSIb8MFplx/scene.splinecode"
+                    : "https://prod.spline.design/LYnE7DUy1dfNnCfp/scene.splinecode"}
                   style={{
                     width: '100%',
                     height: '100%',
@@ -1680,30 +1759,11 @@ export default function About() {
             zIndex: 10
           }}
         >
-          {/* Radial blur background effect - blurs icons behind text */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: -1,
-              pointerEvents: 'none',
-              opacity: (() => {
-                const fadeSpeed = scrollDirection.current === 'up' ? sectionConfig.fadeInSpeed * 2.0 : sectionConfig.fadeInSpeed * 1.2;
-                return Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[0] - sectionConfig.fadeOffset)) * fadeSpeed));
-              })(),
-              backdropFilter: 'blur(25px)',
-              WebkitBackdropFilter: 'blur(25px)',
-              background: 'radial-gradient(ellipse at center, rgba(250, 250, 250, 0.9) 0%, rgba(250, 250, 250, 0.75) 25%, rgba(250, 250, 250, 0.6) 45%, rgba(250, 250, 250, 0.4) 65%, rgba(250, 250, 250, 0.2) 80%, rgba(250, 250, 250, 0) 100%)',
-              borderRadius: '20px',
-              transition: 'opacity 0.5s ease-out'
-            }}
-          />
           <h2
             style={{
-              fontSize: calculateFontSize(64, 32, 80),
+              fontSize: windowSize.width < 768 
+                ? `clamp(20px, 5vw, 80px)`
+                : calculateFontSize(64, 32, 80),
               fontWeight: 600,
               lineHeight: 1.1,
               letterSpacing: '-0.03em',
@@ -1717,7 +1777,9 @@ export default function About() {
           
           <p
             style={{
-              fontSize: calculateFontSize(22, 16, 28),
+              fontSize: windowSize.width < 768 
+                ? calculateFontSize(20, 10, 24)
+                : calculateFontSize(22, 16, 28),
               fontWeight: 400,
               lineHeight: 1.5,
               color: '#525252',
@@ -1941,7 +2003,9 @@ export default function About() {
           <div style={{ textAlign: 'left', marginBottom: `${calculateSpacing(60)}px` }}>
             <h2
               style={{
-                fontSize: calculateFontSize(56, 28, 72),
+                fontSize: windowSize.width < 768 
+                  ? `clamp(18px, 4.5vw, 72px)`
+                  : calculateFontSize(56, 28, 72),
                 fontWeight: 600,
                 lineHeight: 1.1,
                 letterSpacing: '-0.03em',
@@ -1954,7 +2018,9 @@ export default function About() {
             </h2>
             <p
               style={{
-                fontSize: calculateFontSize(20, 14, 24),
+                fontSize: windowSize.width < 768 
+                  ? calculateFontSize(18, 9, 22)
+                  : calculateFontSize(20, 14, 24),
                 fontWeight: 400,
                 lineHeight: 1.6,
                 color: '#ffffff',
@@ -1997,7 +2063,9 @@ export default function About() {
                 }}
               >
                 <h3 style={{
-                  fontSize: calculateFontSize(28, 20, 32),
+                  fontSize: windowSize.width < 768 
+                    ? calculateFontSize(22, 16, 26)
+                    : calculateFontSize(28, 20, 32),
                   fontWeight: 600,
                   color: '#0a0a0a',
                   marginBottom: `${calculateSpacing(12)}px`
@@ -2005,7 +2073,9 @@ export default function About() {
                   {item.title}
                 </h3>
                 <p style={{
-                  fontSize: calculateFontSize(16, 13, 18),
+                  fontSize: windowSize.width < 768 
+                    ? calculateFontSize(14, 11, 16)
+                    : calculateFontSize(16, 13, 18),
                   fontWeight: 400,
                   lineHeight: 1.6,
                   color: '#525252'
@@ -2153,7 +2223,9 @@ export default function About() {
           >
             <h2
               style={{
-                fontSize: calculateFontSize(56, 28, 72),
+                fontSize: windowSize.width < 768 
+                  ? `clamp(20px, 5vw, 80px)`
+                  : calculateFontSize(56, 28, 72),
                 fontWeight: 600,
                 lineHeight: 1.1,
                 letterSpacing: '-0.03em',
@@ -2165,7 +2237,9 @@ export default function About() {
             </h2>
             <p
               style={{
-                fontSize: calculateFontSize(20, 14, 24),
+                fontSize: windowSize.width < 768 
+                  ? calculateFontSize(20, 10, 24)
+                  : calculateFontSize(20, 14, 24),
                 fontWeight: 400,
                 lineHeight: 1.6,
                 color: '#525252',
@@ -2339,7 +2413,9 @@ export default function About() {
           >
           <h2
             style={{
-              fontSize: calculateFontSize(56, 28, 72),
+              fontSize: windowSize.width < 768 
+                ? `clamp(20px, 5vw, 80px)`
+                : calculateFontSize(56, 28, 72),
               fontWeight: 600,
               lineHeight: 1.1,
               letterSpacing: '-0.03em',
@@ -2351,7 +2427,9 @@ export default function About() {
           </h2>
           <p
             style={{
-              fontSize: calculateFontSize(20, 14, 24),
+              fontSize: windowSize.width < 768 
+                ? calculateFontSize(20, 10, 24)
+                : calculateFontSize(20, 14, 24),
               fontWeight: 400,
               lineHeight: 1.6,
               color: '#525252',
@@ -2466,7 +2544,9 @@ export default function About() {
         >
           <h2
             style={{
-              fontSize: calculateFontSize(56, 28, 72),
+              fontSize: windowSize.width < 768 
+                ? `clamp(20px, 5vw, 80px)`
+                : calculateFontSize(56, 28, 72),
               fontWeight: 600,
               lineHeight: 1.1,
               letterSpacing: '-0.03em',
@@ -2479,7 +2559,9 @@ export default function About() {
           </h2>
           <p
             style={{
-              fontSize: calculateFontSize(20, 14, 24),
+              fontSize: windowSize.width < 768 
+                ? calculateFontSize(20, 10, 24)
+                : calculateFontSize(20, 14, 24),
               fontWeight: 400,
               lineHeight: 1.6,
               color: '#ffffff',
@@ -2571,7 +2653,9 @@ export default function About() {
                 <>
                   <h2
                     style={{
-                      fontSize: calculateFontSize(56, 28, 72),
+                      fontSize: windowSize.width < 768 
+                        ? `clamp(20px, 5vw, 80px)`
+                        : calculateFontSize(56, 28, 72),
                       fontWeight: 600,
                       lineHeight: 1.1,
                       letterSpacing: '-0.03em',
@@ -2587,7 +2671,9 @@ export default function About() {
                   </h2>
                   <p
                     style={{
-                      fontSize: calculateFontSize(20, 14, 24),
+                      fontSize: windowSize.width < 768 
+                        ? calculateFontSize(20, 10, 24)
+                        : calculateFontSize(20, 14, 24),
                       fontWeight: 400,
                       lineHeight: 1.6,
                       color: '#525252',
@@ -2602,47 +2688,6 @@ export default function About() {
                     Each shot tells a story, preserving memories and perspectives that inspire and connect.
                   </p>
                   
-                  {/* Category Buttons */}
-                  <div style={{ 
-                    display: 'flex', 
-                    gap: '12px', 
-                    flexWrap: 'wrap',
-                    marginBottom: `${calculateSpacing(32)}px`,
-                    opacity: headerOpacity,
-                    transform: headerTransform,
-                    transition: 'opacity 0.6s ease-out, transform 0.6s ease-out'
-                  }}>
-              {['All', 'Nature', 'Urban', 'Portrait', 'Abstract'].map((category) => (
-                <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  style={{
-                    padding: '10px 24px',
-                    borderRadius: '24px',
-                    border: 'none',
-                    background: selectedCategory === category ? '#0a0a0a' : '#f5f5f5',
-                    color: selectedCategory === category ? '#ffffff' : '#525252',
-                    fontSize: calculateFontSize(16, 14, 18),
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    whiteSpace: 'nowrap'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (selectedCategory !== category) {
-                      e.currentTarget.style.background = '#e5e5e5';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (selectedCategory !== category) {
-                      e.currentTarget.style.background = '#f5f5f5';
-                    }
-                  }}
-                >
-                  {category}
-                </button>
-              ))}
-                  </div>
                 </>
               );
             })()}
@@ -2940,7 +2985,9 @@ export default function About() {
         >
           <h2
             style={{
-              fontSize: calculateFontSize(56, 28, 72),
+              fontSize: windowSize.width < 768 
+                ? `clamp(20px, 5vw, 80px)`
+                : calculateFontSize(56, 28, 72),
               fontWeight: 600,
               lineHeight: 1.1,
               letterSpacing: '-0.03em',
@@ -2952,7 +2999,9 @@ export default function About() {
           </h2>
           <p
             style={{
-              fontSize: calculateFontSize(20, 14, 24),
+              fontSize: windowSize.width < 768 
+                ? calculateFontSize(20, 10, 24)
+                : calculateFontSize(20, 14, 24),
               fontWeight: 400,
               lineHeight: 1.6,
               color: '#525252',
@@ -2993,7 +3042,9 @@ export default function About() {
         >
           <h2
             style={{
-              fontSize: calculateFontSize(56, 28, 72),
+              fontSize: windowSize.width < 768 
+                ? `clamp(20px, 5vw, 80px)`
+                : calculateFontSize(56, 28, 72),
               fontWeight: 600,
               lineHeight: 1.1,
               letterSpacing: '-0.03em',
@@ -3005,7 +3056,9 @@ export default function About() {
           </h2>
           <p
             style={{
-              fontSize: calculateFontSize(20, 14, 24),
+              fontSize: windowSize.width < 768 
+                ? calculateFontSize(20, 10, 24)
+                : calculateFontSize(20, 14, 24),
               fontWeight: 400,
               lineHeight: 1.6,
               color: '#525252',
@@ -3048,7 +3101,9 @@ export default function About() {
         >
           <h2
             style={{
-              fontSize: calculateFontSize(56, 28, 72),
+              fontSize: windowSize.width < 768 
+                ? `clamp(20px, 5vw, 80px)`
+                : calculateFontSize(56, 28, 72),
               fontWeight: 600,
               lineHeight: 1.1,
               letterSpacing: '-0.03em',
@@ -3060,7 +3115,9 @@ export default function About() {
           </h2>
           <p
             style={{
-              fontSize: calculateFontSize(20, 14, 24),
+              fontSize: windowSize.width < 768 
+                ? calculateFontSize(20, 10, 24)
+                : calculateFontSize(20, 14, 24),
               fontWeight: 400,
               lineHeight: 1.6,
               color: '#525252',
