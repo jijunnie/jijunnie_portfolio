@@ -1159,12 +1159,19 @@ export default function About() {
   };
   
   const calculateFontSize = (baseSize, minSize, maxSize) => {
-    const screenWidth = windowSize.width;
-    const screenHeight = windowSize.height;
-    
-    // 增强的响应式计算，更细粒度的断点和更激进的移动端缩放
-    // 基础缩放基于屏幕宽度，确保在最小值和最大值之间平滑过渡
-    let scale = 1;
+    try {
+      const screenWidth = windowSize.width || 1920;
+      // Use fixed viewport height to prevent size changes when address bar collapses
+      const screenHeight = fixedViewportHeight.current || windowSize.height || 1080;
+      
+      // Validate inputs
+      if (isNaN(baseSize) || isNaN(minSize) || isNaN(maxSize) || baseSize <= 0) {
+        return `${Math.max(minSize || 10, Math.min(maxSize || 100, baseSize || 16))}px`;
+      }
+      
+      // 增强的响应式计算，更细粒度的断点和更激进的移动端缩放
+      // 基础缩放基于屏幕宽度，确保在最小值和最大值之间平滑过渡
+      let scale = 1;
     
     // 更细粒度的断点控制
     if (screenWidth < 360) {
@@ -1201,30 +1208,53 @@ export default function About() {
       scale *= 0.95;
     }
     
-    // 计算最终大小，确保在最小值和最大值之间
-    const calculatedSize = baseSize * scale;
-    const clampedSize = Math.max(minSize, Math.min(maxSize, calculatedSize));
-    
-    return `${clampedSize}px`;
+      // 计算最终大小，确保在最小值和最大值之间
+      const calculatedSize = baseSize * scale;
+      const clampedSize = Math.max(minSize, Math.min(maxSize, calculatedSize));
+      
+      // Ensure the result is a valid number
+      if (isNaN(clampedSize) || !isFinite(clampedSize)) {
+        return `${Math.max(minSize, Math.min(maxSize, baseSize))}px`;
+      }
+      
+      return `${clampedSize}px`;
+    } catch (error) {
+      console.error('calculateFontSize error:', error);
+      return `${Math.max(minSize || 10, Math.min(maxSize || 100, baseSize || 16))}px`;
+    }
   };
   
   const calculateSpacing = (baseValue) => {
-    const screenWidth = windowSize.width;
-    
-    if (screenWidth < 480) {
-      return baseValue * 0.4; // 超小屏幕，更激进的缩小
-    } else if (screenWidth < 640) {
-      return baseValue * 0.5; // 小屏幕
-    } else if (screenWidth < 768) {
-      return baseValue * 0.65; // 中等屏幕
-    } else if (screenWidth < 1024) {
-      return baseValue * 0.8; // 大屏幕
-    } else if (screenWidth < 1440) {
-      return baseValue * 0.9; // 超大屏幕
-    } else if (screenWidth < 1920) {
-      return baseValue; // 超宽屏幕
-    } else {
-      return baseValue * 1.1; // 超大屏幕
+    try {
+      const screenWidth = windowSize.width || 1920;
+      
+      // Validate input
+      if (isNaN(baseValue) || baseValue <= 0 || !isFinite(baseValue)) {
+        return baseValue || 0;
+      }
+      
+      let multiplier = 1;
+      if (screenWidth < 480) {
+        multiplier = 0.4; // 超小屏幕，更激进的缩小
+      } else if (screenWidth < 640) {
+        multiplier = 0.5; // 小屏幕
+      } else if (screenWidth < 768) {
+        multiplier = 0.65; // 中等屏幕
+      } else if (screenWidth < 1024) {
+        multiplier = 0.8; // 大屏幕
+      } else if (screenWidth < 1440) {
+        multiplier = 0.9; // 超大屏幕
+      } else if (screenWidth < 1920) {
+        multiplier = 1; // 超宽屏幕
+      } else {
+        multiplier = 1.1; // 超大屏幕
+      }
+      
+      const result = baseValue * multiplier;
+      return isNaN(result) || !isFinite(result) ? baseValue : result;
+    } catch (error) {
+      console.error('calculateSpacing error:', error);
+      return baseValue || 0;
     }
   };
   
@@ -1236,7 +1266,7 @@ export default function About() {
   const navBarHeight = windowSize.width >= 768 ? 64 : 56;
   const navBarTotalHeight = navBarTop + navBarHeight; // Fixed: 72px (mobile) or 80px (desktop)
   // availableHeight uses fixed viewport height, so it won't change when address bar collapses
-  const availableHeight = Math.max(windowSize.height - navBarTotalHeight, 100);
+  const availableHeight = Math.max((fixedViewportHeight.current || windowSize.height) - navBarTotalHeight, 100);
   
   const isDesktop = windowSize.width >= 768;
   const desktopYOffset = isDesktop ? -0.5 : 0;
@@ -1244,7 +1274,8 @@ export default function About() {
   
   const calculateSplineSize = () => {
     const screenWidth = windowSize.width;
-    const screenHeight = windowSize.height;
+    // Use fixed viewport height to prevent size changes when address bar collapses
+    const screenHeight = fixedViewportHeight.current || windowSize.height;
     
     const baseWidth = 1920;
     const baseContainerSize = 800;
@@ -1265,7 +1296,8 @@ export default function About() {
   
   const calculateBottomRightSplineSize = () => {
     const screenWidth = windowSize.width;
-    const screenHeight = windowSize.height;
+    // Use fixed viewport height to prevent size changes when address bar collapses
+    const screenHeight = fixedViewportHeight.current || windowSize.height;
     
     if (screenWidth < 640) {
       return { width: 120, height: 120 };
@@ -1292,10 +1324,17 @@ export default function About() {
   const sectionTriggers = [0.08, 0.20, 0.32, 0.38, 0.56, 0.68, 0.76, 0.84];
   
   // Memoize expensive calculations to prevent unnecessary re-renders
-  const avatarTransform = useMemo(() => 
-    `translateY(${scrollProgress * 15}%) scale(${1 - scrollProgress * 0.15})`,
-    [scrollProgress]
-  );
+  const avatarTransform = useMemo(() => {
+    try {
+      const progress = isNaN(scrollProgress) || !isFinite(scrollProgress) ? 0 : Math.max(0, Math.min(1, scrollProgress));
+      const translateY = progress * 15;
+      const scale = 1 - progress * 0.15;
+      return `translateY(${isNaN(translateY) ? 0 : translateY}%) scale(${isNaN(scale) || scale <= 0 ? 1 : scale})`;
+    } catch (error) {
+      console.error('avatarTransform calculation error:', error);
+      return 'translateY(0%) scale(1)';
+    }
+  }, [scrollProgress]);
   
   // Avatar completely disappears when "Learning Beyond Classroom" section appears (fades out by sectionTriggers[0] = 0.08)
   const avatarOpacity = useMemo(() => 
@@ -1678,7 +1717,7 @@ export default function About() {
               filter: 'drop-shadow(0 10px 40px rgba(0, 0, 0, 0.08))',
               transform: windowSize.width >= 768 
                 ? avatarTransform 
-                : `${avatarTransform} translateY(-${windowSize.height * 0.15}px)`,
+                : `${avatarTransform} translateY(-${(fixedViewportHeight.current || windowSize.height) * 0.15}px)`,
               opacity: avatarOpacity,
               transition: 'transform 0.3s ease-out, opacity 0.6s ease-out',
               pointerEvents: 'auto',
@@ -2041,9 +2080,9 @@ export default function About() {
             const angleOffset = (itemInOrbit / totalInOrbit) * 360;
             const angle = (config.rotation + angleOffset + sectionProgress * 180) * (Math.PI / 180);
             
-            // Calculate position
+            // Calculate position - use fixed viewport height to prevent position changes when address bar collapses
             const centerX = (windowSize.width * config.x) / 100;
-            const centerY = (windowSize.height * config.y) / 100;
+            const centerY = ((fixedViewportHeight.current || windowSize.height) * config.y) / 100;
             
             const finalX = centerX + Math.cos(angle) * spiralRadius * sectionProgress;
             let finalY = centerY + Math.sin(angle) * spiralRadius * sectionProgress;
@@ -2802,29 +2841,52 @@ export default function About() {
             width: '100%',
             marginLeft: 'auto',
             marginRight: 'auto',
-            transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[6]) * -sectionConfig.translateYAmplitude)}px)`,
+            transform: (() => {
+              try {
+                if (!sectionTriggers || !Array.isArray(sectionTriggers) || sectionTriggers.length < 7) return 'translateY(0px)';
+                if (isNaN(scrollProgress) || !isFinite(scrollProgress)) return 'translateY(0px)';
+                const trigger = sectionTriggers[6] || 0;
+                const amplitude = sectionConfig?.translateYAmplitude || 0;
+                const translateY = Math.max(0, (scrollProgress - trigger) * -amplitude);
+                return `translateY(${isNaN(translateY) ? 0 : translateY}px)`;
+              } catch (error) {
+                console.error('Transform calculation error:', error);
+                return 'translateY(0px)';
+              }
+            })(),
             opacity: (() => {
-              // Start fading in much earlier - when Travel section appears
-              const fadeInStart = sectionTriggers[3] - 0.08; // Start fading in when Travel appears (0.38 - 0.08 = 0.30)
-              const fadeInEnd = sectionTriggers[3] + 0.06; // Fully visible shortly after Travel appears (0.38 + 0.06 = 0.44)
-              const fadeOutStart = sectionTriggers[7] ? sectionTriggers[7] - 0.08 : 0.95; // Start fading out near next section
-              
-              if (scrollProgress < fadeInStart) return 0;
-              if (scrollProgress >= fadeInStart && scrollProgress <= fadeInEnd) {
-                // Smooth fade in
-                const fadeProgress = (scrollProgress - fadeInStart) / (fadeInEnd - fadeInStart);
-                return Math.min(1, fadeProgress);
-              }
-              if (scrollProgress > fadeInEnd && scrollProgress < fadeOutStart) {
-                // Fully visible
+              try {
+                // Validate inputs
+                if (!sectionTriggers || !Array.isArray(sectionTriggers) || sectionTriggers.length < 4) return 1;
+                if (isNaN(scrollProgress) || !isFinite(scrollProgress)) return 1;
+                
+                // Start fading in much earlier - when Travel section appears
+                const fadeInStart = (sectionTriggers[3] || 0.38) - 0.08; // Start fading in when Travel appears (0.38 - 0.08 = 0.30)
+                const fadeInEnd = (sectionTriggers[3] || 0.38) + 0.06; // Fully visible shortly after Travel appears (0.38 + 0.06 = 0.44)
+                const fadeOutStart = sectionTriggers[7] ? sectionTriggers[7] - 0.08 : 0.95; // Start fading out near next section
+                
+                if (scrollProgress < fadeInStart) return 0;
+                if (scrollProgress >= fadeInStart && scrollProgress <= fadeInEnd) {
+                  // Smooth fade in
+                  const denominator = fadeInEnd - fadeInStart;
+                  if (denominator <= 0) return 1;
+                  const fadeProgress = (scrollProgress - fadeInStart) / denominator;
+                  return Math.min(1, Math.max(0, fadeProgress));
+                }
+                if (scrollProgress > fadeInEnd && scrollProgress < fadeOutStart) {
+                  // Fully visible
+                  return 1;
+                }
+                if (scrollProgress >= fadeOutStart) {
+                  // Smooth fade out
+                  const fadeOutProgress = (scrollProgress - fadeOutStart) / 0.12;
+                  return Math.max(0, Math.min(1, 1 - fadeOutProgress));
+                }
                 return 1;
+              } catch (error) {
+                console.error('Opacity calculation error:', error);
+                return 1; // Default to visible on error
               }
-              if (scrollProgress >= fadeOutStart) {
-                // Smooth fade out
-                const fadeOutProgress = (scrollProgress - fadeOutStart) / 0.12;
-                return Math.max(0, 1 - fadeOutProgress);
-              }
-              return 1;
             })(),
             transition: 'transform 0.8s ease-out, opacity 0.5s ease-out',
             position: 'relative',
@@ -2844,9 +2906,14 @@ export default function About() {
               
               if (scrollProgress >= headerFadeInStart) {
                 if (scrollProgress < headerFadeInEnd) {
-                  const fadeProgress = (scrollProgress - headerFadeInStart) / (headerFadeInEnd - headerFadeInStart);
-                  headerOpacity = Math.min(1, Math.max(0, fadeProgress));
-                  headerTransform = `translateY(${20 * (1 - fadeProgress)}px)`;
+                  const denominator = headerFadeInEnd - headerFadeInStart;
+                  // Prevent division by zero
+                  const fadeProgress = denominator > 0 
+                    ? Math.min(1, Math.max(0, (scrollProgress - headerFadeInStart) / denominator))
+                    : 0;
+                  headerOpacity = fadeProgress;
+                  const transformValue = 20 * (1 - fadeProgress);
+                  headerTransform = `translateY(${isNaN(transformValue) ? 0 : transformValue}px)`;
                 } else {
                   headerOpacity = 1;
                   headerTransform = 'translateY(0)';
@@ -2917,20 +2984,26 @@ export default function About() {
                 willChange: 'scroll-position',
                 WebkitOverflowScrolling: 'touch'
               }}
-              onScroll={(e) => {
+              onScroll={useCallback((e) => {
                 try {
+                  if (!e || !e.target) return;
                   const scrollLeft = e.target.scrollLeft;
                   const scrollWidth = e.target.scrollWidth - e.target.clientWidth;
                   // Prevent division by zero and NaN
-                  const newScroll = scrollWidth > 0 && !isNaN(scrollLeft) && !isNaN(scrollWidth) 
-                    ? Math.min(Math.max(0, scrollLeft / scrollWidth), 1) 
-                    : 0;
-                  setGalleryScroll(newScroll);
+                  if (scrollWidth <= 0 || isNaN(scrollLeft) || isNaN(scrollWidth) || !isFinite(scrollLeft) || !isFinite(scrollWidth)) {
+                    return;
+                  }
+                  const newScroll = Math.min(Math.max(0, scrollLeft / scrollWidth), 1);
+                  // Only update if value actually changed to prevent unnecessary re-renders
+                  setGalleryScroll(prev => {
+                    if (Math.abs(prev - newScroll) < 0.001) return prev;
+                    return newScroll;
+                  });
                 } catch (error) {
                   // Silently handle any errors to prevent crashes
                   console.error('Gallery scroll error:', error);
                 }
-              }}
+              }, [])}
             >
               {[
                 { title: 'Photo 1', description: 'Capturing the beauty of moments', image: '/aboutImage/1.jpg', location: 'Daytona Beach, Florida' },
@@ -3049,12 +3122,27 @@ export default function About() {
                         opacity: 1
                       }}
                       loading="lazy"
+                      decoding="async"
+                      onLoad={(e) => {
+                        // Ensure image is properly loaded
+                        try {
+                          if (e && e.target) {
+                            e.target.style.opacity = '1';
+                          }
+                        } catch (error) {
+                          // Silently handle errors
+                        }
+                      }}
                       onError={(e) => {
                         try {
                           // Fallback to gradient if image fails to load
-                          if (e && e.target && e.target.parentElement) {
+                          if (e && e.target) {
                             e.target.style.display = 'none';
-                            e.target.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                            const parent = e.target.parentElement;
+                            if (parent) {
+                              parent.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                              parent.style.backgroundSize = 'cover';
+                            }
                           }
                         } catch (error) {
                           // Silently handle errors to prevent crashes
