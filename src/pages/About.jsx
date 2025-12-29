@@ -806,36 +806,33 @@ export default function About() {
     };
   }, [subtitlePrefixVisible]);
   
-  // Set fixed viewport height CSS variable on mount to prevent content shift
+  // Set viewport height and handle mobile address bar collapse
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const setFixedViewportHeight = () => {
-        // Only set on initial load, not on resize
+      const updateViewportHeight = () => {
+        const currentVh = window.innerHeight;
+        
+        // On first load, always use current viewport height
+        // After that, only update if viewport gets LARGER (prevents shrinking when address bar hides)
         if (fixedViewportHeight.current === null) {
-          const vh = window.innerHeight * 0.01;
-          const vhPx = window.innerHeight;
-          fixedViewportHeight.current = vhPx;
+          const vh = currentVh * 0.01;
+          fixedViewportHeight.current = currentVh;
           
           // Set CSS variables
           document.documentElement.style.setProperty('--vh', `${vh}px`);
           document.documentElement.style.setProperty('--fixed-vh', `${vh}px`);
-          document.documentElement.style.setProperty('--fixed-vh-px', `${vhPx}px`);
+          document.documentElement.style.setProperty('--fixed-vh-px', `${currentVh}px`);
           
-          // Only set if not already set to prevent unnecessary updates
-          setWindowSize(prev => {
-            if (prev && prev.width === window.innerWidth && prev.height === vhPx) {
-              return prev;
-            }
-            return { width: window.innerWidth, height: vhPx };
-          });
+          // Update window size state
+          setWindowSize({ width: window.innerWidth, height: currentVh });
         }
       };
       
-      // Set immediately
-      setFixedViewportHeight();
+      // Set immediately on mount
+      updateViewportHeight();
       
-      // Also set after a short delay to ensure it's set after any browser adjustments
-      const timeoutId = setTimeout(setFixedViewportHeight, 100);
+      // Set again after short delay for iOS Safari
+      const timeoutId = setTimeout(updateViewportHeight, 100);
       
       return () => clearTimeout(timeoutId);
     }
@@ -1322,10 +1319,35 @@ export default function About() {
         * {
           max-width: 100%;
         }
-        html, body {
+        /* Fix for mobile address bar collapse - prevent content shift */
+        html {
+          height: 100%;
           overflow-x: hidden;
           width: 100%;
         }
+        
+        body {
+          margin: 0;
+          padding: 0;
+          width: 100%;
+          overflow-x: hidden;
+          /* Prevent overscroll bounce */
+          overscroll-behavior-y: none;
+          /* Use fixed viewport height to prevent shift */
+          min-height: 100vh;
+          min-height: calc(var(--vh, 1vh) * 100);
+          min-height: -webkit-fill-available;
+        }
+        
+        /* Main container uses fixed vh */
+        #root {
+          width: 100%;
+          min-height: 100vh;
+          min-height: calc(var(--vh, 1vh) * 100);
+          min-height: -webkit-fill-available;
+        }
+        
+        /* Prevent horizontal scrolling globally */
         @keyframes blink {
           0%, 50% { opacity: 1; }
           51%, 100% { opacity: 0; }
@@ -1667,7 +1689,7 @@ export default function About() {
             style={{
               left: '0',
               top: `${navBarTotalHeight}px`,
-              bottom: 0,
+              bottom: 'auto',  // Changed: Don't anchor to bottom
               width: `${windowSize.width >= 768 ? Math.max(windowSize.width * 0.32, 200) : Math.max(windowSize.width * 0.375, 200)}px`,
               maxWidth: '100vw',
               height: `${availableHeight}px`,
