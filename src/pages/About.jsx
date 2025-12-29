@@ -2492,7 +2492,7 @@ export default function About() {
             position: 'absolute',
             top: windowSize.width >= 1024 ? '42%' : windowSize.width < 640 ? 'clamp(24rem, 50vw, 30rem)' : 'clamp(26rem, 54vw, 32rem)',
             left: '50%',
-            transform: `translate(-50%, -50%) translateY(${Math.max(0, (scrollProgress - sectionTriggers[2]) * -sectionConfig.translateYAmplitude)}px)`,
+            transform: `translate(-50%, -50%) translateY(${Math.max(0, (scrollProgress - sectionTriggers[2]) * -sectionConfig.translateYAmplitude)}px) ${windowSize.width < 768 ? 'scale(0.75)' : ''}`,  // Scale down on mobile
             opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[2] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
             transition: 'transform 0.8s ease-out, opacity 0.8s ease-out',
             width: '100%',
@@ -2574,8 +2574,8 @@ export default function About() {
             transform: `translateX(-50%) translateY(${Math.max(0, (scrollProgress - sectionTriggers[2]) * -sectionConfig.translateYAmplitude)}px)`,
             opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[2] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
             transition: 'transform 0.8s ease-out, opacity 0.8s ease-out',
-            width: windowSize.width >= 1024 ? '620px' : windowSize.width >= 640 ? '550px' : '450px',
-            height: windowSize.width >= 1024 ? '450px' : windowSize.width >= 640 ? '400px' : '350px',
+            width: windowSize.width >= 1024 ? '680px' : windowSize.width >= 640 ? '600px' : '500px',
+            height: windowSize.width >= 1024 ? '500px' : windowSize.width >= 640 ? '450px' : '400px',
             zIndex: 15,
             pointerEvents: 'none',
             overflow: 'visible',
@@ -2618,7 +2618,7 @@ export default function About() {
               )}
               <Avatar
                 animationPath="/animations/Singing.fbx"
-                scale={windowSize.width >= 1024 ? 1.4 : windowSize.width >= 640 ? 1.3 : 1.15}
+                scale={windowSize.width >= 1024 ? 1.6 : windowSize.width >= 640 ? 1.45 : 1.3}
                 position={[0, -1.5, 0]}
               />
             </Canvas>
@@ -3001,7 +3001,7 @@ export default function About() {
                 // Pattern repeats every 3 items: 0=baseline, 1=up, 2=up(top aligned with 1, smaller height)
                 const patternIndex = i % 3;
                 let verticalOffset = 0;
-                let boxHeight = windowSize.width >= 768 ? 400 : 300; // Default height
+                let boxHeight = windowSize.width >= 768 ? 400 : 240; // Default height
                 
                 if (patternIndex === 0) {
                   verticalOffset = 0; // Baseline
@@ -3012,7 +3012,7 @@ export default function About() {
                   // Height calculated so gap between 3rd bottom and 2nd bottom equals gap between 2nd bottom and 1st bottom (60px)
                   // Box 2 bottom: -60 + 400 = 340px, so box 3 bottom should be at 340 - 60 = 280px
                   // Since box 3 top is at -60px, height = 280 - (-60) = 340px
-                  boxHeight = windowSize.width >= 768 ? 340 : 240; // Adjusted height to match gap spacing
+                  boxHeight = windowSize.width >= 768 ? 340 : 190; // Adjusted height to match gap spacing
                 }
                 
                 const baseTransform = `translateY(${verticalOffset}px)`;
@@ -3029,8 +3029,8 @@ export default function About() {
                 <div
                   key={i}
                   style={{
-                    minWidth: windowSize.width >= 768 ? '340px' : '250px',
-                    width: windowSize.width >= 768 ? '340px' : '250px',
+                    minWidth: windowSize.width >= 768 ? '340px' : '200px',
+                    width: windowSize.width >= 768 ? '340px' : '200px',
                     height: `${boxHeight}px`,
                     borderRadius: '16px',
                     overflow: 'hidden',
