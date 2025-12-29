@@ -1,50 +1,71 @@
 // Suppress FBXLoader texture warnings (these are harmless - FBX files load fine)
 // MUST be at the very top before any imports to catch warnings early
+// Only suppress in production to allow debugging in development
 (function() {
   if (typeof console === 'undefined') return;
   
+  // Only suppress in production mode
+  const isProduction = import.meta.env?.PROD || process.env.NODE_ENV === 'production';
+  if (!isProduction) return; // Allow warnings in development
+  
   const suppressFBXWarning = (message) => {
     if (!message) return false;
-    const msg = String(message);
-    // Match the exact warning pattern: "FBXLoader: Image type "..." is not supported."
-    return (msg.includes('FBXLoader') && 
-            msg.includes('Image type') && 
-            (msg.includes('is not supported') || msg.includes('not supported'))) ||
-           // Also catch variations
-           msg.match(/FBXLoader.*Image type.*not supported/i);
+    try {
+      const msg = String(message);
+      // Match the exact warning pattern: "FBXLoader: Image type "..." is not supported."
+      return (msg.includes('FBXLoader') && 
+              msg.includes('Image type') && 
+              (msg.includes('is not supported') || msg.includes('not supported'))) ||
+             // Also catch variations
+             msg.match(/FBXLoader.*Image type.*not supported/i);
+    } catch (e) {
+      // If string conversion fails, don't suppress
+      return false;
+    }
   };
   
   const wrapConsoleMethod = (original, methodName) => {
     if (!original) return;
-    const wrapped = function(...args) {
-      // Check first argument (most common case) and all arguments
-      const shouldSuppress = args.some(arg => suppressFBXWarning(arg));
-      if (shouldSuppress) {
-        return; // Suppress these specific warnings
-      }
-      return original.apply(console, args);
-    };
-    // Preserve original properties
-    Object.setPrototypeOf(wrapped, original);
-    Object.defineProperty(wrapped, 'name', { value: methodName });
-    return wrapped;
+    try {
+      const wrapped = function(...args) {
+        try {
+          // Check first argument (most common case) and all arguments
+          const shouldSuppress = args.some(arg => suppressFBXWarning(arg));
+          if (shouldSuppress) {
+            return; // Suppress these specific warnings
+          }
+          return original.apply(console, args);
+        } catch (e) {
+          // If suppression check fails, show the original message
+          return original.apply(console, args);
+        }
+      };
+      // Preserve original properties
+      Object.setPrototypeOf(wrapped, original);
+      Object.defineProperty(wrapped, 'name', { value: methodName });
+      return wrapped;
+    } catch (e) {
+      // If wrapping fails, return original
+      return original;
+    }
   };
   
-  // Override console.warn and console.error
-  if (console.warn) {
-    console.warn = wrapConsoleMethod(console.warn, 'warn');
-  }
-  if (console.error) {
-    console.error = wrapConsoleMethod(console.error, 'error');
-  }
-  // Also check console.log just in case
-  if (console.log) {
-    const originalLog = console.log;
-    console.log = function(...args) {
-      const shouldSuppress = args.some(arg => suppressFBXWarning(arg));
-      if (shouldSuppress) return;
-      return originalLog.apply(console, args);
-    };
+  // Override console.warn and console.error only if wrapping succeeds
+  try {
+    if (console.warn) {
+      const wrappedWarn = wrapConsoleMethod(console.warn, 'warn');
+      if (wrappedWarn) {
+        console.warn = wrappedWarn;
+      }
+    }
+    if (console.error) {
+      const wrappedError = wrapConsoleMethod(console.error, 'error');
+      if (wrappedError) {
+        console.error = wrappedError;
+      }
+    }
+  } catch (e) {
+    // Silently fail if console override fails
   }
 })();
 
@@ -126,9 +147,39 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
       if (mixer.current) {
         try {
           mixer.current.stopAllAction();
+          mixer.current.uncacheRoot(mixer.current.getRoot());
+          mixer.current = null;
         } catch (error) {
           console.warn('Error stopping animation actions:', error);
         }
+      }
+      
+      // Dispose geometry and materials to prevent memory leaks
+      if (clonedAvatar) {
+        clonedAvatar.traverse((child) => {
+          if (child.isMesh) {
+            if (child.geometry) {
+              child.geometry.dispose();
+            }
+            if (child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach(m => {
+                  if (m) {
+                    if (m.map) m.map.dispose();
+                    if (m.normalMap) m.normalMap.dispose();
+                    if (m.emissiveMap) m.emissiveMap.dispose();
+                    m.dispose();
+                  }
+                });
+              } else {
+                if (child.material.map) child.material.map.dispose();
+                if (child.material.normalMap) child.material.normalMap.dispose();
+                if (child.material.emissiveMap) child.material.emissiveMap.dispose();
+                child.material.dispose();
+              }
+            }
+          }
+        });
       }
     };
   }, [clonedAvatar]);
@@ -456,6 +507,9 @@ function NeonWaveBackground({ scrollProgress, sectionTrigger, fadeOffset, fadeIn
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
       }
+      // Clear particles to free memory
+      particlesRef.current = [];
+      isInitializedRef.current = false;
     };
   }, [sectionTrigger, fadeOffset, fadeInSpeed]); // Removed scrollProgress from dependencies
 
@@ -750,8 +804,21 @@ export default function About() {
       // Use fixed viewport height to prevent content shift
       const fixedHeight = fixedViewportHeight.current || window.innerHeight;
       const docHeight = document.documentElement.scrollHeight - fixedHeight;
+      
+      // Validate all calculations to prevent NaN
+      if (!isFinite(scrollTop) || !isFinite(fixedHeight) || !isFinite(docHeight)) {
+        ticking = false;
+        return;
+      }
+      
       // Prevent division by zero and NaN
       const progress = docHeight > 0 ? Math.min(Math.max(0, scrollTop / docHeight), 1) : 0;
+      
+      // Extra safety check for NaN
+      if (!isFinite(progress) || isNaN(progress)) {
+        ticking = false;
+        return;
+      }
       
       // Only update if progress changed significantly to prevent unnecessary re-renders
       const progressDiff = Math.abs(progress - previousScrollProgress.current);
@@ -882,36 +949,26 @@ export default function About() {
     if (typeof window !== 'undefined') {
       const updateViewportHeight = () => {
         const currentVh = window.innerHeight;
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
         
-        // Detect browser for better compatibility
-        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-        const isSafari = /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
-        const isMobile = window.innerWidth < 768;
+        // On iOS, always use visualViewport if available for better address bar handling
+        const height = isIOS && window.visualViewport 
+          ? window.visualViewport.height 
+          : currentVh;
         
         // On first load, always use current viewport height
         // After that, only update if viewport gets LARGER (prevents shrinking when address bar hides)
-        if (fixedViewportHeight.current === null) {
-          const vh = currentVh * 0.01;
-          fixedViewportHeight.current = currentVh;
+        if (fixedViewportHeight.current === null || isIOS) {
+          const vh = height * 0.01;
+          fixedViewportHeight.current = height;
           
           // Set CSS variables - ensure they're set for all browsers
           document.documentElement.style.setProperty('--vh', `${vh}px`);
           document.documentElement.style.setProperty('--fixed-vh', `${vh}px`);
-          document.documentElement.style.setProperty('--fixed-vh-px', `${currentVh}px`);
-          
-          // For Chrome on mobile, use a more stable approach
-          if (isChrome && isMobile) {
-            // Chrome may need a slight delay to get accurate viewport height
-            setTimeout(() => {
-              const stableVh = window.innerHeight;
-              const stableVhPx = stableVh * 0.01;
-              document.documentElement.style.setProperty('--vh', `${stableVhPx}px`);
-              fixedViewportHeight.current = stableVh;
-            }, 50);
-          }
+          document.documentElement.style.setProperty('--fixed-vh-px', `${height}px`);
           
           // Update window size state
-          setWindowSize({ width: window.innerWidth, height: currentVh });
+          setWindowSize({ width: window.innerWidth, height });
         }
       };
       
@@ -921,12 +978,20 @@ export default function About() {
       // Set again after short delay for better browser compatibility
       const timeoutId = setTimeout(updateViewportHeight, 100);
       
-      // Additional delay for Chrome mobile
-      const chromeTimeoutId = setTimeout(updateViewportHeight, 300);
+      // Listen to iOS-specific viewport changes
+      let visualViewportCleanup = null;
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', updateViewportHeight);
+        visualViewportCleanup = () => {
+          window.visualViewport.removeEventListener('resize', updateViewportHeight);
+        };
+      }
       
       return () => {
         clearTimeout(timeoutId);
-        clearTimeout(chromeTimeoutId);
+        if (visualViewportCleanup) {
+          visualViewportCleanup();
+        }
       };
     }
   }, []);
@@ -1019,6 +1084,39 @@ export default function About() {
     }
   }, [windowSize.width]);
 
+  // Intersection Observer for optimized image lazy loading
+  useEffect(() => {
+    if (!galleryRef.current || typeof IntersectionObserver === 'undefined') return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const img = entry.target;
+            const dataSrc = img.dataset.src;
+            if (dataSrc && !img.src) {
+              img.src = dataSrc;
+              img.removeAttribute('data-src');
+              observer.unobserve(img);
+            }
+          }
+        });
+      },
+      { 
+        rootMargin: '200px', // Load 200px before visible
+        threshold: 0.01 
+      }
+    );
+    
+    // Observe all images with data-src attribute
+    const images = galleryRef.current.querySelectorAll('img[data-src]');
+    images.forEach(img => observer.observe(img));
+    
+    return () => {
+      observer.disconnect();
+    };
+  }, [galleryRef.current]);
+
   // Preload travel video - delay on mobile to improve initial load
   useEffect(() => {
     const isMobile = windowSize.width < 768;
@@ -1063,21 +1161,23 @@ export default function About() {
     const rafId = requestAnimationFrame(() => {
       try {
         if (travelVideoRef.current) {
-          if (shouldPlayTravel) {
+          if (shouldPlayTravel && travelVideoRef.current.paused) {
+            // Add user interaction requirement check for autoplay
             travelVideoRef.current.play().catch(err => {
               console.warn('Video autoplay prevented:', err);
+              // Fallback: could show play button overlay here
             });
-          } else {
+          } else if (!shouldPlayTravel && !travelVideoRef.current.paused) {
             travelVideoRef.current.pause();
           }
         }
         
         if (developVideoRef.current) {
-          if (shouldPlayDevelop) {
+          if (shouldPlayDevelop && developVideoRef.current.paused) {
             developVideoRef.current.play().catch(err => {
               console.warn('Develop video autoplay prevented:', err);
             });
-          } else {
+          } else if (!shouldPlayDevelop && !developVideoRef.current.paused) {
             developVideoRef.current.pause();
           }
         }
@@ -3207,7 +3307,8 @@ export default function About() {
                     willChange: windowSize.width < 768 ? 'auto' : 'transform'
                   }}>
                     <img 
-                      src={item.image} 
+                      data-src={item.image}
+                      src={i < 3 ? item.image : undefined}
                       alt={item.title}
                       style={{
                         width: '100%',
@@ -3222,7 +3323,7 @@ export default function About() {
                         willChange: windowSize.width < 768 ? 'auto' : 'transform',
                         opacity: 1
                       }}
-                      loading="lazy"
+                      loading={i < 3 ? "eager" : "lazy"}
                       decoding="async"
                       onError={(e) => {
                         try {
