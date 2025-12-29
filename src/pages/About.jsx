@@ -1281,9 +1281,9 @@ export default function About() {
   const bottomRightSplineSize = calculateBottomRightSplineSize();
   
   const sectionConfig = {
-    fadeInSpeed: isDesktop ? 8 : 12,
-    fadeOffset: isDesktop ? 0.05 : 0.03,
-    translateYAmplitude: isDesktop ? 40 : 25
+    fadeInSpeed: isDesktop ? 8 : 10,  // Adjusted for better mobile animation
+    fadeOffset: isDesktop ? 0.05 : 0.05,  // Same fadeOffset for mobile to match desktop
+    translateYAmplitude: isDesktop ? 40 : 35  // Increased for better mobile animation
   };
   
   const sectionTriggers = [0.08, 0.20, 0.32, 0.38, 0.56, 0.68, 0.76, 0.84];
@@ -1688,7 +1688,7 @@ export default function About() {
             className="fixed overflow-visible flex items-end justify-center"
             style={{
               left: windowSize.width >= 768 ? '0' : '-20px',  // Shift left on mobile
-              top: `${navBarTotalHeight}px`,
+              top: windowSize.width >= 768 ? `${navBarTotalHeight}px` : `${navBarTotalHeight - 20}px`,  // Shift up on mobile
               bottom: 'auto',  // Changed: Don't anchor to bottom
               width: `${windowSize.width >= 768 ? Math.max(windowSize.width * 0.32, 200) : Math.max(windowSize.width * 0.375, 200)}px`,
               maxWidth: '100vw',
@@ -1767,15 +1767,15 @@ export default function About() {
             paddingTop: windowSize.width >= 768 
               ? 'clamp(4rem, 6vw, 8rem)' 
               : windowSize.width < 480 
-                ? 'clamp(0.5rem, 2vw, 1rem)' 
-                : 'clamp(1rem, 3vw, 2rem)',
+                ? 'clamp(0.25rem, 1.5vw, 0.75rem)'  // Shift up on mobile
+                : 'clamp(0.5rem, 2.5vw, 1.5rem)',  // Shift up on mobile
             paddingBottom: windowSize.width < 480 
               ? 'clamp(2rem, 4vw, 3rem)' 
               : 'clamp(4rem, 8vw, 8rem)',
             paddingRight: windowSize.width < 480 ? 'clamp(0.75rem, 2vw, 1rem)' : '0',
             transform: windowSize.width >= 768 
               ? `translateY(-5%) translateY(${scrollProgress * -30}px)`
-              : `translateY(-15%) translateY(${scrollProgress * -30}px)`,
+              : `translateY(-18%) translateY(${scrollProgress * -30}px)`,  // Shift up more on mobile
             position: 'relative',
             zIndex: 10,
             marginLeft: windowSize.width >= 768 
@@ -1801,7 +1801,9 @@ export default function About() {
               lineHeight: 1.1,
               letterSpacing: '-0.03em',
               color: '#0a0a0a',
-              opacity: mainTitleVisible ? (1 - scrollProgress * 0.4) : 0,
+              opacity: mainTitleVisible ? (windowSize.width >= 768 
+                ? (1 - scrollProgress * 0.4) 
+                : Math.max(0, 1 - scrollProgress * 0.6)) : 0,  // Faster fade out on mobile
               transform: `${mainTitleVisible ? 'translateY(0)' : 'translateY(8px)'} ${textTransform}`,
               transition: 'opacity 0.6s ease-out, transform 0.6s ease-out, fontSize 0.3s ease-out',
               marginBottom: `${calculateSpacing(16)}px`,
@@ -1836,7 +1838,9 @@ export default function About() {
           >
             <span
               style={{
-                opacity: subtitlePrefixVisible ? (1 - scrollProgress * 0.4) : 0,
+                opacity: subtitlePrefixVisible ? (windowSize.width >= 768 
+                  ? (1 - scrollProgress * 0.4) 
+                  : Math.max(0, 1 - scrollProgress * 0.6)) : 0,  // Faster fade out on mobile
                 transition: 'opacity 0.6s ease-out'
               }}
             >
@@ -1845,7 +1849,9 @@ export default function About() {
             <span style={{ 
               fontWeight: 500, 
               color: '#171717',
-              opacity: 1 - scrollProgress * 0.4
+              opacity: windowSize.width >= 768 
+                ? (1 - scrollProgress * 0.4) 
+                : Math.max(0, 1 - scrollProgress * 0.6)  // Faster fade out on mobile
             }}>{typingText}</span>
           </div>
           
@@ -1863,7 +1869,9 @@ export default function About() {
               fontWeight: 400,
               lineHeight: 1.7,
               color: '#525252',
-              opacity: scriptVisible ? (1 - scrollProgress * 0.4) : 0,
+              opacity: scriptVisible ? (windowSize.width >= 768 
+                ? (1 - scrollProgress * 0.4) 
+                : Math.max(0, 1 - scrollProgress * 0.6)) : 0,  // Faster fade out on mobile
               transform: `${scriptVisible ? 'translateY(0)' : 'translateY(8px)'} ${textTransform}`,
               transition: 'opacity 0.6s ease-out, transform 0.6s ease-out, fontSize 0.3s ease-out',
               paddingLeft: windowSize.width < 480 ? `${calculateSpacing(16)}px` : `${calculateSpacing(24)}px`,
@@ -1887,7 +1895,7 @@ export default function About() {
             style={{
               right: windowSize.width >= 768 ? '2%' : 'auto',
               left: windowSize.width >= 768 ? 'auto' : '50%',
-              bottom: windowSize.width >= 768 ? '0%' : '10%',  // Shift down a bit on mobile
+              bottom: windowSize.width >= 768 ? '0%' : '15%',  // Shift up on mobile
               top: windowSize.width >= 768 ? 'auto' : 'auto',
               width: windowSize.width >= 768 
                 ? `${splineSize.containerWidth}px`
@@ -1968,7 +1976,9 @@ export default function About() {
               const fadeOut = Math.max(0, Math.min(1, (scrollProgress - (sectionTriggers[1] - 0.08)) / 0.07));
               return fadeIn * (1 - fadeOut);
             })(),
-            transition: 'transform 0.8s ease-out, opacity 0.5s ease-out',
+            transition: windowSize.width >= 768 
+              ? 'transform 0.8s ease-out, opacity 0.5s ease-out'
+              : 'transform 0.6s ease-out, opacity 0.4s ease-out',  // Faster transition on mobile
             maxWidth: '900px',
             marginLeft: 'auto',
             marginRight: 'auto',
