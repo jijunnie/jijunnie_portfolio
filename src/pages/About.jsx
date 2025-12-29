@@ -664,6 +664,11 @@ export default function About() {
   }, [subtitlePrefixVisible]);
   
   useEffect(() => {
+    // Disable mouse tracking on mobile to improve performance
+    if (windowSize.width < 768) {
+      return;
+    }
+    
     const handleMouseMove = throttle((e) => {
       const x = (e.clientX / window.innerWidth - 0.5) * 2;
       const y = (e.clientY / window.innerHeight - 0.5) * 2;
@@ -672,15 +677,24 @@ export default function About() {
     
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
     return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+  }, [windowSize.width]);
   
   useEffect(() => {
+    const isMobile = windowSize.width < 768;
+    // Use longer throttle on mobile to reduce updates and prevent lag
+    const throttleTime = isMobile ? 100 : 16; // 100ms on mobile, 16ms on desktop
+    
     const handleScroll = throttle(() => {
       if (!containerRef.current) return;
       
       const scrollTop = window.scrollY;
       const docHeight = document.documentElement.scrollHeight - window.innerHeight;
       const progress = Math.min(scrollTop / docHeight, 1);
+      
+      // Only update if progress changed significantly on mobile to reduce re-renders
+      if (isMobile && Math.abs(progress - previousScrollProgress.current) < 0.01) {
+        return;
+      }
       
       // Determine scroll direction
       if (progress < previousScrollProgress.current) {
@@ -691,13 +705,13 @@ export default function About() {
       
       previousScrollProgress.current = progress;
       setScrollProgress(progress);
-    }, 16); // ~60fps for smooth scrolling
+    }, throttleTime);
     
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
     
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [windowSize.width]);
   
   const typingStateRef = useRef({
     currentCharIndex: 0,
@@ -1181,14 +1195,29 @@ export default function About() {
   
   const sectionTriggers = [0.08, 0.20, 0.32, 0.38, 0.56, 0.68, 0.76, 0.84];
   
-  const avatarTransform = `translateY(${scrollProgress * 15}%) scale(${1 - scrollProgress * 0.15})`;
-  // Avatar completely disappears when "Learning Beyond Classroom" section appears (fades out by sectionTriggers[0] = 0.08)
-  const avatarOpacity = modelsVisible ? Math.max(0, 1 - Math.max(0, (scrollProgress - 0.03) / (sectionTriggers[0] - 0.03) * 1)) : 0;
+  // Memoize expensive calculations to prevent unnecessary re-renders
+  const avatarTransform = useMemo(() => 
+    `translateY(${scrollProgress * 15}%) scale(${1 - scrollProgress * 0.15})`,
+    [scrollProgress]
+  );
   
-  // Limit textTransform to prevent horizontal overflow
-  const maxTranslateX = 20; // Maximum horizontal translation in pixels
-  const limitedX = Math.max(-maxTranslateX, Math.min(maxTranslateX, mousePosition.x * 10));
-  const textTransform = `translateX(${limitedX}px) translateY(${mousePosition.y * 10}px)`;
+  // Avatar completely disappears when "Learning Beyond Classroom" section appears (fades out by sectionTriggers[0] = 0.08)
+  const avatarOpacity = useMemo(() => 
+    modelsVisible ? Math.max(0, 1 - Math.max(0, (scrollProgress - 0.03) / (sectionTriggers[0] - 0.03) * 1)) : 0,
+    [modelsVisible, scrollProgress]
+  );
+  
+  // Limit textTransform to prevent horizontal overflow - disable on mobile for performance
+  const isMobile = windowSize.width < 768;
+  const textTransform = useMemo(() => {
+    if (isMobile) {
+      // Disable mouse tracking on mobile to improve performance
+      return 'translateX(0px) translateY(0px)';
+    }
+    const maxTranslateX = 20; // Maximum horizontal translation in pixels
+    const limitedX = Math.max(-maxTranslateX, Math.min(maxTranslateX, mousePosition.x * 10));
+    return `translateX(${limitedX}px) translateY(${mousePosition.y * 10}px)`;
+  }, [isMobile, mousePosition.x, mousePosition.y]);
 
   return (
     <div ref={containerRef} className="w-full" style={{ minHeight: '800vh', width: '100%', maxWidth: '100vw', position: 'relative', top: 0, left: 0, display: 'block', visibility: 'visible', opacity: 1, background: '#fafafa', overflowX: 'hidden', overflowY: 'visible' }}>
@@ -1515,7 +1544,8 @@ export default function About() {
         }
       `}</style>
       
-      {[...Array(6)].map((_, i) => (
+      {/* Disable decorative particles on mobile for better performance */}
+      {windowSize.width >= 768 && [...Array(6)].map((_, i) => (
         <div
           key={i}
           style={{
