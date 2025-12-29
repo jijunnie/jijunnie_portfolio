@@ -48,9 +48,9 @@
   }
 })();
 
-import React, { useRef, useEffect, Suspense, useState } from 'react';
+import React, { useRef, useEffect, Suspense, useState, useMemo, useCallback } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { useGLTF, useFBX } from '@react-three/drei';
+import { OrbitControls, useGLTF, useFBX } from '@react-three/drei';
 import { SkeletonUtils } from 'three-stdlib';
 import * as THREE from 'three';
 import Spline from '@splinetool/react-spline';
@@ -464,13 +464,30 @@ export default function About() {
   const [typingText, setTypingText] = useState('');
   const [currentIdentityIndex, setCurrentIdentityIndex] = useState(0);
   const [pageOpacity, setPageOpacity] = useState(0);
+  const [pageReady, setPageReady] = useState(false);
   const [scriptVisible, setScriptVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [galleryScroll, setGalleryScroll] = useState(0);
   const [hoveredGalleryItem, setHoveredGalleryItem] = useState(null);
   
+  // Interests carousel state
+  const [carouselRotation, setCarouselRotation] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [hasAnimated, setHasAnimated] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const dragStartRotation = useRef(0);
+  const lastClickTime = useRef(0);
+  const dragDistance = useRef(0);
+  const carouselRef = useRef(null);
+  const animationFrameRef = useRef(null);
+  const lastRotationTime = useRef(0);
+  const animationTimerRef = useRef(null);
+  
   const containerRef = useRef(null);
   const galleryRef = useRef(null);
+  const travelVideoRef = useRef(null);
+  const developVideoRef = useRef(null);
   
   const titleText = 'Hi, I am Jijun Nie';
   
@@ -517,9 +534,46 @@ export default function About() {
     { url: '/icons2/vscode.png', name: 'VS Code' },
   ];
   
+  // Sing Out Voices carousel images
+  const carouselImages = useMemo(() => [
+    '/images/sing1.jpg',
+    '/images/sing2.JPG',
+    '/images/sing3.JPG',
+    '/images/sing4.jpg',
+    '/images/sing5.JPG',
+    '/images/sing6.jpg',
+    '/images/sing7.jpg'
+  ], []);
+  
+  const carouselItemsCount = carouselImages.length;
+  const angleStep = 360 / carouselItemsCount;
+  
+  // Responsive values for interests carousel
+  const responsiveCarousel = useMemo(() => {
+    const isMobile = windowSize.width < 640;
+    const isTablet = windowSize.width >= 640 && windowSize.width < 1024;
+    return {
+      carouselRadius: isMobile ? 200 : isTablet ? 250 : 240,
+      cardWidth: isMobile ? 120 : isTablet ? 130 : 110,
+      cardHeight: isMobile ? 160 : isTablet ? 170 : 150,
+      carouselHeight: isMobile ? 200 : isTablet ? 220 : 200,
+      avatarScale: isMobile ? 2.4 : isTablet ? 3.0 : 3.6,
+      avatarPosition: isMobile ? [0, -2.5, 0] : isTablet ? [0, -2.6, 0] : [0, -2.7, 0],
+      cameraPosition: isMobile ? [0, 0.8, 3.5] : isTablet ? [0, 0.9, 4] : [0, 1, 4.5],
+      cameraFov: isMobile ? 55 : isTablet ? 52 : 50,
+    };
+  }, [windowSize.width]);
+  
   useEffect(() => {
-    setPageOpacity(1);
-    setModelsVisible(true);
+    // Set page ready immediately to prevent flash
+    setPageReady(true);
+    // Set opacity immediately on next frame to prevent flash
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setPageOpacity(1);
+        setModelsVisible(true);
+      });
+    });
   }, []);
   
   const titleTypingRef = useRef({ currentIndex: 0, timeoutId: null });
@@ -735,6 +789,196 @@ export default function About() {
     }
   }, [windowSize.width]);
 
+  // Preload travel video
+  useEffect(() => {
+    const videoUrl = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/IMG_0496.MP4';
+    const video = document.createElement('video');
+    video.src = videoUrl;
+    video.preload = 'auto';
+    video.muted = true;
+    video.playsInline = true;
+    // Preload the video
+    video.load();
+  }, []);
+
+  // Control video playback based on scroll position
+  useEffect(() => {
+    const travelSectionTrigger = 0.38; // sectionTriggers[3]
+    const developSectionTrigger = 0.20; // sectionTriggers[1]
+    
+    const shouldPlayTravel = scrollProgress >= travelSectionTrigger - 0.05 && scrollProgress <= travelSectionTrigger + 0.15;
+    const shouldPlayDevelop = scrollProgress >= developSectionTrigger - 0.05 && scrollProgress <= developSectionTrigger + 0.15;
+    
+    if (travelVideoRef.current) {
+      if (shouldPlayTravel) {
+        travelVideoRef.current.play().catch(err => {
+          console.warn('Video autoplay prevented:', err);
+        });
+      } else {
+        travelVideoRef.current.pause();
+      }
+    }
+    
+    if (developVideoRef.current) {
+      if (shouldPlayDevelop) {
+        developVideoRef.current.play().catch(err => {
+          console.warn('Develop video autoplay prevented:', err);
+        });
+      } else {
+        developVideoRef.current.pause();
+      }
+    }
+  }, [scrollProgress]);
+  
+  // Sing Out Voices carousel initialization - trigger animation when section starts appearing, then auto-rotate
+  useEffect(() => {
+    const sectionStart = 0.32; // sectionTriggers[2] - Sing Out Voices section
+    const sectionEnd = 0.38; // sectionTriggers[3]
+    const fadeOffset = windowSize.width >= 768 ? 0.05 : 0.03; // sectionConfig.fadeOffset
+    const fadeInStart = sectionStart - fadeOffset; // When section starts appearing
+    
+    // Trigger animation when section starts appearing (not at midpoint)
+    if (scrollProgress >= fadeInStart && !hasAnimated) {
+      // Use timer-based approach for reliability
+      const timer = setTimeout(() => {
+        setHasAnimated(true);
+        setIsAnimating(true);
+        
+        // Store animation timer in ref so it persists even if effect re-runs
+        animationTimerRef.current = setTimeout(() => {
+          setIsAnimating(false);
+          animationTimerRef.current = null;
+        }, 2700);
+      }, 100);
+      
+      // Only clear the outer timer, not the animationTimerRef (it needs to complete)
+      return () => {
+        clearTimeout(timer);
+      };
+    }
+  }, [scrollProgress, hasAnimated, windowSize.width]);
+  
+  // Cleanup animation timer on unmount
+  useEffect(() => {
+    return () => {
+      if (animationTimerRef.current) {
+        clearTimeout(animationTimerRef.current);
+        animationTimerRef.current = null;
+      }
+    };
+  }, []);
+  
+  // Fallback: If user scrolls past section without triggering, still enable auto-rotation
+  useEffect(() => {
+    const sectionEnd = 0.38; // sectionTriggers[3]
+    // If we're well past the section and haven't animated, just enable auto-rotation
+    if (scrollProgress > sectionEnd + 0.1 && !hasAnimated) {
+      setHasAnimated(true);
+      setIsAnimating(false); // Skip the initial animation, go straight to auto-rotation
+    }
+  }, [scrollProgress, hasAnimated]);
+  
+  // Auto-rotation for Sing Out Voices carousel - continuous rotation when not dragging
+  useEffect(() => {
+    if (!isDragging && hasAnimated && !isAnimating) {
+      const animate = (timestamp) => {
+        if (!lastRotationTime.current) {
+          lastRotationTime.current = timestamp;
+        }
+        
+        const elapsed = timestamp - lastRotationTime.current;
+        
+        // Update every ~33ms (30fps) instead of 20ms for smoother mobile performance
+        if (elapsed >= 33) {
+          setCarouselRotation(prev => prev + 0.3); // Slightly faster to compensate
+          lastRotationTime.current = timestamp;
+        }
+        
+        animationFrameRef.current = requestAnimationFrame(animate);
+      };
+      
+      animationFrameRef.current = requestAnimationFrame(animate);
+      
+      return () => {
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+        }
+        lastRotationTime.current = 0;
+      };
+    }
+  }, [isDragging, hasAnimated, isAnimating]);
+  
+  // Interests carousel pointer handlers
+  const handlePointerDown = useCallback((e) => {
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    setIsDragging(true);
+    setStartX(clientX);
+    dragStartRotation.current = carouselRotation;
+    lastClickTime.current = Date.now();
+    dragDistance.current = 0;
+  }, [carouselRotation]);
+  
+  const handlePointerMove = useCallback((e) => {
+    if (!isDragging) return;
+    
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const deltaX = clientX - startX;
+    dragDistance.current = Math.abs(deltaX);
+    const rotationDelta = deltaX * 0.5;
+    setCarouselRotation(dragStartRotation.current + rotationDelta);
+  }, [isDragging, startX]);
+  
+  const handlePointerUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+  
+  
+  // Unified event listeners for carousel
+  useEffect(() => {
+    if (isDragging) {
+      const handleMove = (e) => handlePointerMove(e);
+      const handleUp = () => handlePointerUp();
+      
+      window.addEventListener('mousemove', handleMove, { passive: true });
+      window.addEventListener('mouseup', handleUp);
+      window.addEventListener('touchmove', handleMove, { passive: true });
+      window.addEventListener('touchend', handleUp);
+      
+      return () => {
+        window.removeEventListener('mousemove', handleMove);
+        window.removeEventListener('mouseup', handleUp);
+        window.removeEventListener('touchmove', handleMove);
+        window.removeEventListener('touchend', handleUp);
+      };
+    }
+  }, [isDragging, handlePointerMove, handlePointerUp]);
+  
+  // Generate keyframe styles for carousel
+  const keyframeStyles = useMemo(() => {
+    return carouselImages.map((_, index) => {
+      const angle = angleStep * index;
+      const startAngle = -135;
+      const midAngle = startAngle + ((angle - startAngle) * 0.5);
+      
+      return `
+        @keyframes slide-curve-in-${index} {
+          0% {
+            transform: rotateY(${startAngle}deg) translateZ(${responsiveCarousel.carouselRadius + 200}px) rotateX(-15deg);
+            opacity: 0;
+          }
+          50% {
+            transform: rotateY(${midAngle}deg) translateZ(${responsiveCarousel.carouselRadius + 100}px) rotateX(-15deg);
+            opacity: 0.5;
+          }
+          70%, 100% {
+            transform: rotateY(${angle}deg) translateZ(${responsiveCarousel.carouselRadius}px) rotateX(-15deg);
+            opacity: 1;
+          }
+        }
+      `;
+    }).join('\n');
+  }, [carouselImages, angleStep, responsiveCarousel.carouselRadius]);
+
   
   const calculateScale = () => {
     const screenWidth = windowSize.width;
@@ -901,6 +1145,284 @@ export default function About() {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        /* Prevent flash on initial load - hide content until ready */
+        .about-page-content:not(.ready) {
+          opacity: 0 !important;
+          visibility: hidden;
+        }
+        .about-page-content.ready {
+          opacity: 1;
+          visibility: visible;
+          transition: opacity 0.4s ease-in, visibility 0s linear 0s;
+        }
+        
+        /* Interests Carousel Styles */
+        /* Neon Glow Effects */
+        .neon-glow {
+          filter: drop-shadow(0 0 8px currentColor);
+          animation: neon-flicker 3s infinite alternate;
+        }
+
+        .neon-glow-large {
+          filter: drop-shadow(0 0 20px currentColor) drop-shadow(0 0 40px currentColor);
+          animation: neon-pulse 2s infinite;
+        }
+
+        .neon-icon {
+          filter: drop-shadow(0 0 6px currentColor);
+        }
+
+        @keyframes neon-flicker {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.8; }
+        }
+
+        @keyframes neon-pulse {
+          0%, 100% { 
+            filter: drop-shadow(0 0 20px currentColor) drop-shadow(0 0 40px currentColor);
+          }
+          50% { 
+            filter: drop-shadow(0 0 30px currentColor) drop-shadow(0 0 60px currentColor);
+          }
+        }
+
+        /* Cyberpunk Card Effects */
+        .cyberpunk-card {
+          position: relative;
+          background-clip: padding-box;
+          transform: translateZ(0);
+          backface-visibility: hidden;
+        }
+
+        .glitch-overlay {
+          background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            transparent 100%
+          );
+          animation: glitch-slide 3s infinite;
+        }
+
+        @keyframes glitch-slide {
+          0%, 100% { transform: translateX(-100%); }
+          50% { transform: translateX(100%); }
+        }
+
+        .border-animation {
+          border: 2px solid transparent;
+          background: linear-gradient(90deg, #00ffff, #ff00ff, #00ffff) border-box;
+          mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+          mask-composite: exclude;
+          animation: border-rotate 3s linear infinite;
+        }
+
+        @keyframes border-rotate {
+          0% { background-position: 0% 50%; }
+          100% { background-position: 200% 50%; }
+        }
+
+        /* Cyberpunk Text Effects */
+        .cyber-text {
+          text-shadow: 
+            0 0 10px rgba(0, 255, 255, 0.8),
+            0 0 20px rgba(0, 255, 255, 0.4);
+        }
+
+        .cyber-text-glow {
+          text-shadow: 
+            0 0 10px rgba(0, 255, 255, 0.8),
+            0 0 20px rgba(0, 255, 255, 0.6),
+            0 0 30px rgba(0, 255, 255, 0.4);
+          animation: text-flicker 2s infinite alternate;
+        }
+
+        @keyframes text-flicker {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.9; }
+        }
+
+        .cyber-title {
+          text-shadow: 
+            0 0 20px rgba(0, 255, 255, 0.8),
+            0 0 40px rgba(255, 0, 255, 0.6),
+            0 0 60px rgba(0, 255, 255, 0.4);
+          animation: title-glow 2s infinite alternate;
+        }
+
+        @keyframes title-glow {
+          0% { 
+            text-shadow: 
+              0 0 20px rgba(0, 255, 255, 0.8),
+              0 0 40px rgba(255, 0, 255, 0.6),
+              0 0 60px rgba(0, 255, 255, 0.4);
+          }
+          100% { 
+            text-shadow: 
+              0 0 30px rgba(0, 255, 255, 1),
+              0 0 50px rgba(255, 0, 255, 0.8),
+              0 0 70px rgba(0, 255, 255, 0.6);
+          }
+        }
+
+        .cyber-text-content {
+          text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+        }
+
+        /* Cyberpunk UI Elements */
+        .cyber-close-btn {
+          position: relative;
+          clip-path: polygon(
+            4px 0, calc(100% - 4px) 0, 100% 4px,
+            100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px
+          );
+        }
+
+        .cyber-close-btn:hover {
+          box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
+        }
+
+        .cyber-button {
+          position: relative;
+          clip-path: polygon(
+            8px 0, calc(100% - 8px) 0, 100% 8px,
+            100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px
+          );
+        }
+
+        .cyber-button:hover {
+          box-shadow: 0 0 30px rgba(0, 255, 255, 0.6);
+          text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+        }
+
+        .cyber-bar {
+          animation: bar-pulse 2s infinite;
+        }
+
+        @keyframes bar-pulse {
+          0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 255, 0.5); }
+          50% { box-shadow: 0 0 20px rgba(0, 255, 255, 0.8); }
+        }
+
+        .cyber-skill-tag {
+          animation: skill-fade-in 0.5s ease-out forwards;
+          opacity: 0;
+          transform: translateY(10px);
+        }
+
+        @keyframes skill-fade-in {
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        /* Modal Effects */
+        .cyberpunk-modal {
+          box-shadow: 
+            0 0 40px rgba(0, 255, 255, 0.3),
+            inset 0 0 40px rgba(0, 255, 255, 0.1);
+        }
+
+        .cyberpunk-modal-bg {
+          background: 
+            radial-gradient(circle at center, rgba(0, 255, 255, 0.1), transparent 50%),
+            radial-gradient(circle at center, rgba(255, 0, 255, 0.1), transparent 70%);
+        }
+
+        .glitch-overlay-modal {
+          background: linear-gradient(
+            45deg,
+            transparent 0%,
+            rgba(0, 255, 255, 0.05) 25%,
+            transparent 50%,
+            rgba(255, 0, 255, 0.05) 75%,
+            transparent 100%
+          );
+          background-size: 200% 200%;
+          animation: modal-glitch 4s linear infinite;
+        }
+
+        @keyframes modal-glitch {
+          0% { background-position: 0% 0%; }
+          100% { background-position: 200% 200%; }
+        }
+
+        .cyber-section {
+          animation: section-slide-in 0.5s ease-out;
+        }
+
+        @keyframes section-slide-in {
+          from {
+            opacity: 0;
+            transform: translateX(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        /* Carousel Animation */
+        @keyframes carousel-spin {
+          from {
+            transform: rotateY(0deg);
+          }
+          to {
+            transform: rotateY(360deg);
+          }
+        }
+
+        .animate-carousel-spin {
+          animation: carousel-spin 2.5s linear;
+        }
+
+        ${keyframeStyles}
+
+        @keyframes bounce-cyber {
+          0%, 100% {
+            transform: translateY(0px);
+            filter: drop-shadow(0 0 20px currentColor);
+          }
+          50% {
+            transform: translateY(-20px);
+            filter: drop-shadow(0 0 40px currentColor);
+          }
+        }
+        
+        .animate-bounce-cyber {
+          animation: bounce-cyber 3s ease-in-out infinite;
+        }
+        
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-out;
+        }
+        
+        @keyframes scale-in-cyber {
+          from {
+            opacity: 0;
+            transform: scale(0.9);
+            filter: blur(10px);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+            filter: blur(0px);
+          }
+        }
+        
+        .animate-scale-in-cyber {
+          animation: scale-in-cyber 0.4s ease-out;
+        }
       `}</style>
       
       {[...Array(6)].map((_, i) => (
@@ -989,7 +1511,7 @@ export default function About() {
         )}
         
         <div 
-          className="w-full flex flex-col justify-center"
+          className={`w-full flex flex-col justify-center about-page-content ${pageReady ? 'ready' : ''}`}
           style={{
             minHeight: `calc(100vh - ${navBarTotalHeight}px)`,
             opacity: pageOpacity,
@@ -1087,7 +1609,7 @@ export default function About() {
               bottom: '2%',
               width: `${splineSize.containerWidth}px`,
               height: `${splineSize.containerHeight}px`,
-              transform: `translateY(${scrollProgress * 60}px) scale(${1 - scrollProgress * 0.1})`,
+              transform: avatarTransform,
               opacity: modelsVisible ? Math.max(0, avatarOpacity) : 0,
               zIndex: 0,
               pointerEvents: scrollProgress >= 0.2 ? 'none' : 'auto',
@@ -1219,7 +1741,7 @@ export default function About() {
             right: 0,
             bottom: 0,
             pointerEvents: 'none',
-            zIndex: 1,
+            zIndex: 5,
             overflow: 'visible'
           }}
         >
@@ -1338,6 +1860,19 @@ export default function About() {
             );
           })}
         </div>
+        {/* Gradient fade at bottom for blending with Develop With Creativity section */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '400px',
+            background: 'linear-gradient(to bottom, transparent 0%, rgba(250, 250, 250, 0.1) 20%, rgba(250, 250, 250, 0.3) 40%, rgba(250, 250, 250, 0.6) 60%, rgba(250, 250, 250, 0.85) 80%, rgba(250, 250, 250, 1) 100%)',
+            zIndex: 2,
+            pointerEvents: 'none'
+          }}
+        />
       </div>
 
       <div 
@@ -1351,17 +1886,45 @@ export default function About() {
           position: 'relative'
         }}
       >
-        {/* Neon Wave and Particle Background */}
-        <NeonWaveBackground 
-          scrollProgress={scrollProgress}
-          sectionTrigger={sectionTriggers[1]}
-          fadeOffset={sectionConfig.fadeOffset}
-          fadeInSpeed={sectionConfig.fadeInSpeed}
+        {/* Video Background */}
+        <video
+          ref={developVideoRef}
+          src="/images/develop bg.mp4"
+          autoPlay={false}
+          loop
+          muted
+          playsInline
+          preload="auto"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center',
+            zIndex: 0,
+            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[1] - sectionConfig.fadeOffset - 0.03)) * (sectionConfig.fadeInSpeed * 0.8))),
+            transition: 'opacity 1.5s ease-out'
+          }}
+        />
+        {/* Gradient fade at top for blending with previous section */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '400px',
+            background: 'linear-gradient(to bottom, rgba(250, 250, 250, 1) 0%, rgba(250, 250, 250, 0.85) 20%, rgba(250, 250, 250, 0.6) 40%, rgba(250, 250, 250, 0.3) 60%, rgba(250, 250, 250, 0.1) 80%, transparent 100%)',
+            zIndex: 1,
+            pointerEvents: 'none'
+          }}
         />
         <div 
           className="w-full"
           style={{
-            paddingTop: 'clamp(2rem, 4vw, 4rem)',
+            paddingTop: 'clamp(4rem, 8vw, 8rem)',
             paddingBottom: 'clamp(3rem, 6vw, 6rem)',
             paddingLeft: 'clamp(1.5rem, 4vw, 4rem)',
             paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
@@ -1372,7 +1935,7 @@ export default function About() {
             opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[1] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
             transition: 'transform 0.8s ease-out, opacity 0.8s ease-out',
             position: 'relative',
-            zIndex: 1
+            zIndex: 2
           }}
         >
           <div style={{ textAlign: 'left', marginBottom: `${calculateSpacing(60)}px` }}>
@@ -1382,8 +1945,9 @@ export default function About() {
                 fontWeight: 600,
                 lineHeight: 1.1,
                 letterSpacing: '-0.03em',
-                color: '#0a0a0a',
-                marginBottom: `${calculateSpacing(16)}px`
+                color: '#ffffff',
+                marginBottom: `${calculateSpacing(16)}px`,
+                textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)'
               }}
             >
               Develop With Creativity
@@ -1393,8 +1957,9 @@ export default function About() {
                 fontSize: calculateFontSize(20, 14, 24),
                 fontWeight: 400,
                 lineHeight: 1.6,
-                color: '#525252',
-                maxWidth: '700px'
+                color: '#ffffff',
+                maxWidth: '700px',
+                textShadow: '0 1px 4px rgba(0, 0, 0, 0.5)'
               }}
             >
               I also enjoy designing and developing web experiences that blend creative, thoughtful design with clear, user‑centered thinking. I care deeply about usability, accessibility, and performance of my projects, turning complex problems into elegant products that people enjoy using.
@@ -1456,7 +2021,7 @@ export default function About() {
           style={{
             position: 'absolute',
             right: windowSize.width < 640 ? '1rem' : '2rem',
-            bottom: windowSize.width < 640 ? '1rem' : '2rem',
+            bottom: windowSize.width < 640 ? '0.5rem' : '1rem',
             width: windowSize.width < 640 ? 'clamp(120px, 25vw, 150px)' : 
                    windowSize.width < 768 ? 'clamp(150px, 30vw, 200px)' :
                    windowSize.width < 1024 ? 'clamp(200px, 35vw, 300px)' :
@@ -1512,95 +2077,266 @@ export default function About() {
             </Suspense>
           </div>
         </div>
+        {/* Gradient fade at bottom for blending with Sing Out Voices section */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '400px',
+            background: 'linear-gradient(to bottom, transparent 0%, rgba(255, 255, 255, 0.1) 20%, rgba(255, 255, 255, 0.3) 40%, rgba(255, 255, 255, 0.6) 60%, rgba(255, 255, 255, 0.85) 80%, rgba(255, 255, 255, 1) 100%)',
+            zIndex: 1,
+            pointerEvents: 'none'
+          }}
+        />
       </div>
 
       <div 
         className="relative w-full"
         style={{ 
           minHeight: '100vh',
-          background: '#ffffff',
+          background: 'linear-gradient(to bottom, #f3f4f6, #e5e7eb, #d1d5db)',
           position: 'relative',
-          overflow: 'hidden'
+          overflowX: 'visible',
+          overflowY: 'visible',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: (() => {
+            const sectionStart = 0.32; // sectionTriggers[2]
+            const fadeOffset = windowSize.width >= 768 ? 0.05 : 0.03; // sectionConfig.fadeOffset
+            const fadeInStart = sectionStart - fadeOffset;
+            const fadeInEnd = sectionStart + 0.03;
+            
+            if (scrollProgress < fadeInStart) return 0;
+            if (scrollProgress >= fadeInStart && scrollProgress <= fadeInEnd) {
+              return (scrollProgress - fadeInStart) / (fadeInEnd - fadeInStart);
+            }
+            // 保持可见，不再淡出
+            return 1;
+          })(),
+          transition: 'opacity 0.3s ease-out'
         }}
       >
-        {/* 3D Avatar at the top */}
-        {windowSize.width > 0 && (
+        {/* Gradient fade at top for blending with Develop With Creativity section */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '400px',
+            background: 'linear-gradient(to bottom, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.85) 20%, rgba(255, 255, 255, 0.6) 40%, rgba(255, 255, 255, 0.3) 60%, rgba(255, 255, 255, 0.1) 80%, transparent 100%)',
+            zIndex: 1,
+            pointerEvents: 'none'
+          }}
+        />
+        
+        {/* Sing Out Voices Text - Mobile/Tablet */}
+        {windowSize.width < 1024 && (
           <div 
-            className="absolute left-0 right-0 overflow-hidden flex items-center"
             style={{
-              top: 0,
-              height: '75%',
-              width: '100%',
-              zIndex: 10,
-              justifyContent: windowSize.width >= 768 ? 'flex-start' : 'center',
-              paddingLeft: windowSize.width >= 768 ? 'clamp(1.5rem, 4vw, 4rem)' : '0'
+              position: 'absolute',
+              top: windowSize.width < 640 ? 'clamp(9rem, 16vw, 11rem)' : 'clamp(10rem, 18vw, 12rem)',
+              left: '50%',
+              textAlign: 'center',
+              maxWidth: '800px',
+              width: '90%',
+              paddingLeft: '1rem',
+              paddingRight: '1rem',
+              zIndex: 20,
+              transform: `translateX(-50%) translateY(${Math.max(0, (scrollProgress - sectionTriggers[2]) * -sectionConfig.translateYAmplitude)}px)`,
+              opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[2] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
+              transition: 'transform 0.8s ease-out, opacity 0.8s ease-out'
             }}
           >
-            <Canvas 
-              camera={{ position: [0, 0, 5], fov: 50, up: [0, 1, 0] }}
-              gl={{ 
-                antialias: true, 
-                alpha: true,
-                premultipliedAlpha: false,
-                powerPreference: "high-performance",
-                preserveDrawingBuffer: true,
-                failIfMajorPerformanceCaveat: false
-              }}
-              onCreated={({ gl }) => {
-                gl.setClearColor('#ffffff', 0);
-              }}
-              style={{ 
-                background: 'transparent', 
-                width: '100%', 
-                height: '100%',
-                overflow: 'hidden'
+            <h2
+              style={{
+                fontSize: calculateFontSize(56, 28, 72),
+                fontWeight: 600,
+                lineHeight: 1.1,
+                letterSpacing: '-0.03em',
+                color: '#0a0a0a',
+                marginBottom: `${calculateSpacing(16)}px`
               }}
             >
-              <ambientLight intensity={1.5} />
-              <directionalLight position={[5, 8, 5]} intensity={2.5} />
-              <directionalLight position={[0, 3, 8]} intensity={2} />
-              <directionalLight position={[-5, 5, -5]} intensity={1.2} color="#a5b4fc" />
-              <pointLight position={[8, 2, 3]} intensity={1} color="#fbbf24" />
-              <pointLight position={[-8, 2, 3]} intensity={1} color="#60a5fa" />
-              <hemisphereLight skyColor="#ffffff" groundColor="#b0b0b0" intensity={1.2} />
-              
-              <Suspense fallback={null}>
-                <Avatar 
-                  animationPath="/animations/Singing.fbx"
-                  scale={avatarScale}
-                  position={[windowSize.width >= 768 ? -3.5 : 0, -singingModelCenterY - 0.5, 0]}
-                  onBoundingBoxCalculated={setSingingModelCenterY}
-                  noRotation={true}
-                  rotation={[0, 10 * (Math.PI / 180), -5 * (Math.PI / 180)]}
-                />
-              </Suspense>
-            </Canvas>
+              Sing Out Voices
+            </h2>
+            <p
+              style={{
+                fontSize: calculateFontSize(20, 14, 24),
+                fontWeight: 400,
+                lineHeight: 1.6,
+                color: '#525252',
+                maxWidth: '700px',
+                marginLeft: 'auto',
+                marginRight: 'auto'
+              }}
+            >
+              Music is my emotional outlet and creative way of expression. Through singing, I connect stories with lyrics, convey emotions with rhythm and share experiences that words alone cannot capture.
+            </p>
           </div>
         )}
         
-        {/* Text at the bottom 25% */}
+        {/* Spinning Cards Carousel */}
         <div 
-          className="absolute left-0 right-0"
+          className="relative z-20 w-full flex items-center justify-center"
           style={{
-            bottom: 0,
-            height: '25%',
-            paddingLeft: 'clamp(1.5rem, 4vw, 4rem)',
-            paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
-            paddingBottom: 'clamp(3rem, 6vw, 6rem)',
-            paddingTop: 'clamp(2rem, 4vw, 4rem)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'flex-end',
-            alignItems: 'flex-start',
-            maxWidth: '1200px',
-            width: '100%',
-            textAlign: 'left',
-            transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[2]) * -sectionConfig.translateYAmplitude)}px)`,
+            position: 'absolute',
+            top: windowSize.width >= 1024 ? '42%' : windowSize.width < 640 ? 'clamp(24rem, 50vw, 30rem)' : 'clamp(26rem, 54vw, 32rem)',
+            left: '50%',
+            transform: `translate(-50%, -50%) translateY(${Math.max(0, (scrollProgress - sectionTriggers[2]) * -sectionConfig.translateYAmplitude)}px)`,
             opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[2] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
             transition: 'transform 0.8s ease-out, opacity 0.8s ease-out',
-            zIndex: 5
+            width: '100%',
+            pointerEvents: 'auto',
+            overflow: 'visible',
+            clipPath: 'none'
           }}
         >
+            <div
+              className="relative cursor-grab active:cursor-grabbing select-none"
+              style={{
+                perspective: '1000px',
+                width: '100%',
+                height: `${responsiveCarousel.carouselHeight}px`,
+                overflow: 'visible',
+                clipPath: 'none'
+              }}
+              onMouseDown={handlePointerDown}
+              onTouchStart={handlePointerDown}
+            >
+              <div
+                ref={carouselRef}
+                className={`relative w-full h-full ${isAnimating ? 'animate-carousel-spin' : ''}`}
+                style={{
+                  transformStyle: 'preserve-3d',
+                  transform: `rotateY(${carouselRotation}deg)`,
+                  transition: isDragging || isAnimating ? 'none' : 'transform 0.05s linear',
+                  overflow: 'visible',
+                  clipPath: 'none',
+                  width: '100%',
+                  height: '100%'
+                }}
+              >
+                {carouselImages.map((imageUrl, index) => {
+                  const animationDelay = index * 0.15;
+                  
+                  return (
+                    <div
+                      key={index}
+                      className={`absolute left-1/2 top-1/2 ${hasAnimated ? '' : 'opacity-0'}`}
+                      style={{
+                        width: `${responsiveCarousel.cardWidth}px`,
+                        height: `${responsiveCarousel.cardHeight}px`,
+                        marginLeft: `-${responsiveCarousel.cardWidth / 2}px`,
+                        marginTop: `-${responsiveCarousel.cardHeight / 2}px`,
+                        transformStyle: 'preserve-3d',
+                        animation: hasAnimated ? `slide-curve-in-${index} 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) ${animationDelay}s both` : 'none',
+                        overflow: 'visible',
+                        clipPath: 'none'
+                      }}
+                    >
+                      <div className="w-full h-full rounded-lg overflow-hidden shadow-2xl transform hover:scale-110 transition-all duration-300">
+                        <img 
+                          src={imageUrl} 
+                          alt={`Sing Out Voices ${index + 1}`}
+                          className="w-full h-full object-cover"
+                          style={{ 
+                            display: 'block',
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            objectPosition: 'center'
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        
+        {/* Singing Avatar - Below Carousel */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: windowSize.width >= 1024 ? '3vh' : windowSize.width >= 640 ? '13vh' : '8vh',
+            left: '50%',
+            transform: `translateX(-50%) translateY(${Math.max(0, (scrollProgress - sectionTriggers[2]) * -sectionConfig.translateYAmplitude)}px)`,
+            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[2] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
+            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out',
+            width: windowSize.width >= 1024 ? '620px' : windowSize.width >= 640 ? '550px' : '450px',
+            height: windowSize.width >= 1024 ? '450px' : windowSize.width >= 640 ? '400px' : '350px',
+            zIndex: 15,
+            pointerEvents: 'none',
+            overflow: 'visible',
+            clipPath: 'none'
+          }}
+        >
+          <Suspense fallback={null}>
+            <Canvas
+              camera={{ position: [0, 0, 5], fov: 50 }}
+              style={{ width: '100%', height: '100%', overflow: 'visible' }}
+            >
+              {/* Responsive lighting based on breakpoints */}
+              {windowSize.width >= 1024 ? (
+                // Desktop lighting
+                <>
+                  <ambientLight intensity={1.2} />
+                  <directionalLight position={[10, 10, 5]} intensity={2.4} />
+                  <directionalLight position={[-5, 5, -3]} intensity={1.0} />
+                  <pointLight position={[-10, -10, -5]} intensity={1.5} />
+                  <pointLight position={[5, 8, 3]} intensity={0.8} />
+                </>
+              ) : windowSize.width >= 640 ? (
+                // Tablet lighting
+                <>
+                  <ambientLight intensity={1.3} />
+                  <directionalLight position={[8, 8, 4]} intensity={2.2} />
+                  <directionalLight position={[-4, 4, -2]} intensity={1.1} />
+                  <pointLight position={[-8, -8, -4]} intensity={1.6} />
+                  <pointLight position={[4, 6, 2]} intensity={0.9} />
+                </>
+              ) : (
+                // Mobile lighting
+                <>
+                  <ambientLight intensity={1.4} />
+                  <directionalLight position={[6, 6, 3]} intensity={2.0} />
+                  <directionalLight position={[-3, 3, -2]} intensity={1.2} />
+                  <pointLight position={[-6, -6, -3]} intensity={1.7} />
+                  <pointLight position={[3, 5, 2]} intensity={1.0} />
+                </>
+              )}
+              <Avatar
+                animationPath="/animations/Singing.fbx"
+                scale={windowSize.width >= 1024 ? 1.4 : windowSize.width >= 640 ? 1.3 : 1.15}
+                position={[0, -1.5, 0]}
+              />
+            </Canvas>
+          </Suspense>
+        </div>
+        
+        {/* Sing Out Voices Text - Desktop */}
+        {windowSize.width >= 1024 && (
+          <div 
+            style={{
+              position: 'absolute',
+              top: '18%',
+              left: '50%',
+              textAlign: 'center',
+              maxWidth: '1000px',
+              width: '95%',
+              paddingLeft: '1rem',
+              paddingRight: '1rem',
+              zIndex: 20,
+              transform: `translate(-50%, -50%) translateY(${Math.max(0, (scrollProgress - sectionTriggers[2]) * -sectionConfig.translateYAmplitude)}px)`,
+              opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[2] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
+              transition: 'transform 0.8s ease-out, opacity 0.8s ease-out'
+            }}
+          >
           <h2
             style={{
               fontSize: calculateFontSize(56, 28, 72),
@@ -1619,37 +2355,113 @@ export default function About() {
               fontWeight: 400,
               lineHeight: 1.6,
               color: '#525252',
-              maxWidth: '700px'
+              maxWidth: '900px',
+              marginLeft: 'auto',
+              marginRight: 'auto',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
             }}
           >
             Music is my emotional outlet and creative way of expression. Through singing, I connect stories with lyrics, convey emotions with rhythm and share experiences that words alone cannot capture.
           </p>
-        </div>
+          </div>
+        )}
+
+        {/* Gradient fade at bottom for blending with travel section - more intense at boundary */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '120px',
+            background: 'linear-gradient(to bottom, transparent 0%, rgba(255, 255, 255, 0.4) 40%, rgba(255, 255, 255, 0.8) 70%, rgba(255, 255, 255, 1) 100%)',
+            zIndex: 1,
+            pointerEvents: 'none'
+          }}
+        />
       </div>
 
       <div 
         className="relative w-full"
         style={{ 
-          minHeight: '80vh',
+          minHeight: '100vh',
           background: '#ffffff',
           display: 'flex',
-          alignItems: 'center'
+          alignItems: 'flex-end',
+          justifyContent: 'flex-end',
+          overflow: 'hidden',
+          position: 'relative',
+          zIndex: 10
         }}
       >
+        {/* Gradient fade at top for blending with Singing section - more intense at boundary, always visible */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '120px',
+            background: 'linear-gradient(to bottom, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.8) 30%, rgba(255, 255, 255, 0.4) 60%, transparent 100%)',
+            zIndex: 1,
+            pointerEvents: 'none',
+            opacity: 1
+          }}
+        />
+        {/* Video Background */}
+        <video
+          ref={travelVideoRef}
+          src="https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/IMG_0496.MP4"
+          autoPlay={false}
+          loop
+          muted
+          playsInline
+          preload="auto"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center',
+            zIndex: 0,
+            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[3] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
+            transition: 'opacity 0.8s ease-out'
+          }}
+        />
+        {/* Gradient fade at bottom for blending with next section */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '400px',
+            background: 'linear-gradient(to bottom, transparent 0%, rgba(255, 255, 255, 0.1) 20%, rgba(255, 255, 255, 0.3) 40%, rgba(255, 255, 255, 0.6) 60%, rgba(255, 255, 255, 0.85) 80%, rgba(255, 255, 255, 1) 100%)',
+            zIndex: 1,
+            pointerEvents: 'none'
+          }}
+        />
         <div 
           className="w-full"
           style={{
-            paddingTop: 'clamp(3rem, 6vw, 6rem)',
             paddingBottom: 'clamp(3rem, 6vw, 6rem)',
             paddingLeft: 'clamp(1.5rem, 4vw, 4rem)',
             paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
             maxWidth: '1200px',
             marginLeft: 'auto',
-            marginRight: 'auto',
+            marginRight: 0,
             textAlign: 'right',
             transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[3]) * -sectionConfig.translateYAmplitude)}px)`,
             opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[3] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
-            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out'
+            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out',
+            position: 'relative',
+            zIndex: 2
           }}
         >
           <h2
@@ -1658,8 +2470,9 @@ export default function About() {
               fontWeight: 600,
               lineHeight: 1.1,
               letterSpacing: '-0.03em',
-              color: '#0a0a0a',
-              marginBottom: `${calculateSpacing(16)}px`
+              color: '#ffffff',
+              marginBottom: `${calculateSpacing(16)}px`,
+              textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
             }}
           >
             Travel The World
@@ -1669,9 +2482,10 @@ export default function About() {
               fontSize: calculateFontSize(20, 14, 24),
               fontWeight: 400,
               lineHeight: 1.6,
-              color: '#525252',
+              color: '#ffffff',
               maxWidth: '800px',
-              marginLeft: 'auto'
+              marginLeft: 'auto',
+              textShadow: '0 1px 4px rgba(0, 0, 0, 0.3)'
             }}
           >
             Exploring new places is a defining part of my life, it broadens my perspective through diverse cultures, people, and ways of thinking. Immersing myself in the world's masterpieces and uncovering the boundless possibilities it offers is something I deeply value and genuinely love.
@@ -1687,15 +2501,19 @@ export default function About() {
           display: 'flex',
           alignItems: 'flex-start',
           paddingTop: 'clamp(6rem, 10vw, 12rem)',
-          paddingBottom: 'clamp(6rem, 10vw, 12rem)'
+          paddingBottom: 'clamp(6rem, 10vw, 12rem)',
+          position: 'relative',
+          overflow: 'visible',
+          zIndex: 10
         }}
       >
         <div 
           className="w-full"
           style={{
             paddingLeft: 'clamp(1.5rem, 4vw, 4rem)',
-            paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
-            maxWidth: '1400px',
+            paddingRight: '0',
+            maxWidth: 'none',
+            width: '100%',
             marginLeft: 'auto',
             marginRight: 'auto',
             transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[6]) * -sectionConfig.translateYAmplitude)}px)`,
@@ -1722,11 +2540,14 @@ export default function About() {
               }
               return 1;
             })(),
-            transition: 'transform 0.8s ease-out, opacity 0.5s ease-out'
+            transition: 'transform 0.8s ease-out, opacity 0.5s ease-out',
+            position: 'relative',
+            zIndex: 2,
+            overflow: 'visible'
           }}
         >
           {/* Header Section */}
-          <div style={{ marginBottom: `${calculateSpacing(40)}px` }}>
+          <div style={{ marginBottom: `${calculateSpacing(40)}px`, paddingRight: 'clamp(1.5rem, 4vw, 4rem)' }}>
             {(() => {
               // Header fade-in starts very early - appears when Travel section is at top
               const headerFadeInStart = sectionTriggers[3] - 0.08; // Start when Travel section appears (0.38 - 0.08 = 0.30)
@@ -1828,7 +2649,7 @@ export default function About() {
           </div>
 
           {/* Horizontal Scrollable Gallery */}
-          <div style={{ position: 'relative', width: '100%' }}>
+          <div style={{ position: 'relative', width: '100%', zIndex: 10, overflow: 'visible' }}>
             <div
               ref={galleryRef}
               style={{
@@ -1839,9 +2660,13 @@ export default function About() {
                 scrollBehavior: 'smooth',
                 paddingTop: '80px',
                 paddingBottom: '80px',
+                paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
                 scrollbarWidth: 'none',
                 msOverflowStyle: 'none',
-                WebkitScrollbar: { display: 'none' }
+                WebkitScrollbar: { display: 'none' },
+                transform: 'translateZ(0)',
+                willChange: 'scroll-position',
+                WebkitOverflowScrolling: 'touch'
               }}
               onScroll={(e) => {
                 const scrollLeft = e.target.scrollLeft;
@@ -1850,45 +2675,37 @@ export default function About() {
               }}
             >
               {[
-                { title: 'Mountain Vista', description: 'Capturing the grandeur of nature\'s peaks and valleys', image: '/images/photography-1.jpg', location: 'Swiss Alps, Switzerland' },
-                { title: 'City Lights', description: 'The vibrant energy of urban landscapes at night', image: '/images/photography-2.jpg', location: 'Tokyo, Japan' },
-                { title: 'Portrait Moment', description: 'Capturing authentic emotions and human connections', image: '/images/photography-3.jpg', location: 'Paris, France' },
-                { title: 'Abstract Flow', description: 'Finding beauty in patterns and abstract compositions', image: '/images/photography-4.jpg', location: 'Iceland' },
-                { title: 'Natural Harmony', description: 'The delicate balance of light and shadow in nature', image: '/images/photography-5.jpg', location: 'Banff National Park, Canada' },
-                { title: 'Urban Rhythm', description: 'The pulse of city life through architectural details', image: '/images/photography-6.jpg', location: 'New York City, USA' },
-                { title: 'Coastal Sunset', description: 'Golden hour reflections on tranquil waters', image: '/images/photography-7.jpg', location: 'Santorini, Greece' },
-                { title: 'Forest Path', description: 'Wandering through nature\'s cathedral', image: '/images/photography-8.jpg', location: 'Redwood National Park, USA' },
-                { title: 'Desert Dunes', description: 'Endless waves of sand under starlit skies', image: '/images/photography-9.jpg', location: 'Sahara Desert, Morocco' },
-                { title: 'Mountain Lake', description: 'Crystal clear waters mirroring snow-capped peaks', image: '/images/photography-10.jpg', location: 'Lake Louise, Canada' },
-                { title: 'Historic Architecture', description: 'Timeless beauty in stone and glass', image: '/images/photography-11.jpg', location: 'Prague, Czech Republic' },
-                { title: 'Tropical Paradise', description: 'Palm trees swaying in ocean breeze', image: '/images/photography-12.jpg', location: 'Maldives' },
-                { title: 'Northern Lights', description: 'Dancing colors across the arctic sky', image: '/images/photography-13.jpg', location: 'Tromsø, Norway' },
-                { title: 'City Skyline', description: 'Urban canyons reaching for the clouds', image: '/images/photography-14.jpg', location: 'Hong Kong' },
-                { title: 'Mountain Peak', description: 'Conquering heights and breathtaking vistas', image: '/images/photography-15.jpg', location: 'Mount Fuji, Japan' },
-                { title: 'Rural Landscape', description: 'Rolling hills and pastoral beauty', image: '/images/photography-16.jpg', location: 'Tuscany, Italy' },
-                { title: 'Waterfall', description: 'Nature\'s power and grace in motion', image: '/images/photography-17.jpg', location: 'Iguazu Falls, Argentina' },
-                { title: 'Ancient Ruins', description: 'Echoes of civilizations past', image: '/images/photography-18.jpg', location: 'Machu Picchu, Peru' },
-                { title: 'Beach Scene', description: 'Where land meets endless ocean', image: '/images/photography-19.jpg', location: 'Bora Bora, French Polynesia' },
-                { title: 'Canyon View', description: 'Carved by time and water', image: '/images/photography-20.jpg', location: 'Grand Canyon, USA' },
+                { title: 'Photo 1', description: 'Capturing the beauty of moments', image: '/aboutImage/1.jpg', location: 'Daytona Beach, Florida' },
+                { title: 'Photo 2', description: 'Capturing the beauty of moments', image: '/aboutImage/2.jpg', location: 'Marina Bay Sands, Singapore' },
+                { title: 'Photo 3', description: 'Capturing the beauty of moments', image: '/aboutImage/3.JPG', location: 'Niagara Falls, Canada' },
+                { title: 'Photo 4', description: 'Capturing the beauty of moments', image: '/aboutImage/4.jpg', location: '大三巴, Macau' },
+                { title: 'Photo 5', description: 'Capturing the beauty of moments', image: '/aboutImage/5.JPG', location: 'Gardens by the Bay, Singapore' },
+                { title: 'Photo 6', description: 'Capturing the beauty of moments', image: '/aboutImage/6.JPG', location: 'My Home, South Florida' },
+                { title: 'Photo 7', description: 'Capturing the beauty of moments', image: '/aboutImage/7.jpg.JPG', location: 'Universal Studios Singapore' },
+                { title: 'Photo 8', description: 'Capturing the beauty of moments', image: '/aboutImage/8.jpg', location: '九寨沟, Sichuan' },
+                { title: 'Photo 9', description: 'Capturing the beauty of moments', image: '/aboutImage/9.jpg', location: 'Bayside Marketplace, Miami' },
+                { title: 'Photo 10', description: 'Capturing the beauty of moments', image: '/aboutImage/10.jpg', location: '佛山, 广东' },
+                { title: 'Photo 11', description: 'Capturing the beauty of moments', image: '/aboutImage/11.jpg', location: 'Random Library, 佛山' },
+                { title: 'Photo 12', description: 'Capturing the beauty of moments', image: '/aboutImage/12.JPG', location: 'My Home, South Florida' },
+                { title: 'Photo 13', description: 'Capturing the beauty of moments', image: '/aboutImage/13.JPG', location: 'Deerfield Beach, Florida' },
+                { title: 'Photo 14', description: 'Capturing the beauty of moments', image: '/aboutImage/14.jpg', location: 'Manhattan, New York' },
+                { title: 'Photo 15', description: 'Capturing the beauty of moments', image: '/aboutImage/15.JPG', location: 'Everglades, Florida' },
+                { title: 'Photo 16', description: 'Capturing the beauty of moments', image: '/aboutImage/16.jpg', location: 'Marina Bay Sands, Singapore' },
+                { title: 'Photo 17', description: 'Capturing the beauty of moments', image: '/aboutImage/17.jpg', location: 'Marina Bay Sands, Singapore' },
+                { title: 'Photo 18', description: 'Capturing the beauty of moments', image: '/aboutImage/18.JPG', location: 'Daytona Beach, Florida' },
+                { title: 'Photo 19', description: 'Capturing the beauty of moments', image: '/aboutImage/19.JPG', location: 'Niagara Falls, Canada' },
+                { title: 'Photo 20', description: 'Capturing the beauty of moments', image: '/aboutImage/20.JPG', location: 'Downtown Miami' },
+                { title: 'Photo 21', description: 'Capturing the beauty of moments', image: '/aboutImage/21.JPG', location: 'Everglades, Florida' },
+                { title: 'Photo 22', description: 'Capturing the beauty of moments', image: '/aboutImage/22.jpg', location: 'Kuala Lumpur, Malaysia' },
+                { title: 'Photo 23', description: 'Capturing the beauty of moments', image: '/aboutImage/23.JPG', location: 'Boca Raton, Florida' },
+                { title: 'Photo 24', description: 'Capturing the beauty of moments', image: '/aboutImage/24.JPG', location: 'Fort Canning Park, Singapore' },
+                { title: 'Photo 25', description: 'Capturing the beauty of moments', image: '/aboutImage/25.JPG', location: 'South Beach, Florida' },
+                { title: 'Photo 26', description: 'Capturing the beauty of moments', image: '/aboutImage/26.JPG', location: 'Toronto, Canada' },
+                { title: 'Photo 27', description: 'Capturing the beauty of moments', image: '/aboutImage/27.png', location: '香格里拉, 云南' },
+                { title: 'Photo 28', description: 'Capturing the beauty of moments', image: '/aboutImage/28.JPG', location: '香格里拉, 云南' },
               ].map((item, i) => {
-                // Calculate fade-in for each item - starts when Travel section appears
-                const itemFadeInStart = sectionTriggers[3] - 0.06; // Start when Travel section appears (0.38 - 0.06 = 0.32)
-                const itemFadeInDelay = i * 0.02; // Stagger each item by 0.02 (faster)
-                const itemFadeInEnd = itemFadeInStart + 0.12 + itemFadeInDelay; // Fade in over 0.12 + delay (quicker)
-                
-                let itemOpacity = 0;
-                let itemTransform = 'translateY(30px)';
-                
-                if (scrollProgress >= itemFadeInStart) {
-                  if (scrollProgress < itemFadeInEnd) {
-                    const fadeProgress = (scrollProgress - itemFadeInStart) / (itemFadeInEnd - itemFadeInStart);
-                    itemOpacity = Math.min(1, Math.max(0, fadeProgress));
-                    itemTransform = `translateY(${30 * (1 - fadeProgress)}px)`;
-                  } else {
-                    itemOpacity = 1;
-                    itemTransform = 'translateY(0)';
-                  }
-                }
+                // 图片直接显示，无淡入效果
+                const itemOpacity = 1;
                 
                 // Staggered layout pattern: baseline, up, up (smaller height)
                 // Pattern repeats every 3 items: 0=baseline, 1=up, 2=up(top aligned with 1, smaller height)
@@ -1916,13 +2733,6 @@ export default function About() {
                 if (isHovered) {
                   // On hover: base offset + hover lift
                   finalTransform = `translateY(${verticalOffset - 8}px)`;
-                } else if (itemOpacity < 1 && itemTransform.includes('translateY')) {
-                  // During fade-in: combine base offset with fade animation
-                  const fadeMatch = itemTransform.match(/translateY\(([^)]+)\)/);
-                  if (fadeMatch) {
-                    const fadeValue = parseFloat(fadeMatch[1]) || 0;
-                    finalTransform = `translateY(${verticalOffset + fadeValue}px)`;
-                  }
                 }
                 
                 return (
@@ -1934,14 +2744,18 @@ export default function About() {
                     height: `${boxHeight}px`,
                     borderRadius: '16px',
                     overflow: 'hidden',
-                    background: '#fafafa',
+                    background: 'transparent',
                     boxShadow: isHovered ? '0 8px 30px rgba(0, 0, 0, 0.12)' : '0 4px 20px rgba(0, 0, 0, 0.08)',
                     transition: 'transform 0.3s ease, box-shadow 0.3s ease, opacity 0.6s ease-out, height 0.3s ease',
                     cursor: 'pointer',
                     flexShrink: 0,
                     opacity: itemOpacity,
                     transform: finalTransform,
-                    position: 'relative'
+                    position: 'relative',
+                    zIndex: i + 1,
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden',
+                    willChange: 'transform'
                   }}
                   onMouseEnter={() => {
                     setHoveredGalleryItem(i);
@@ -1954,7 +2768,11 @@ export default function About() {
                     width: '100%',
                     height: '100%',
                     position: 'relative',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden',
+                    transform: 'translateZ(0)',
+                    willChange: 'transform'
                   }}>
                     <img 
                       src={item.image} 
@@ -1963,8 +2781,16 @@ export default function About() {
                         width: '100%',
                         height: '100%',
                         objectFit: 'cover',
-                        display: 'block'
+                        display: 'block',
+                        imageRendering: 'auto',
+                        WebkitImageRendering: 'auto',
+                        backfaceVisibility: 'hidden',
+                        WebkitBackfaceVisibility: 'hidden',
+                        transform: 'translateZ(0)',
+                        willChange: 'transform',
+                        opacity: 1
                       }}
+                      loading="lazy"
                       onError={(e) => {
                         // Fallback to gradient if image fails to load
                         e.target.style.display = 'none';
@@ -1972,7 +2798,7 @@ export default function About() {
                       }}
                     />
                     {/* Location overlay on hover */}
-                    {isHovered && (
+                    {isHovered && item.location && (
                       <div style={{
                         position: 'absolute',
                         bottom: 0,

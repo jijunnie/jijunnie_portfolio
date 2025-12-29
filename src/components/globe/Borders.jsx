@@ -47,17 +47,15 @@ export default function Borders({ onRegionClick, selectedRegion, hoveredRegion, 
             .then(res => res.ok ? res.json() : null)
             .catch(() => null);
         }),
-      // Canada Provinces
-      fetch('https://raw.githubusercontent.com/deldersveld/topojson/master/countries/canada/canada-provinces.json')
+      // Canada Provinces - using working source directly
+      fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries/CAN.geo.json')
         .then(res => {
           if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
           return res.json();
         })
         .catch(() => {
-          // Alternative source for Canada
-          return fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries/CAN.geo.json')
-            .then(res => res.ok ? res.json() : null)
-            .catch(() => null);
+          // Silently return null if fetch fails
+          return null;
         }),
       // China Provinces
       fetch('https://raw.githubusercontent.com/longwosion/geojson-map-china/master/china.json')

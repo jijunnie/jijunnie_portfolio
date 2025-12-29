@@ -1467,7 +1467,7 @@ function JijunAIChatPanel({ isActive }) {
     setMessages(prev => [...prev, { role: 'assistant', content: '', id: thinkingId, isThinking: true }]);
 
     try {
-      const systemPrompt = `You are Jijun Nie. Answer questions naturally and thoroughly. Provide complete, detailed responses when appropriate. Be friendly, conversational, and helpful.
+      const systemPrompt = `You are Jijun Nie. Be friendly, conversational, and helpful.
 Quick facts about me (share when relevant to their question):
 - I'm 19 years old (do NOT mention exact birthday)
 - UF Junior studying Industrial & System Engineering going in supply chain and logistic path(3.94 GPA)
@@ -1482,13 +1482,14 @@ Quick facts about me (share when relevant to their question):
 - Interests: Photography, Singing, Guitar, Badminton, Basketball, Gaming, Traveling
 - Contact: jijun.nie@ufl.edu, (754) 610-4078
 IMPORTANT RULES:
-- Answer questions completely and thoroughly - provide as much detail as needed
+- Only answer the specific question asked
+- Keep responses brief and concise - don't expand on information that isn't asked
+- Don't volunteer extra information unless directly asked
 - Be conversational and natural
 - Use "I" not "Jijun"
 - Add emojis sparingly (only when it feels natural)
 - You must not say you are AI assistant, you are Jijun Nie
-- If asked about age or birthday, just say "I'm 19 years old" - do NOT give the exact date
-- There is NO limit on response length - give complete, detailed answers when appropriate`;
+- If asked about age or birthday, just say "I'm 19 years old" - do NOT give the exact date`;
 
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -1923,20 +1924,29 @@ function SettingsPanel({ isMobile, settings, updateSetting }) {
   );
 }
 
+// Helper function to create SVG placeholder (defined outside component)
+const createPlaceholderSVG = (color, text) => {
+  const svg = `<svg width="150" height="150" xmlns="http://www.w3.org/2000/svg">
+    <rect width="150" height="150" fill="${color}"/>
+    <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="14" fill="white" text-anchor="middle" dy=".3em">${text}</text>
+  </svg>`;
+  return `data:image/svg+xml;base64,${btoa(svg)}`;
+};
+
 // Music Panel Component - Apple Music style
 function MusicPanel({ isMobile }) {
   const [selectedSong, setSelectedSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  // Placeholder music data
-  const songs = [
+  // Placeholder music data - memoized to avoid regenerating SVG on every render
+  const songs = useMemo(() => [
     {
       id: 1,
       title: 'Midnight Dreams',
       artist: 'Jijun Nie',
       album: 'Night Vibes',
       duration: '3:45',
-      albumCover: 'https://via.placeholder.com/150/6366f1/ffffff?text=Album+1',
+      albumCover: createPlaceholderSVG('#6366f1', 'Album 1'),
       year: '2024',
       genre: 'Electronic'
     },
@@ -1946,7 +1956,7 @@ function MusicPanel({ isMobile }) {
       artist: 'Jijun Nie',
       album: 'Nature Sounds',
       duration: '4:12',
-      albumCover: 'https://via.placeholder.com/150/8b5cf6/ffffff?text=Album+2',
+      albumCover: createPlaceholderSVG('#8b5cf6', 'Album 2'),
       year: '2024',
       genre: 'Ambient'
     },
@@ -1956,7 +1966,7 @@ function MusicPanel({ isMobile }) {
       artist: 'Jijun Nie',
       album: 'Urban Stories',
       duration: '3:28',
-      albumCover: 'https://via.placeholder.com/150/ec4899/ffffff?text=Album+3',
+      albumCover: createPlaceholderSVG('#ec4899', 'Album 3'),
       year: '2023',
       genre: 'Pop'
     },
@@ -1966,7 +1976,7 @@ function MusicPanel({ isMobile }) {
       artist: 'Jijun Nie',
       album: 'Nature Sounds',
       duration: '5:03',
-      albumCover: 'https://via.placeholder.com/150/14b8a6/ffffff?text=Album+4',
+      albumCover: createPlaceholderSVG('#14b8a6', 'Album 4'),
       year: '2023',
       genre: 'Instrumental'
     },
@@ -1976,11 +1986,11 @@ function MusicPanel({ isMobile }) {
       artist: 'Jijun Nie',
       album: 'Urban Stories',
       duration: '4:37',
-      albumCover: 'https://via.placeholder.com/150/f59e0b/ffffff?text=Album+5',
+      albumCover: createPlaceholderSVG('#f59e0b', 'Album 5'),
       year: '2024',
       genre: 'Jazz'
     }
-  ];
+  ], []);
 
   if (selectedSong) {
     const song = songs.find(s => s.id === selectedSong);
@@ -2517,7 +2527,88 @@ function JourneysPanel({ isMobile }) {
   const [selectedMarker, setSelectedMarker] = useState(null);
   const [infoPanelOpen, setInfoPanelOpen] = useState(false);
   const [isGlobeHovered, setIsGlobeHovered] = useState(false);
+  const [hasValidDimensions, setHasValidDimensions] = useState(false);
   const globeRotationRef = useRef(0);
+  const containerRef = useRef(null);
+
+  // Check if container has valid dimensions before rendering Canvas
+  useEffect(() => {
+    const checkDimensions = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const hasSize = rect.width > 0 && rect.height > 0;
+        setHasValidDimensions(hasSize);
+      }
+    };
+
+    // Initial check
+    checkDimensions();
+
+    // Use ResizeObserver to watch for size changes
+    let resizeObserver;
+    if (containerRef.current && window.ResizeObserver) {
+      resizeObserver = new ResizeObserver(checkDimensions);
+      resizeObserver.observe(containerRef.current);
+    } else {
+      // Fallback: check on resize event
+      window.addEventListener('resize', checkDimensions);
+    }
+
+    // Also check after a short delay to catch delayed sizing
+    const timeoutId = setTimeout(checkDimensions, 100);
+
+    return () => {
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      } else {
+        window.removeEventListener('resize', checkDimensions);
+      }
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
+  // Suppress harmless WebGL warnings about zero-sized textures/framebuffers
+  useEffect(() => {
+    const originalError = console.error;
+    const originalWarn = console.warn;
+
+    const suppressWebGLWarnings = (...args) => {
+      // Check all arguments for WebGL warning patterns
+      const message = args.map(arg => 
+        typeof arg === 'string' ? arg : 
+        arg?.toString ? arg.toString() : 
+        String(arg)
+      ).join(' ');
+      
+      return (
+        message.includes('GL_INVALID_VALUE') && message.includes('glTexStorage2D') ||
+        (message.includes('GL_INVALID_FRAMEBUFFER_OPERATION') && (
+          message.includes('Framebuffer is incomplete') ||
+          message.includes('Attachment has zero size') ||
+          message.includes('glClear') ||
+          message.includes('glClearBufferfv') ||
+          message.includes('glDrawElements')
+        ))
+      );
+    };
+
+    console.error = function(...args) {
+      if (!suppressWebGLWarnings(...args)) {
+        originalError.apply(console, args);
+      }
+    };
+
+    console.warn = function(...args) {
+      if (!suppressWebGLWarnings(...args)) {
+        originalWarn.apply(console, args);
+      }
+    };
+
+    return () => {
+      console.error = originalError;
+      console.warn = originalWarn;
+    };
+  }, []);
 
   const handleRegionClick = (regionName) => {
     setSelectedRegion(regionName);
@@ -2538,13 +2629,14 @@ function JourneysPanel({ isMobile }) {
   };
 
   return (
-    <div className="h-full w-full relative bg-gradient-to-b from-slate-950 via-indigo-950 to-slate-950 rounded-2xl overflow-hidden">
-      {/* 3D Globe Canvas */}
-      <Canvas
-        gl={{ antialias: true, alpha: false }}
-        camera={{ position: [0, 0, 6], fov: 50 }}
-        style={{ width: '100%', height: '100%' }}
-      >
+    <div ref={containerRef} className="h-full w-full relative bg-gradient-to-b from-slate-950 via-indigo-950 to-slate-950 rounded-2xl overflow-hidden">
+      {/* 3D Globe Canvas - only render when container has valid dimensions */}
+      {hasValidDimensions && (
+        <Canvas
+          gl={{ antialias: true, alpha: false }}
+          camera={{ position: [0, 0, 6], fov: 50 }}
+          style={{ width: '100%', height: '100%' }}
+        >
         {/* Balanced Lighting with better contrast */}
         <ambientLight intensity={1.2} />
         {/* Front lights - primary light source */}
@@ -2622,7 +2714,8 @@ function JourneysPanel({ isMobile }) {
           enableDamping
           dampingFactor={0.05}
         />
-      </Canvas>
+        </Canvas>
+      )}
 
       {/* Info Panel */}
       {infoPanelOpen && (
