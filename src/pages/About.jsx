@@ -705,6 +705,9 @@ export default function About() {
       const docHeight = document.documentElement.scrollHeight - fixedHeight;
       const progress = Math.min(scrollTop / docHeight, 1);
       
+      // On mobile, ensure we account for address bar collapse when scrolling
+      // The extra padding (navBarPadding) should prevent content from shifting past nav bar
+      
       // Only update if progress changed significantly on mobile to reduce re-renders
       if (isMobile && Math.abs(progress - previousScrollProgress.current) < 0.01) {
         return;
@@ -1187,6 +1190,11 @@ export default function About() {
   const navBarTop = 16;
   const navBarHeight = windowSize.width >= 768 ? 64 : 56;
   const navBarTotalHeight = navBarTop + navBarHeight;
+  // Add extra padding for mobile address bar collapse (typically 56-80px depending on device)
+  // This ensures content doesn't shift up past the navigation bar when scrolling starts
+  // The extra padding accounts for the address bar collapsing and increasing viewport height
+  const addressBarCollapseOffset = windowSize.width < 768 ? 80 : 0;
+  const navBarPadding = navBarTotalHeight + addressBarCollapseOffset;
   const availableHeight = Math.max(windowSize.height - navBarTotalHeight, 100);
   
   const isDesktop = windowSize.width >= 768;
@@ -1611,7 +1619,17 @@ export default function About() {
         />
       ))}
       
-      <div className="relative w-full" style={{ minHeight: 'calc(var(--vh, 1vh) * 100)', paddingTop: `${navBarTotalHeight}px`, overflow: 'hidden', overflowX: 'hidden' }}>
+      <div 
+        className="relative w-full" 
+        style={{ 
+          minHeight: 'calc(var(--vh, 1vh) * 100)', 
+          paddingTop: `${navBarPadding}px`, 
+          overflow: 'hidden', 
+          overflowX: 'hidden',
+          scrollMarginTop: `${navBarPadding}px`,
+          scrollPaddingTop: `${navBarPadding}px`
+        }}
+      >
         {availableHeight > 0 && windowSize.width > 0 && modelsVisible && (
           <div 
             className="fixed overflow-visible flex items-end justify-center"
@@ -1685,7 +1703,7 @@ export default function About() {
         <div 
           className={`w-full flex flex-col justify-center about-page-content ${pageReady ? 'ready' : ''}`}
           style={{
-            minHeight: `calc(calc(var(--vh, 1vh) * 100) - ${navBarTotalHeight}px)`,
+            minHeight: `calc(calc(var(--vh, 1vh) * 100) - ${navBarPadding}px)`,
             opacity: pageOpacity,
             transition: 'opacity 1.2s ease-in',
             paddingLeft: windowSize.width >= 768 

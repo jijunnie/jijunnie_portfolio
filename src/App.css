@@ -36,6 +36,25 @@ body {
   overscroll-behavior: none;
 }
 
+/* Prevent content shift when address bar collapses on mobile */
+html {
+  scroll-padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* On mobile, add extra scroll padding to account for address bar collapse */
+/* This ensures when user scrolls, content stops before navigation bar is scrolled past */
+/* 72px = navBarTotalHeight (16px top + 56px height), 80px = address bar collapse offset */
+@media (max-width: 767px) {
+  html {
+    scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 152px);
+  }
+  
+  /* Also add scroll-margin-top to first content element for better scroll behavior */
+  body > *:first-child {
+    scroll-margin-top: 152px;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
