@@ -62,6 +62,27 @@ iconFiles.forEach((url) => {
   }
 });
 
+// Throttle function for performance optimization
+const throttle = (func, limit) => {
+  let inThrottle;
+  return function(...args) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  };
+};
+
+// Debounce function for performance optimization
+const debounce = (func, wait) => {
+  let timeout;
+  return function(...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+};
+
 // Real-time Date/Time Component
 function DateTimeDisplay() {
   const [dateTime, setDateTime] = useState(new Date());
@@ -2546,12 +2567,14 @@ function JourneysPanel({ isMobile }) {
 
     // Use ResizeObserver to watch for size changes
     let resizeObserver;
+    let debouncedCheckDimensions;
     if (containerRef.current && window.ResizeObserver) {
       resizeObserver = new ResizeObserver(checkDimensions);
       resizeObserver.observe(containerRef.current);
     } else {
-      // Fallback: check on resize event
-      window.addEventListener('resize', checkDimensions);
+      // Fallback: check on resize event with debounce
+      debouncedCheckDimensions = debounce(checkDimensions, 150);
+      window.addEventListener('resize', debouncedCheckDimensions, { passive: true });
     }
 
     // Also check after a short delay to catch delayed sizing
@@ -2560,8 +2583,8 @@ function JourneysPanel({ isMobile }) {
     return () => {
       if (resizeObserver) {
         resizeObserver.disconnect();
-      } else {
-        window.removeEventListener('resize', checkDimensions);
+      } else if (debouncedCheckDimensions) {
+        window.removeEventListener('resize', debouncedCheckDimensions);
       }
       clearTimeout(timeoutId);
     };
@@ -2806,11 +2829,13 @@ function ProjectsPanel({ isMobile }) {
     updateScrollInfo();
     const container = scrollContainerRef.current;
     if (container) {
-      container.addEventListener('scroll', updateScrollInfo);
-      window.addEventListener('resize', updateScrollInfo);
+      const throttledUpdateScrollInfo = throttle(updateScrollInfo, 16);
+      const debouncedResizeUpdate = debounce(updateScrollInfo, 150);
+      container.addEventListener('scroll', throttledUpdateScrollInfo, { passive: true });
+      window.addEventListener('resize', debouncedResizeUpdate, { passive: true });
       return () => {
-        container.removeEventListener('scroll', updateScrollInfo);
-        window.removeEventListener('resize', updateScrollInfo);
+        container.removeEventListener('scroll', throttledUpdateScrollInfo);
+        window.removeEventListener('resize', debouncedResizeUpdate);
       };
     }
   }, [selectedProject]);
@@ -3251,8 +3276,9 @@ export default function Portfolio() {
       setIsMobile(isSmallScreen || isIPad);
     };
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    const debouncedCheckMobile = debounce(checkMobile, 150);
+    window.addEventListener('resize', debouncedCheckMobile, { passive: true });
+    return () => window.removeEventListener('resize', debouncedCheckMobile);
   }, []);
 
   useEffect(() => {
@@ -3350,7 +3376,7 @@ export default function Portfolio() {
     // Smooth interpolation function (lerp) - higher factor for more immediate response
     const lerp = (start, end, factor) => start + (end - start) * factor;
     
-    const handleMouseMove = (e) => {
+    const handleMouseMove = throttle((e) => {
       const newX = (e.clientX / window.innerWidth - 0.5) * 2;
       const newY = (e.clientY / window.innerHeight - 0.5) * 2;
       
@@ -3394,7 +3420,7 @@ export default function Portfolio() {
         
         mouseAnimationFrame.current = requestAnimationFrame(animate);
       }
-    };
+    }, 16); // Throttle to ~60fps
     
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
     return () => {

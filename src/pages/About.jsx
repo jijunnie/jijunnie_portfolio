@@ -441,6 +441,27 @@ function NeonWaveBackground({ scrollProgress, sectionTrigger, fadeOffset, fadeIn
   );
 }
 
+// Throttle function for performance optimization
+const throttle = (func, limit) => {
+  let inThrottle;
+  return function(...args) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  };
+};
+
+// Debounce function for performance optimization
+const debounce = (func, wait) => {
+  let timeout;
+  return function(...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+};
+
 export default function About() {
   const [currentAnimation, setCurrentAnimation] = useState('/animations/idle.fbx');
   const [windowSize, setWindowSize] = useState(() => {
@@ -564,16 +585,29 @@ export default function About() {
   }, [windowSize.width]);
   
   useEffect(() => {
+    const isMobile = windowSize.width < 768;
+    
     // Set page ready immediately to prevent flash
     setPageReady(true);
-    // Set opacity immediately on next frame to prevent flash
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setPageOpacity(1);
+    
+    // On mobile, use a simpler, faster initialization to avoid lag
+    if (isMobile) {
+      // Immediate opacity for mobile to prevent flash
+      setPageOpacity(1);
+      // Delay 3D models slightly on mobile to improve initial load
+      setTimeout(() => {
         setModelsVisible(true);
+      }, 100);
+    } else {
+      // Desktop: use double RAF for smooth transition
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setPageOpacity(1);
+          setModelsVisible(true);
+        });
       });
-    });
-  }, []);
+    }
+  }, [windowSize.width]);
   
   const titleTypingRef = useRef({ currentIndex: 0, timeoutId: null });
   
@@ -630,18 +664,18 @@ export default function About() {
   }, [subtitlePrefixVisible]);
   
   useEffect(() => {
-    const handleMouseMove = (e) => {
+    const handleMouseMove = throttle((e) => {
       const x = (e.clientX / window.innerWidth - 0.5) * 2;
       const y = (e.clientY / window.innerHeight - 0.5) * 2;
       setMousePosition({ x, y });
-    };
+    }, 16); // ~60fps
     
-    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
   
   useEffect(() => {
-    const handleScroll = () => {
+    const handleScroll = throttle(() => {
       if (!containerRef.current) return;
       
       const scrollTop = window.scrollY;
@@ -657,7 +691,7 @@ export default function About() {
       
       previousScrollProgress.current = progress;
       setScrollProgress(progress);
-    };
+    }, 16); // ~60fps for smooth scrolling
     
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
@@ -729,14 +763,14 @@ export default function About() {
       setWindowSize({ width: window.innerWidth, height: window.innerHeight });
     }
     
-    const handleResize = () => {
+    const handleResize = debounce(() => {
       if (typeof window !== 'undefined') {
         setWindowSize({ width: window.innerWidth, height: window.innerHeight });
       }
-    };
+    }, 150); // Debounce resize to avoid excessive updates
     
     if (typeof window !== 'undefined') {
-      window.addEventListener('resize', handleResize);
+      window.addEventListener('resize', handleResize, { passive: true });
       return () => window.removeEventListener('resize', handleResize);
     }
   }, []);
@@ -788,17 +822,28 @@ export default function About() {
     }
   }, [windowSize.width]);
 
-  // Preload travel video
+  // Preload travel video - delay on mobile to improve initial load
   useEffect(() => {
+    const isMobile = windowSize.width < 768;
     const videoUrl = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/IMG_0496.MP4';
-    const video = document.createElement('video');
-    video.src = videoUrl;
-    video.preload = 'auto';
-    video.muted = true;
-    video.playsInline = true;
-    // Preload the video
-    video.load();
-  }, []);
+    
+    const preloadVideo = () => {
+      const video = document.createElement('video');
+      video.src = videoUrl;
+      video.preload = 'auto';
+      video.muted = true;
+      video.playsInline = true;
+      // Preload the video
+      video.load();
+    };
+    
+    if (isMobile) {
+      // Delay video preload on mobile to improve initial page load
+      setTimeout(preloadVideo, 2000);
+    } else {
+      preloadVideo();
+    }
+  }, [windowSize.width]);
 
   // Control video playback based on scroll position
   useEffect(() => {
@@ -1140,11 +1185,22 @@ export default function About() {
   // Avatar completely disappears when "Learning Beyond Classroom" section appears (fades out by sectionTriggers[0] = 0.08)
   const avatarOpacity = modelsVisible ? Math.max(0, 1 - Math.max(0, (scrollProgress - 0.03) / (sectionTriggers[0] - 0.03) * 1)) : 0;
   
-  const textTransform = `translateX(${mousePosition.x * 10}px) translateY(${mousePosition.y * 10}px)`;
+  // Limit textTransform to prevent horizontal overflow
+  const maxTranslateX = 20; // Maximum horizontal translation in pixels
+  const limitedX = Math.max(-maxTranslateX, Math.min(maxTranslateX, mousePosition.x * 10));
+  const textTransform = `translateX(${limitedX}px) translateY(${mousePosition.y * 10}px)`;
 
   return (
-    <div ref={containerRef} className="w-full" style={{ minHeight: '800vh', width: '100%', maxWidth: '100vw', position: 'relative', top: 0, left: 0, display: 'block', visibility: 'visible', opacity: 1, background: '#fafafa', overflowX: 'visible', overflowY: 'visible' }}>
+    <div ref={containerRef} className="w-full" style={{ minHeight: '800vh', width: '100%', maxWidth: '100vw', position: 'relative', top: 0, left: 0, display: 'block', visibility: 'visible', opacity: 1, background: '#fafafa', overflowX: 'hidden', overflowY: 'visible' }}>
       <style>{`
+        /* Prevent horizontal scrolling globally */
+        * {
+          max-width: 100%;
+        }
+        html, body {
+          overflow-x: hidden;
+          width: 100%;
+        }
         @keyframes blink {
           0%, 50% { opacity: 1; }
           51%, 100% { opacity: 0; }
@@ -1181,7 +1237,13 @@ export default function About() {
         .about-page-content.ready {
           opacity: 1;
           visibility: visible;
-          transition: opacity 0.4s ease-in, visibility 0s linear 0s;
+          transition: opacity 0.3s ease-in, visibility 0s linear 0s;
+        }
+        /* Optimize for mobile - faster transition */
+        @media (max-width: 767px) {
+          .about-page-content.ready {
+            transition: opacity 0.2s ease-in, visibility 0s linear 0s;
+          }
         }
         
         /* Interests Carousel Styles */
@@ -1472,15 +1534,16 @@ export default function About() {
         />
       ))}
       
-      <div className="relative w-full" style={{ minHeight: '100vh', paddingTop: `${navBarTotalHeight}px`, overflow: 'visible' }}>
-        {availableHeight > 0 && windowSize.width > 0 && (
+      <div className="relative w-full" style={{ minHeight: '100vh', paddingTop: `${navBarTotalHeight}px`, overflow: 'hidden', overflowX: 'hidden' }}>
+        {availableHeight > 0 && windowSize.width > 0 && modelsVisible && (
           <div 
             className="fixed overflow-visible flex items-end justify-center"
             style={{
-              left: windowSize.width >= 768 ? '-40px' : '0',
+              left: '0',
               top: `${navBarTotalHeight}px`,
               bottom: 0,
               width: `${windowSize.width >= 768 ? Math.max(windowSize.width * 0.32, 200) : Math.max(windowSize.width * 0.375, 200)}px`,
+              maxWidth: '100vw',
               height: `${availableHeight}px`,
               minWidth: '200px',
               minHeight: '100px',
@@ -1492,7 +1555,8 @@ export default function About() {
                 : `${avatarTransform} translateY(-${windowSize.height * 0.15}px)`,
               opacity: avatarOpacity,
               transition: 'transform 0.3s ease-out, opacity 0.6s ease-out',
-              pointerEvents: 'auto'
+              pointerEvents: 'auto',
+              background: 'transparent'
             }}
           >
             <Canvas 
@@ -1506,7 +1570,7 @@ export default function About() {
                 failIfMajorPerformanceCaveat: false
               }}
               onCreated={({ gl }) => {
-                gl.setClearColor('#ffffff', 0);
+                gl.setClearColor(0x000000, 0);
               }}
               style={{ 
                 background: 'transparent', 
@@ -1562,8 +1626,8 @@ export default function About() {
               : 'clamp(4rem, 8vw, 8rem)',
             paddingRight: windowSize.width < 480 ? 'clamp(0.75rem, 2vw, 1rem)' : '0',
             transform: windowSize.width >= 768 
-              ? `translate(-6rem, -5%) translateY(${scrollProgress * -30}px)`
-              : `translateX(-8px) translateY(-15%) translateY(${scrollProgress * -30}px)`,
+              ? `translateY(-5%) translateY(${scrollProgress * -30}px)`
+              : `translateY(-15%) translateY(${scrollProgress * -30}px)`,
             position: 'relative',
             zIndex: 10,
             marginLeft: windowSize.width >= 768 
@@ -1575,7 +1639,9 @@ export default function About() {
               ? '50%' 
               : windowSize.width < 480 
                 ? `${Math.max(windowSize.width - Math.max(windowSize.width * 0.375, 200) - 8, windowSize.width * 0.9)}px` 
-                : `${windowSize.width - Math.max(windowSize.width * 0.375, 200) - 16}px`
+                : `${windowSize.width - Math.max(windowSize.width * 0.375, 200) - 16}px`,
+            width: '100%',
+            boxSizing: 'border-box'
           }}
         >
           <h1
@@ -1667,7 +1733,7 @@ export default function About() {
           </div>
         </div>
         
-        {splineSize.containerWidth > 0 && splineSize.containerHeight > 0 && (
+        {splineSize.containerWidth > 0 && splineSize.containerHeight > 0 && modelsVisible && (
           <div 
             className="absolute pointer-events-auto"
             style={{
@@ -1732,7 +1798,11 @@ export default function About() {
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
-          overflow: 'visible'
+          overflow: 'hidden',
+          overflowX: 'hidden',
+          width: '100%',
+          maxWidth: '100vw',
+          boxSizing: 'border-box'
         }}
       >
         <div 
@@ -1945,7 +2015,11 @@ export default function About() {
           display: 'flex',
           alignItems: 'center',
           overflow: 'hidden',
-          position: 'relative'
+          overflowX: 'hidden',
+          position: 'relative',
+          width: '100%',
+          maxWidth: '100vw',
+          boxSizing: 'border-box'
         }}
       >
         {/* Video Background */}
@@ -2168,7 +2242,7 @@ export default function About() {
           minHeight: '100vh',
           background: 'linear-gradient(to bottom, #f3f4f6, #e5e7eb, #d1d5db)',
           position: 'relative',
-          overflowX: 'visible',
+          overflowX: 'hidden',
           overflowY: 'visible',
           display: 'flex',
           alignItems: 'center',
@@ -2472,7 +2546,11 @@ export default function About() {
           alignItems: 'flex-end',
           justifyContent: 'flex-end',
           overflow: 'hidden',
+          overflowX: 'hidden',
           position: 'relative',
+          width: '100%',
+          maxWidth: '100vw',
+          boxSizing: 'border-box',
           zIndex: 10
         }}
       >
@@ -2964,7 +3042,12 @@ export default function About() {
           minHeight: '100vh',
           background: '#ffffff',
           display: 'flex',
-          alignItems: 'center'
+          alignItems: 'center',
+          overflow: 'hidden',
+          overflowX: 'hidden',
+          width: '100%',
+          maxWidth: '100vw',
+          boxSizing: 'border-box'
         }}
       >
         <div 
@@ -3021,7 +3104,12 @@ export default function About() {
           minHeight: '80vh',
           background: '#fafafa',
           display: 'flex',
-          alignItems: 'center'
+          alignItems: 'center',
+          overflow: 'hidden',
+          overflowX: 'hidden',
+          width: '100%',
+          maxWidth: '100vw',
+          boxSizing: 'border-box'
         }}
       >
         <div 
@@ -3080,7 +3168,12 @@ export default function About() {
           minHeight: '80vh',
           background: '#fafafa',
           display: 'flex',
-          alignItems: 'center'
+          alignItems: 'center',
+          overflow: 'hidden',
+          overflowX: 'hidden',
+          width: '100%',
+          maxWidth: '100vw',
+          boxSizing: 'border-box'
         }}
       >
         <div 
