@@ -36,6 +36,15 @@ body {
   overscroll-behavior: none;
 }
 
+/* Ensure navigation bar stays fixed when address bar collapses */
+/* Navigation bar uses fixed positioning (top-4 = 16px), so it should not move */
+/* Only content sections should respond to address bar collapse */
+nav[class*="fixed"] {
+  position: fixed !important;
+  /* Use max() to ensure it accounts for safe area on mobile devices */
+  top: max(1rem, calc(env(safe-area-inset-top, 0px) + 1rem)) !important;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
