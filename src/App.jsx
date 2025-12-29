@@ -15,7 +15,7 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
   const isGlobePage = location.pathname === '/globe';
   
   return (
-    <nav className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-[95%] sm:w-[90%] md:w-[85%] lg:w-[80%] max-w-4xl" style={{ background: 'transparent' }}>
+    <nav className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] w-[95%] sm:w-[90%] md:w-[85%] lg:w-[80%] max-w-4xl" style={{ background: 'transparent', position: 'fixed', top: '16px', willChange: 'transform' }}>
       {/* Liquid Glass Background */}
       <div className={`liquid-glass-nav ${isGlobePage ? 'globe-page-nav' : ''}`}>
         <div className="relative flex items-center justify-between h-14 md:h-16 px-4 md:px-6" style={{ alignItems: 'center' }}>
@@ -341,6 +341,16 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
         @media (max-width: 768px) {
           .liquid-glass-nav {
             border-radius: 16px;
+          }
+          nav {
+            position: fixed !important;
+            top: 16px !important;
+            z-index: 9999 !important;
+            transform: translateX(-50%) !important;
+            will-change: transform;
+            -webkit-transform: translateX(-50%);
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
           }
         }
       `}</style>

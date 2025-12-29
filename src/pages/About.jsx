@@ -682,9 +682,10 @@ export default function About() {
   useEffect(() => {
     const isMobile = windowSize.width < 768;
     // Use longer throttle on mobile to reduce updates and prevent lag
-    const throttleTime = isMobile ? 100 : 16; // 100ms on mobile, 16ms on desktop
+    const throttleTime = isMobile ? 150 : 16; // 150ms on mobile for better performance, 16ms on desktop
+    let rafId = null;
     
-    const handleScroll = throttle(() => {
+    const handleScroll = () => {
       if (!containerRef.current) return;
       
       const scrollTop = window.scrollY;
@@ -692,7 +693,7 @@ export default function About() {
       const progress = Math.min(scrollTop / docHeight, 1);
       
       // Only update if progress changed significantly on mobile to reduce re-renders
-      if (isMobile && Math.abs(progress - previousScrollProgress.current) < 0.01) {
+      if (isMobile && Math.abs(progress - previousScrollProgress.current) < 0.015) {
         return;
       }
       
@@ -705,12 +706,30 @@ export default function About() {
       
       previousScrollProgress.current = progress;
       setScrollProgress(progress);
-    }, throttleTime);
+    };
     
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
+    const throttledHandleScroll = throttle(handleScroll, throttleTime);
     
-    return () => window.removeEventListener('scroll', handleScroll);
+    // Use RAF for smoother updates, especially on mobile
+    const rafScroll = () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+      rafId = requestAnimationFrame(() => {
+        throttledHandleScroll();
+        rafId = null;
+      });
+    };
+    
+    window.addEventListener('scroll', rafScroll, { passive: true });
+    handleScroll(); // Initial call
+    
+    return () => {
+      window.removeEventListener('scroll', rafScroll);
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+    };
   }, [windowSize.width]);
   
   const typingStateRef = useRef({
@@ -859,34 +878,83 @@ export default function About() {
     }
   }, [windowSize.width]);
 
-  // Control video playback based on scroll position
+  // Control video playback based on scroll position - optimized for mobile
+  const videoControlRef = useRef({ travelPlaying: false, developPlaying: false });
+  const videoRafRef = useRef(null);
+  
   useEffect(() => {
+    const isMobile = windowSize.width < 768;
     const travelSectionTrigger = 0.38; // sectionTriggers[3]
     const developSectionTrigger = 0.20; // sectionTriggers[1]
     
-    const shouldPlayTravel = scrollProgress >= travelSectionTrigger - 0.05 && scrollProgress <= travelSectionTrigger + 0.15;
-    const shouldPlayDevelop = scrollProgress >= developSectionTrigger - 0.05 && scrollProgress <= developSectionTrigger + 0.15;
-    
-    if (travelVideoRef.current) {
-      if (shouldPlayTravel) {
-        travelVideoRef.current.play().catch(err => {
-          console.warn('Video autoplay prevented:', err);
-        });
-      } else {
-        travelVideoRef.current.pause();
+    const updateVideoPlayback = () => {
+      const shouldPlayTravel = scrollProgress >= travelSectionTrigger - 0.05 && scrollProgress <= travelSectionTrigger + 0.15;
+      const shouldPlayDevelop = scrollProgress >= developSectionTrigger - 0.05 && scrollProgress <= developSectionTrigger + 0.15;
+      
+      // Only update if state changed to reduce unnecessary operations
+      if (travelVideoRef.current) {
+        if (shouldPlayTravel && !videoControlRef.current.travelPlaying) {
+          videoControlRef.current.travelPlaying = true;
+          requestAnimationFrame(() => {
+            if (travelVideoRef.current) {
+              travelVideoRef.current.play().catch(err => {
+                console.warn('Video autoplay prevented:', err);
+                videoControlRef.current.travelPlaying = false;
+              });
+            }
+          });
+        } else if (!shouldPlayTravel && videoControlRef.current.travelPlaying) {
+          videoControlRef.current.travelPlaying = false;
+          requestAnimationFrame(() => {
+            if (travelVideoRef.current) {
+              travelVideoRef.current.pause();
+            }
+          });
+        }
       }
+      
+      if (developVideoRef.current) {
+        if (shouldPlayDevelop && !videoControlRef.current.developPlaying) {
+          videoControlRef.current.developPlaying = true;
+          requestAnimationFrame(() => {
+            if (developVideoRef.current) {
+              developVideoRef.current.play().catch(err => {
+                console.warn('Develop video autoplay prevented:', err);
+                videoControlRef.current.developPlaying = false;
+              });
+            }
+          });
+        } else if (!shouldPlayDevelop && videoControlRef.current.developPlaying) {
+          videoControlRef.current.developPlaying = false;
+          requestAnimationFrame(() => {
+            if (developVideoRef.current) {
+              developVideoRef.current.pause();
+            }
+          });
+        }
+      }
+    };
+    
+    // On mobile, throttle more aggressively to prevent lag
+    if (isMobile) {
+      // Cancel previous RAF if exists
+      if (videoRafRef.current) {
+        cancelAnimationFrame(videoRafRef.current);
+      }
+      // Use RAF with throttling on mobile
+      videoRafRef.current = requestAnimationFrame(() => {
+        setTimeout(updateVideoPlayback, 50); // Additional 50ms delay on mobile
+      });
+    } else {
+      updateVideoPlayback();
     }
     
-    if (developVideoRef.current) {
-      if (shouldPlayDevelop) {
-        developVideoRef.current.play().catch(err => {
-          console.warn('Develop video autoplay prevented:', err);
-        });
-      } else {
-        developVideoRef.current.pause();
+    return () => {
+      if (videoRafRef.current) {
+        cancelAnimationFrame(videoRafRef.current);
       }
-    }
-  }, [scrollProgress]);
+    };
+  }, [scrollProgress, windowSize.width]);
   
   // Sing Out Voices carousel initialization - trigger animation when section starts appearing, then auto-rotate
   useEffect(() => {
@@ -2581,7 +2649,12 @@ export default function About() {
           width: '100%',
           maxWidth: '100vw',
           boxSizing: 'border-box',
-          zIndex: 10
+          zIndex: 10,
+          willChange: windowSize.width < 768 ? 'auto' : 'transform',
+          transform: 'translateZ(0)',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+          contain: 'layout style paint'
         }}
       >
         {/* Gradient fade at top for blending with Singing section - more intense at boundary, always visible */}
@@ -2606,7 +2679,7 @@ export default function About() {
           loop
           muted
           playsInline
-          preload="auto"
+          preload={windowSize.width < 768 ? "metadata" : "auto"}
           style={{
             position: 'absolute',
             top: 0,
@@ -2617,7 +2690,11 @@ export default function About() {
             objectPosition: 'center',
             zIndex: 0,
             opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[3] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
-            transition: 'opacity 0.8s ease-out'
+            transition: 'opacity 0.8s ease-out',
+            willChange: 'opacity',
+            transform: 'translateZ(0)',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden'
           }}
         />
         {/* Gradient fade at bottom for blending with next section */}
@@ -2643,11 +2720,14 @@ export default function About() {
             marginLeft: 'auto',
             marginRight: 0,
             textAlign: 'right',
-            transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[3]) * -sectionConfig.translateYAmplitude)}px)`,
+            transform: `translate3d(0, ${Math.max(0, (scrollProgress - sectionTriggers[3]) * -sectionConfig.translateYAmplitude)}px, 0)`,
             opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[3] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
-            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out',
+            transition: windowSize.width < 768 ? 'opacity 0.5s ease-out' : 'transform 0.8s ease-out, opacity 0.8s ease-out',
             position: 'relative',
-            zIndex: 2
+            zIndex: 2,
+            willChange: windowSize.width < 768 ? 'opacity' : 'transform, opacity',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden'
           }}
         >
           <h2
@@ -2694,7 +2774,11 @@ export default function About() {
           paddingBottom: 'clamp(6rem, 10vw, 12rem)',
           position: 'relative',
           overflow: 'visible',
-          zIndex: 10
+          zIndex: 10,
+          willChange: windowSize.width < 768 ? 'auto' : 'transform',
+          transform: 'translateZ(0)',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden'
         }}
       >
         <div 
@@ -2706,7 +2790,9 @@ export default function About() {
             width: '100%',
             marginLeft: 'auto',
             marginRight: 'auto',
-            transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[6]) * -sectionConfig.translateYAmplitude)}px)`,
+            transform: windowSize.width < 768 
+              ? 'translate3d(0, 0, 0)' 
+              : `translate3d(0, ${Math.max(0, (scrollProgress - sectionTriggers[6]) * -sectionConfig.translateYAmplitude)}px, 0)`,
             opacity: (() => {
               // Start fading in much earlier - when Travel section appears
               const fadeInStart = sectionTriggers[3] - 0.08; // Start fading in when Travel appears (0.38 - 0.08 = 0.30)
@@ -2730,10 +2816,13 @@ export default function About() {
               }
               return 1;
             })(),
-            transition: 'transform 0.8s ease-out, opacity 0.5s ease-out',
+            transition: windowSize.width < 768 ? 'opacity 0.3s ease-out' : 'transform 0.8s ease-out, opacity 0.5s ease-out',
             position: 'relative',
             zIndex: 2,
-            overflow: 'visible'
+            overflow: 'visible',
+            willChange: windowSize.width < 768 ? 'opacity' : 'transform, opacity',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden'
           }}
         >
           {/* Header Section */}
@@ -2822,9 +2911,21 @@ export default function About() {
                 WebkitOverflowScrolling: 'touch'
               }}
               onScroll={(e) => {
-                const scrollLeft = e.target.scrollLeft;
-                const scrollWidth = e.target.scrollWidth - e.target.clientWidth;
-                setGalleryScroll(scrollWidth > 0 ? scrollLeft / scrollWidth : 0);
+                // Throttle gallery scroll updates on mobile
+                if (windowSize.width < 768) {
+                  if (!galleryRef.current._scrollTimeout) {
+                    galleryRef.current._scrollTimeout = setTimeout(() => {
+                      const scrollLeft = e.target.scrollLeft;
+                      const scrollWidth = e.target.scrollWidth - e.target.clientWidth;
+                      setGalleryScroll(scrollWidth > 0 ? scrollLeft / scrollWidth : 0);
+                      galleryRef.current._scrollTimeout = null;
+                    }, 50);
+                  }
+                } else {
+                  const scrollLeft = e.target.scrollLeft;
+                  const scrollWidth = e.target.scrollWidth - e.target.clientWidth;
+                  setGalleryScroll(scrollWidth > 0 ? scrollLeft / scrollWidth : 0);
+                }
               }}
             >
               {[
@@ -2903,12 +3004,13 @@ export default function About() {
                     cursor: 'pointer',
                     flexShrink: 0,
                     opacity: itemOpacity,
-                    transform: finalTransform,
+                    transform: `${finalTransform} translateZ(0)`,
                     position: 'relative',
                     zIndex: i + 1,
                     backfaceVisibility: 'hidden',
                     WebkitBackfaceVisibility: 'hidden',
-                    willChange: 'transform'
+                    willChange: windowSize.width < 768 ? 'auto' : 'transform',
+                    contain: 'layout style paint'
                   }}
                   onMouseEnter={() => {
                     setHoveredGalleryItem(i);
@@ -2943,7 +3045,8 @@ export default function About() {
                         willChange: 'transform',
                         opacity: 1
                       }}
-                      loading="lazy"
+                      loading={i < 6 ? "eager" : "lazy"}
+                      decoding="async"
                       onError={(e) => {
                         // Fallback to gradient if image fails to load
                         e.target.style.display = 'none';
