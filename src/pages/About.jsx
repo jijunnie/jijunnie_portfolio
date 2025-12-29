@@ -448,22 +448,34 @@ function NeonWaveBackground({ scrollProgress, sectionTrigger, fadeOffset, fadeIn
 // Throttle function for performance optimization
 const throttle = (func, limit) => {
   let inThrottle;
-  return function(...args) {
+  let timeoutId;
+  const throttled = function(...args) {
     if (!inThrottle) {
       func.apply(this, args);
       inThrottle = true;
-      setTimeout(() => inThrottle = false, limit);
+      timeoutId = setTimeout(() => inThrottle = false, limit);
     }
   };
+  // Add cancel method for cleanup
+  throttled.cancel = () => {
+    clearTimeout(timeoutId);
+    inThrottle = false;
+  };
+  return throttled;
 };
 
 // Debounce function for performance optimization
 const debounce = (func, wait) => {
   let timeout;
-  return function(...args) {
+  const debounced = function(...args) {
     clearTimeout(timeout);
     timeout = setTimeout(() => func.apply(this, args), wait);
   };
+  // Add cancel method for cleanup
+  debounced.cancel = () => {
+    clearTimeout(timeout);
+  };
+  return debounced;
 };
 
 export default function About() {
@@ -703,7 +715,8 @@ export default function About() {
       // Use fixed viewport height to prevent content shift
       const fixedHeight = fixedViewportHeight.current || window.innerHeight;
       const docHeight = document.documentElement.scrollHeight - fixedHeight;
-      const progress = Math.min(scrollTop / docHeight, 1);
+      // Prevent division by zero and NaN
+      const progress = docHeight > 0 ? Math.min(Math.max(0, scrollTop / docHeight), 1) : 0;
       
       
       // Only update if progress changed significantly on mobile to reduce re-renders
@@ -725,8 +738,14 @@ export default function About() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
     
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [windowSize.width]);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      // Clean up throttle function
+      if (handleScroll.cancel) {
+        handleScroll.cancel();
+      }
+    };
+  }, [windowSize.width]); // isMobile is derived from windowSize.width, so we don't need it in deps
   
   const typingStateRef = useRef({
     currentCharIndex: 0,
@@ -802,7 +821,13 @@ export default function About() {
           document.documentElement.style.setProperty('--fixed-vh', `${vh}px`);
           document.documentElement.style.setProperty('--fixed-vh-px', `${vhPx}px`);
           
-          setWindowSize({ width: window.innerWidth, height: vhPx });
+          // Only set if not already set to prevent unnecessary updates
+          setWindowSize(prev => {
+            if (prev && prev.width === window.innerWidth && prev.height === vhPx) {
+              return prev;
+            }
+            return { width: window.innerWidth, height: vhPx };
+          });
         }
       };
       
@@ -820,20 +845,40 @@ export default function About() {
     if (typeof window !== 'undefined') {
       // Use fixed height, only update width on resize
       const currentHeight = fixedViewportHeight.current || window.innerHeight;
-      setWindowSize({ width: window.innerWidth, height: currentHeight });
+      setWindowSize(prev => {
+        // Only update if width changed to prevent unnecessary re-renders
+        const newWidth = window.innerWidth;
+        if (prev && prev.width === newWidth && prev.height === currentHeight) {
+          return prev;
+        }
+        return { width: newWidth, height: currentHeight };
+      });
     }
     
     const handleResize = debounce(() => {
       if (typeof window !== 'undefined') {
         // Only update width, keep height fixed to prevent content shift
         const currentHeight = fixedViewportHeight.current || window.innerHeight;
-        setWindowSize({ width: window.innerWidth, height: currentHeight });
+        setWindowSize(prev => {
+          const newWidth = window.innerWidth;
+          // Only update if width actually changed
+          if (prev && prev.width === newWidth && prev.height === currentHeight) {
+            return prev;
+          }
+          return { width: newWidth, height: currentHeight };
+        });
       }
     }, 150); // Debounce resize to avoid excessive updates
     
     if (typeof window !== 'undefined') {
       window.addEventListener('resize', handleResize, { passive: true });
-      return () => window.removeEventListener('resize', handleResize);
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        // Clean up debounce function
+        if (handleResize.cancel) {
+          handleResize.cancel();
+        }
+      };
     }
   }, []);
 
@@ -2873,9 +2918,18 @@ export default function About() {
                 WebkitOverflowScrolling: 'touch'
               }}
               onScroll={(e) => {
-                const scrollLeft = e.target.scrollLeft;
-                const scrollWidth = e.target.scrollWidth - e.target.clientWidth;
-                setGalleryScroll(scrollWidth > 0 ? scrollLeft / scrollWidth : 0);
+                try {
+                  const scrollLeft = e.target.scrollLeft;
+                  const scrollWidth = e.target.scrollWidth - e.target.clientWidth;
+                  // Prevent division by zero and NaN
+                  const newScroll = scrollWidth > 0 && !isNaN(scrollLeft) && !isNaN(scrollWidth) 
+                    ? Math.min(Math.max(0, scrollLeft / scrollWidth), 1) 
+                    : 0;
+                  setGalleryScroll(newScroll);
+                } catch (error) {
+                  // Silently handle any errors to prevent crashes
+                  console.error('Gallery scroll error:', error);
+                }
               }}
             >
               {[
@@ -2996,9 +3050,16 @@ export default function About() {
                       }}
                       loading="lazy"
                       onError={(e) => {
-                        // Fallback to gradient if image fails to load
-                        e.target.style.display = 'none';
-                        e.target.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                        try {
+                          // Fallback to gradient if image fails to load
+                          if (e && e.target && e.target.parentElement) {
+                            e.target.style.display = 'none';
+                            e.target.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                          }
+                        } catch (error) {
+                          // Silently handle errors to prevent crashes
+                          console.error('Image error handler failed:', error);
+                        }
                       }}
                     />
                     {/* Location overlay on hover */}
@@ -3035,8 +3096,12 @@ export default function About() {
             }}>
               <button
                 onClick={() => {
-                  if (galleryRef.current) {
-                    galleryRef.current.scrollBy({ left: -400, behavior: 'smooth' });
+                  try {
+                    if (galleryRef.current) {
+                      galleryRef.current.scrollBy({ left: -400, behavior: 'smooth' });
+                    }
+                  } catch (error) {
+                    console.error('Gallery scroll error:', error);
                   }
                 }}
                 style={{
@@ -3083,8 +3148,12 @@ export default function About() {
               
               <button
                 onClick={() => {
-                  if (galleryRef.current) {
-                    galleryRef.current.scrollBy({ left: 400, behavior: 'smooth' });
+                  try {
+                    if (galleryRef.current) {
+                      galleryRef.current.scrollBy({ left: 400, behavior: 'smooth' });
+                    }
+                  } catch (error) {
+                    console.error('Gallery scroll error:', error);
                   }
                 }}
                 style={{
