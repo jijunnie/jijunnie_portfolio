@@ -15,7 +15,7 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
   const isGlobePage = location.pathname === '/globe';
   
   return (
-    <nav className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-[95%] sm:w-[90%] md:w-[85%] lg:w-[80%] max-w-4xl">
+    <nav className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-[95%] sm:w-[90%] md:w-[85%] lg:w-[80%] max-w-4xl" style={{ background: 'transparent' }}>
       {/* Liquid Glass Background */}
       <div className={`liquid-glass-nav ${isGlobePage ? 'globe-page-nav' : ''}`}>
         <div className="relative flex items-center justify-between h-14 md:h-16 px-4 md:px-6" style={{ alignItems: 'center' }}>
@@ -221,6 +221,7 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
       <style>{`
         .liquid-glass-nav {
           background: #ffffff !important;
+          background-color: #ffffff !important;
           backdrop-filter: blur(20px) saturate(180%);
           -webkit-backdrop-filter: blur(20px) saturate(180%);
           border: 1px solid rgba(255, 255, 255, 0.3);
@@ -232,15 +233,43 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
         }
         .liquid-glass-nav.globe-page-nav {
           background: #ffffff !important;
+          background-color: #ffffff !important;
         }
         .liquid-glass-nav:hover {
           background: #ffffff !important;
+          background-color: #ffffff !important;
           box-shadow:
             0 12px 40px 0 rgba(31, 38, 135, 0.15),
             inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
         }
         .liquid-glass-nav.globe-page-nav:hover {
           background: #ffffff !important;
+          background-color: #ffffff !important;
+        }
+        /* Ensure white background at all breakpoints */
+        @media (max-width: 640px) {
+          .liquid-glass-nav {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+          }
+        }
+        @media (min-width: 641px) and (max-width: 768px) {
+          .liquid-glass-nav {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+          }
+        }
+        @media (min-width: 769px) and (max-width: 1024px) {
+          .liquid-glass-nav {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+          }
+        }
+        @media (min-width: 1025px) {
+          .liquid-glass-nav {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+          }
         }
         .nav-icon-link {
           position: relative;
