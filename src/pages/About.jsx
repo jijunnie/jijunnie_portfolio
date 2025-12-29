@@ -280,10 +280,13 @@ function NeonWaveBackground({ scrollProgress, sectionTrigger, fadeOffset, fadeIn
     let width = canvas.width = window.innerWidth;
     let height = canvas.height = fixedHeight;
 
-    // Initialize particles
+    // Initialize particles - reduce count on mobile for better performance
+    const isMobile = window.innerWidth < 768;
     const initParticles = () => {
       particlesRef.current = [];
-      const particleCount = Math.floor((width * height) / 15000); // Adaptive particle count
+      // Reduce particle count on mobile: divide by 30000 instead of 15000
+      const divisor = isMobile ? 30000 : 15000;
+      const particleCount = Math.floor((width * height) / divisor);
       for (let i = 0; i < particleCount; i++) {
         particlesRef.current.push({
           x: Math.random() * width,
@@ -313,12 +316,15 @@ function NeonWaveBackground({ scrollProgress, sectionTrigger, fadeOffset, fadeIn
       ctx.beginPath();
       ctx.strokeStyle = color;
       ctx.lineWidth = lineWidth;
-      ctx.shadowBlur = 25;
+      // Reduce shadow blur on mobile for better performance
+      ctx.shadowBlur = isMobile ? 15 : 25;
       ctx.shadowColor = color;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
 
-      for (let x = 0; x <= width; x += 1.5) {
+      // Increase step size on mobile to reduce calculations
+      const stepSize = isMobile ? 2.5 : 1.5;
+      for (let x = 0; x <= width; x += stepSize) {
         const wave = Math.sin((x * frequency + time * speed) * 0.01) * amplitude;
         const y = offsetY + wave;
         if (x === 0) {
@@ -360,7 +366,8 @@ function NeonWaveBackground({ scrollProgress, sectionTrigger, fadeOffset, fadeIn
     const animate = () => {
       ctx.clearRect(0, 0, width, height);
       
-      timeRef.current += 0.02;
+      // Slower animation on mobile for better performance
+      timeRef.current += isMobile ? 0.015 : 0.02;
 
       // Calculate opacity based on scroll
       const opacity = Math.min(1, Math.max(0, (scrollProgress - (sectionTrigger - fadeOffset)) * fadeInSpeed)) * 0.7;
@@ -376,8 +383,11 @@ function NeonWaveBackground({ scrollProgress, sectionTrigger, fadeOffset, fadeIn
           'rgba(79, 70, 229, 0.7)',   // Indigo - brighter
         ];
 
-        // Draw waves at different Y positions - original 3 waves
-        const wavePositions = [height * 0.3, height * 0.5, height * 0.7];
+        // Draw waves at different Y positions - reduce wave count on mobile
+        const waveCount = isMobile ? 2 : 3;
+        const wavePositions = isMobile 
+          ? [height * 0.4, height * 0.6]
+          : [height * 0.3, height * 0.5, height * 0.7];
         wavePositions.forEach((yPos, i) => {
           const amplitude = 30 + i * 10;
           const frequency = 0.5 + i * 0.2;
@@ -394,8 +404,9 @@ function NeonWaveBackground({ scrollProgress, sectionTrigger, fadeOffset, fadeIn
           );
         });
 
-        // Draw additional flowing waves - original 3 waves
-        for (let i = 0; i < 3; i++) {
+        // Draw additional flowing waves - reduce count on mobile
+        const additionalWaveCount = isMobile ? 2 : 3;
+        for (let i = 0; i < additionalWaveCount; i++) {
           const yPos = height * 0.4 + Math.sin(timeRef.current * 0.5 + i) * 50;
           const amplitude = 25 + Math.sin(timeRef.current + i) * 10;
           drawWave(
@@ -706,7 +717,7 @@ export default function About() {
   useEffect(() => {
     const isMobile = windowSize.width < 768;
     // Use longer throttle on mobile to reduce updates and prevent lag
-    const throttleTime = isMobile ? 100 : 16; // 100ms on mobile, 16ms on desktop
+    const throttleTime = isMobile ? 150 : 16; // 150ms on mobile (reduced from 100ms), 16ms on desktop
     
     const handleScroll = throttle(() => {
       if (!containerRef.current) return;
@@ -720,7 +731,8 @@ export default function About() {
       
       
       // Only update if progress changed significantly on mobile to reduce re-renders
-      if (isMobile && Math.abs(progress - previousScrollProgress.current) < 0.01) {
+      // Increased threshold from 0.01 to 0.02 for better performance
+      if (isMobile && Math.abs(progress - previousScrollProgress.current) < 0.02) {
         return;
       }
       
@@ -1028,6 +1040,10 @@ export default function About() {
   
   // Auto-rotation for Sing Out Voices carousel - continuous rotation when not dragging
   useEffect(() => {
+    const isMobile = windowSize.width < 768;
+    // Disable auto-rotation on mobile to improve performance
+    if (isMobile) return;
+    
     if (!isDragging && hasAnimated && !isAnimating) {
       const animate = (timestamp) => {
         if (!lastRotationTime.current) {
@@ -1054,7 +1070,7 @@ export default function About() {
         lastRotationTime.current = 0;
       };
     }
-  }, [isDragging, hasAnimated, isAnimating]);
+  }, [isDragging, hasAnimated, isAnimating, windowSize.width]);
   
   // Interests carousel pointer handlers
   const handlePointerDown = useCallback((e) => {
@@ -2570,7 +2586,7 @@ export default function About() {
           style={{
             position: 'absolute',
             bottom: windowSize.width >= 1024 ? '3vh' : windowSize.width >= 640 ? '13vh' : '8vh',
-            left: '50%',
+            left: windowSize.width >= 1024 ? 'calc(50% - 30px)' : windowSize.width >= 640 ? 'calc(50% - 25px)' : 'calc(50% - 20px)',
             transform: `translateX(-50%) translateY(${Math.max(0, (scrollProgress - sectionTriggers[2]) * -sectionConfig.translateYAmplitude)}px)`,
             opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[2] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
             transition: 'transform 0.8s ease-out, opacity 0.8s ease-out',
@@ -3045,13 +3061,17 @@ export default function About() {
                     zIndex: i + 1,
                     backfaceVisibility: 'hidden',
                     WebkitBackfaceVisibility: 'hidden',
-                    willChange: 'transform'
+                    willChange: windowSize.width < 768 ? 'auto' : 'transform'
                   }}
                   onMouseEnter={() => {
-                    setHoveredGalleryItem(i);
+                    if (windowSize.width >= 768) {
+                      setHoveredGalleryItem(i);
+                    }
                   }}
                   onMouseLeave={() => {
-                    setHoveredGalleryItem(null);
+                    if (windowSize.width >= 768) {
+                      setHoveredGalleryItem(null);
+                    }
                   }}
                 >
                   <div style={{
@@ -3062,7 +3082,7 @@ export default function About() {
                     backfaceVisibility: 'hidden',
                     WebkitBackfaceVisibility: 'hidden',
                     transform: 'translateZ(0)',
-                    willChange: 'transform'
+                    willChange: windowSize.width < 768 ? 'auto' : 'transform'
                   }}>
                     <img 
                       src={item.image} 
@@ -3077,10 +3097,11 @@ export default function About() {
                         backfaceVisibility: 'hidden',
                         WebkitBackfaceVisibility: 'hidden',
                         transform: 'translateZ(0)',
-                        willChange: 'transform',
+                        willChange: windowSize.width < 768 ? 'auto' : 'transform',
                         opacity: 1
                       }}
                       loading="lazy"
+                      decoding="async"
                       onError={(e) => {
                         try {
                           // Fallback to gradient if image fails to load
