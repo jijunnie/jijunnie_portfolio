@@ -275,8 +275,10 @@ function NeonWaveBackground({ scrollProgress, sectionTrigger, fadeOffset, fadeIn
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
+    // Use fixed viewport height to prevent content shift
+    const fixedHeight = fixedViewportHeight.current || window.innerHeight;
     let width = canvas.width = window.innerWidth;
-    let height = canvas.height = window.innerHeight;
+    let height = canvas.height = fixedHeight;
 
     // Initialize particles
     const initParticles = () => {
@@ -298,8 +300,10 @@ function NeonWaveBackground({ scrollProgress, sectionTrigger, fadeOffset, fadeIn
     initParticles();
 
     const handleResize = () => {
+      // Use fixed height, only update width
+      const currentFixedHeight = fixedViewportHeight.current || window.innerHeight;
       width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
+      height = canvas.height = currentFixedHeight;
       initParticles();
     };
 
@@ -463,10 +467,16 @@ const debounce = (func, wait) => {
 };
 
 export default function About() {
+  // Fixed viewport height to prevent content shift on mobile address bar collapse
+  const fixedViewportHeight = useRef(null);
+  
   const [currentAnimation, setCurrentAnimation] = useState('/animations/idle.fbx');
   const [windowSize, setWindowSize] = useState(() => {
     if (typeof window !== 'undefined') {
-      return { width: window.innerWidth, height: window.innerHeight };
+      const initialHeight = window.innerHeight;
+      // Set fixed height on initial load
+      fixedViewportHeight.current = initialHeight;
+      return { width: window.innerWidth, height: initialHeight };
     }
     return { width: 1920, height: 1080 };
   });
@@ -671,7 +681,9 @@ export default function About() {
     
     const handleMouseMove = throttle((e) => {
       const x = (e.clientX / window.innerWidth - 0.5) * 2;
-      const y = (e.clientY / window.innerHeight - 0.5) * 2;
+      // Use fixed viewport height to prevent content shift
+      const fixedHeight = fixedViewportHeight.current || window.innerHeight;
+      const y = (e.clientY / fixedHeight - 0.5) * 2;
       setMousePosition({ x, y });
     }, 16); // ~60fps
     
@@ -688,7 +700,9 @@ export default function About() {
       if (!containerRef.current) return;
       
       const scrollTop = window.scrollY;
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      // Use fixed viewport height to prevent content shift
+      const fixedHeight = fixedViewportHeight.current || window.innerHeight;
+      const docHeight = document.documentElement.scrollHeight - fixedHeight;
       const progress = Math.min(scrollTop / docHeight, 1);
       
       // Only update if progress changed significantly on mobile to reduce re-renders
@@ -772,14 +786,47 @@ export default function About() {
     };
   }, [subtitlePrefixVisible]);
   
+  // Set fixed viewport height CSS variable on mount to prevent content shift
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+      const setFixedViewportHeight = () => {
+        // Only set on initial load, not on resize
+        if (fixedViewportHeight.current === null) {
+          const vh = window.innerHeight * 0.01;
+          const vhPx = window.innerHeight;
+          fixedViewportHeight.current = vhPx;
+          
+          // Set CSS variables
+          document.documentElement.style.setProperty('--vh', `${vh}px`);
+          document.documentElement.style.setProperty('--fixed-vh', `${vh}px`);
+          document.documentElement.style.setProperty('--fixed-vh-px', `${vhPx}px`);
+          
+          setWindowSize({ width: window.innerWidth, height: vhPx });
+        }
+      };
+      
+      // Set immediately
+      setFixedViewportHeight();
+      
+      // Also set after a short delay to ensure it's set after any browser adjustments
+      const timeoutId = setTimeout(setFixedViewportHeight, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, []);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Use fixed height, only update width on resize
+      const currentHeight = fixedViewportHeight.current || window.innerHeight;
+      setWindowSize({ width: window.innerWidth, height: currentHeight });
     }
     
     const handleResize = debounce(() => {
       if (typeof window !== 'undefined') {
-        setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+        // Only update width, keep height fixed to prevent content shift
+        const currentHeight = fixedViewportHeight.current || window.innerHeight;
+        setWindowSize({ width: window.innerWidth, height: currentHeight });
       }
     }, 150); // Debounce resize to avoid excessive updates
     
@@ -1220,7 +1267,7 @@ export default function About() {
   }, [isMobile, mousePosition.x, mousePosition.y]);
 
   return (
-    <div ref={containerRef} className="w-full" style={{ minHeight: '800vh', width: '100%', maxWidth: '100vw', position: 'relative', top: 0, left: 0, display: 'block', visibility: 'visible', opacity: 1, background: '#fafafa', overflowX: 'hidden', overflowY: 'visible' }}>
+    <div ref={containerRef} className="w-full" style={{ minHeight: 'calc(var(--vh, 1vh) * 800)', width: '100%', maxWidth: '100vw', position: 'relative', top: 0, left: 0, display: 'block', visibility: 'visible', opacity: 1, background: '#fafafa', overflowX: 'hidden', overflowY: 'visible' }}>
       <style>{`
         /* Prevent horizontal scrolling globally */
         * {
@@ -1564,7 +1611,7 @@ export default function About() {
         />
       ))}
       
-      <div className="relative w-full" style={{ minHeight: '100vh', paddingTop: `${navBarTotalHeight}px`, overflow: 'hidden', overflowX: 'hidden' }}>
+      <div className="relative w-full" style={{ minHeight: 'calc(var(--vh, 1vh) * 100)', paddingTop: `${navBarTotalHeight}px`, overflow: 'hidden', overflowX: 'hidden' }}>
         {availableHeight > 0 && windowSize.width > 0 && modelsVisible && (
           <div 
             className="fixed overflow-visible flex items-end justify-center"
@@ -1638,7 +1685,7 @@ export default function About() {
         <div 
           className={`w-full flex flex-col justify-center about-page-content ${pageReady ? 'ready' : ''}`}
           style={{
-            minHeight: `calc(100vh - ${navBarTotalHeight}px)`,
+            minHeight: `calc(calc(var(--vh, 1vh) * 100) - ${navBarTotalHeight}px)`,
             opacity: pageOpacity,
             transition: 'opacity 1.2s ease-in',
             paddingLeft: windowSize.width >= 768 
@@ -1822,7 +1869,7 @@ export default function About() {
       <div 
         className="relative w-full"
         style={{ 
-          minHeight: '100vh',
+          minHeight: 'calc(var(--vh, 1vh) * 100)',
           background: '#fafafa',
           display: 'flex',
           alignItems: 'center',
@@ -2040,7 +2087,7 @@ export default function About() {
       <div 
         className="relative w-full"
         style={{ 
-          minHeight: '100vh',
+          minHeight: 'calc(var(--vh, 1vh) * 100)',
           background: '#fafafa',
           display: 'flex',
           alignItems: 'center',
@@ -2269,7 +2316,7 @@ export default function About() {
       <div 
         className="relative w-full"
         style={{ 
-          minHeight: '100vh',
+          minHeight: 'calc(var(--vh, 1vh) * 100)',
           background: 'linear-gradient(to bottom, #f3f4f6, #e5e7eb, #d1d5db)',
           position: 'relative',
           overflowX: 'hidden',
@@ -2570,7 +2617,7 @@ export default function About() {
       <div 
         className="relative w-full"
         style={{ 
-          minHeight: '100vh',
+          minHeight: 'calc(var(--vh, 1vh) * 100)',
           background: '#ffffff',
           display: 'flex',
           alignItems: 'flex-end',
@@ -2686,7 +2733,7 @@ export default function About() {
       <div 
         className="relative w-full"
         style={{ 
-          minHeight: '100vh',
+          minHeight: 'calc(var(--vh, 1vh) * 100)',
           background: '#ffffff',
           display: 'flex',
           alignItems: 'flex-start',
@@ -3069,7 +3116,7 @@ export default function About() {
       <div 
         className="relative w-full"
         style={{ 
-          minHeight: '100vh',
+          minHeight: 'calc(var(--vh, 1vh) * 100)',
           background: '#ffffff',
           display: 'flex',
           alignItems: 'center',
@@ -3131,7 +3178,7 @@ export default function About() {
       <div 
         className="relative w-full"
         style={{ 
-          minHeight: '80vh',
+          minHeight: 'calc(var(--vh, 1vh) * 80)',
           background: '#fafafa',
           display: 'flex',
           alignItems: 'center',
@@ -3195,7 +3242,7 @@ export default function About() {
       <div 
         className="relative w-full"
         style={{ 
-          minHeight: '80vh',
+          minHeight: 'calc(var(--vh, 1vh) * 80)',
           background: '#fafafa',
           display: 'flex',
           alignItems: 'center',
