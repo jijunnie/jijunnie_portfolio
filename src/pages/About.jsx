@@ -1781,8 +1781,8 @@ export default function About() {
             marginLeft: windowSize.width >= 768 
               ? '32%' 
               : windowSize.width < 480 
-                ? `${Math.max(windowSize.width * 0.375, 200) - 28}px`  // Shift left on mobile
-                : `${Math.max(windowSize.width * 0.375, 200) - 24}px`,  // Shift left on mobile
+                ? `${Math.max(windowSize.width * 0.375, 200) - 40}px`  // Shift left more on mobile
+                : `${Math.max(windowSize.width * 0.375, 200) - 36}px`,  // Shift left more on mobile
             maxWidth: windowSize.width >= 768 
               ? '50%' 
               : windowSize.width < 480 
@@ -1795,7 +1795,7 @@ export default function About() {
           <h1
             style={{
               fontSize: windowSize.width < 768 
-                ? `clamp(20px, 5vw, 80px)`
+                ? `clamp(24px, 5.5vw, 80px)`  // Bigger text on mobile
                 : calculateFontSize(80, 28, 100),
               fontWeight: 500,
               lineHeight: 1.1,
@@ -1822,7 +1822,7 @@ export default function About() {
           <div
             style={{
               fontSize: windowSize.width < 768 
-                ? `clamp(12px, 2.5vw, 28px)`
+                ? `clamp(14px, 3vw, 28px)`  // Bigger subtitle on mobile
                 : calculateFontSize(28, 12, 36),
               fontWeight: 400,
               lineHeight: 1.4,
@@ -1858,7 +1858,7 @@ export default function About() {
                   ? `${Math.min(calculateSpacing(600), windowSize.width * 0.85)}px` 
                   : `${calculateSpacing(600)}px`,
               fontSize: windowSize.width < 768 
-                ? calculateFontSize(20, 10, 24)
+                ? calculateFontSize(20, 12, 24)  // Bigger description text on mobile
                 : calculateFontSize(20, 12, 24),
               fontWeight: 400,
               lineHeight: 1.7,
