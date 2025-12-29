@@ -1687,7 +1687,7 @@ export default function About() {
           <div 
             className="fixed overflow-visible flex items-end justify-center"
             style={{
-              left: '0',
+              left: windowSize.width >= 768 ? '0' : '-20px',  // Shift left on mobile
               top: `${navBarTotalHeight}px`,
               bottom: 'auto',  // Changed: Don't anchor to bottom
               width: `${windowSize.width >= 768 ? Math.max(windowSize.width * 0.32, 200) : Math.max(windowSize.width * 0.375, 200)}px`,
@@ -1781,8 +1781,8 @@ export default function About() {
             marginLeft: windowSize.width >= 768 
               ? '32%' 
               : windowSize.width < 480 
-                ? `${Math.max(windowSize.width * 0.375, 200) - 8}px` 
-                : `${Math.max(windowSize.width * 0.375, 200) - 4}px`,
+                ? `${Math.max(windowSize.width * 0.375, 200) - 28}px`  // Shift left on mobile
+                : `${Math.max(windowSize.width * 0.375, 200) - 24}px`,  // Shift left on mobile
             maxWidth: windowSize.width >= 768 
               ? '50%' 
               : windowSize.width < 480 
@@ -1887,7 +1887,7 @@ export default function About() {
             style={{
               right: windowSize.width >= 768 ? '2%' : 'auto',
               left: windowSize.width >= 768 ? 'auto' : '50%',
-              bottom: windowSize.width >= 768 ? '0%' : '0%',
+              bottom: windowSize.width >= 768 ? '0%' : '15%',  // Shift up on mobile
               top: windowSize.width >= 768 ? 'auto' : 'auto',
               width: windowSize.width >= 768 
                 ? `${splineSize.containerWidth}px`
