@@ -1,56 +1,40 @@
-// Suppress FBXLoader texture warnings (these are harmless - FBX files load fine)
-// MUST be at the very top before any imports to catch warnings early
-// Only suppress in production to allow debugging in development
 (function() {
   if (typeof console === 'undefined') return;
-  
-  // Only suppress in production mode
   const isProduction = import.meta.env?.PROD || process.env.NODE_ENV === 'production';
-  if (!isProduction) return; // Allow warnings in development
-  
+  if (!isProduction) return;
   const suppressFBXWarning = (message) => {
     if (!message) return false;
     try {
       const msg = String(message);
-      // Match the exact warning pattern: "FBXLoader: Image type "..." is not supported."
       return (msg.includes('FBXLoader') && 
               msg.includes('Image type') && 
               (msg.includes('is not supported') || msg.includes('not supported'))) ||
-             // Also catch variations
              msg.match(/FBXLoader.*Image type.*not supported/i);
     } catch (e) {
-      // If string conversion fails, don't suppress
       return false;
     }
   };
-  
   const wrapConsoleMethod = (original, methodName) => {
     if (!original) return;
     try {
       const wrapped = function(...args) {
         try {
-          // Check first argument (most common case) and all arguments
           const shouldSuppress = args.some(arg => suppressFBXWarning(arg));
           if (shouldSuppress) {
-            return; // Suppress these specific warnings
+            return;
           }
           return original.apply(console, args);
         } catch (e) {
-          // If suppression check fails, show the original message
           return original.apply(console, args);
         }
       };
-      // Preserve original properties
       Object.setPrototypeOf(wrapped, original);
       Object.defineProperty(wrapped, 'name', { value: methodName });
       return wrapped;
     } catch (e) {
-      // If wrapping fails, return original
       return original;
     }
   };
-  
-  // Override console.warn and console.error only if wrapping succeeds
   try {
     if (console.warn) {
       const wrappedWarn = wrapConsoleMethod(console.warn, 'warn');
@@ -64,9 +48,7 @@
         console.error = wrappedError;
       }
     }
-  } catch (e) {
-    // Silently fail if console override fails
-  }
+  } catch (e) {}
 })();
 
 import React, { useRef, useEffect, Suspense, useState, useMemo, useCallback } from 'react';
@@ -76,7 +58,6 @@ import { SkeletonUtils } from 'three-stdlib';
 import * as THREE from 'three';
 import Spline from '@splinetool/react-spline';
 
-// 3D Avatar Component
 function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundingBoxCalculated, noRotation = false, rotation = null }) {
   const group = useRef();
   const mixer = useRef();
@@ -86,7 +67,6 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
   
   useEffect(() => {
     if (error) {
-      console.error('Error loading avatar:', error);
     }
   }, [error]);
   
@@ -99,7 +79,6 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
     try {
       cloned = SkeletonUtils.clone(baseAvatar);
     } catch (error) {
-      console.error('SkeletonUtils.clone failed:', error);
       cloned = baseAvatar.clone(true);
     }
     
@@ -137,9 +116,7 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
     if (clonedAvatar && group.current) {
       try {
         mixer.current = new THREE.AnimationMixer(clonedAvatar);
-        console.log('✓ Animation mixer created');
       } catch (error) {
-        console.warn('Failed to create animation mixer:', error);
         mixer.current = null;
       }
     }
@@ -150,7 +127,6 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
           mixer.current.uncacheRoot(mixer.current.getRoot());
           mixer.current = null;
         } catch (error) {
-          console.warn('Error stopping animation actions:', error);
         }
       }
       
@@ -189,7 +165,6 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
     
     const newAnimation = fbx.animations[0];
     if (!newAnimation || !newAnimation.tracks || newAnimation.tracks.length === 0) {
-      console.warn('No valid animation tracks found');
       return;
     }
     
@@ -235,7 +210,6 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
       const newAction = mixer.current.clipAction(retargetedClip);
       
       if (!newAction) {
-        console.warn('Failed to create action');
         return;
       }
       
@@ -270,7 +244,6 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
         }
       };
     } catch (error) {
-      console.error('❌ Error setting up animation:', error);
     }
   }, [animationPath, fbx.animations, clonedAvatar]);
   
@@ -293,7 +266,6 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
     try {
       mixer.current.update(delta);
     } catch (error) {
-      console.warn('Animation mixer update error:', error);
     }
   });
   
@@ -338,7 +310,7 @@ function CameraDrift() {
   return null;
 }
 
-// Neon Wave and Particle Background Component
+
 function NeonWaveBackground({ scrollProgress, sectionTrigger, fadeOffset, fadeInSpeed }) {
   const canvasRef = useRef(null);
   const animationFrameRef = useRef(null);
@@ -555,7 +527,7 @@ function NeonWaveBackground({ scrollProgress, sectionTrigger, fadeOffset, fadeIn
   );
 }
 
-// Throttle function for performance optimization
+
 const throttle = (func, limit) => {
   let inThrottle;
   let timeoutId;
@@ -574,7 +546,7 @@ const throttle = (func, limit) => {
   return throttled;
 };
 
-// Debounce function for performance optimization
+
 const debounce = (func, wait) => {
   let timeout;
   const debounced = function(...args) {
@@ -593,6 +565,7 @@ export default function About() {
   const fixedViewportHeight = useRef(null);
   
   const [currentAnimation, setCurrentAnimation] = useState('/animations/idle.fbx');
+  const [navBarTop, setNavBarTop] = useState(16); // Dynamic navigation bar top position
   const [windowSize, setWindowSize] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -604,7 +577,6 @@ export default function About() {
         fixedViewportHeight.current = initialHeight;
         return { width: window.innerWidth || 1920, height: initialHeight };
       } catch (error) {
-        console.error('Error initializing window size:', error);
         return { width: 1920, height: 1080 };
       }
     }
@@ -715,7 +687,6 @@ export default function About() {
         animationFrameRate: performanceTier === 'low' ? 20 : performanceTier === 'medium' ? 30 : deviceType === 'mobile' ? 30 : 60
       };
     } catch (error) {
-      console.error('Error detecting device info:', error);
       // Fallback to safe defaults
       return {
         deviceType: 'desktop',
@@ -1029,7 +1000,6 @@ export default function About() {
         try {
           setModelsVisible(true);
         } catch (error) {
-          console.error('Error setting models visible:', error);
         }
       }, delay);
     } else {
@@ -1150,7 +1120,7 @@ export default function About() {
       verticalImg.src = '/images/sport vertical.jpg';
       
       // Handle load errors
-      horizontalImg.onerror = () => console.warn('Failed to load sport horizontal.jpg');
+      horizontalImg.onerror = () => {};
       verticalImg.onerror = () => console.warn('Failed to load sport vertical.jpg');
     };
     
@@ -1201,8 +1171,6 @@ export default function About() {
           return;
         }
         
-        // Only update if progress changed significantly to prevent unnecessary re-renders
-        // Use larger threshold on low-performance devices to prevent crashes
         const progressThreshold = deviceInfo.performanceTier === 'low' ? 0.02 :
                                  deviceInfo.performanceTier === 'medium' ? 0.015 :
                                  deviceInfo.isMobile ? 0.01 : 0.001;
@@ -1212,20 +1180,15 @@ export default function About() {
           return;
         }
         
-        // Determine scroll direction
         if (progress < previousScrollProgress.current) {
           scrollDirection.current = 'up';
         } else if (progress > previousScrollProgress.current) {
           scrollDirection.current = 'down';
         }
-        
         previousScrollProgress.current = progress;
-        
-        // Use requestAnimationFrame to batch state updates
         try {
           setScrollProgress(progress);
         } catch (error) {
-          console.error('Error updating scroll progress:', error);
           ticking = false;
           return;
         }
@@ -1242,35 +1205,25 @@ export default function About() {
     const handleScroll = () => {
       try {
         if (!isMounted || ticking) return;
-        
         ticking = true;
-        // Cancel any pending animation frame
         if (rafIdRef.current) {
           cancelAnimationFrame(rafIdRef.current);
         }
-        // Use requestAnimationFrame for smooth updates
         rafIdRef.current = requestAnimationFrame(updateScrollProgress);
       } catch (error) {
-        console.error('Error in handleScroll:', error);
         ticking = false;
       }
     };
-    
-    // Throttle scroll event listener based on device performance to prevent crashes
     const throttleTime = deviceInfo.scrollThrottle;
     const throttledHandleScroll = throttle(handleScroll, throttleTime);
-    
     try {
       window.addEventListener('scroll', throttledHandleScroll, { passive: true });
-      // Initial call with delay to avoid blocking
       setTimeout(() => {
         if (isMounted) {
           handleScroll();
         }
       }, 0);
-    } catch (error) {
-      console.error('Error setting up scroll listener:', error);
-    }
+    } catch (error) {}
     
     return () => {
       try {
@@ -1428,6 +1381,73 @@ export default function About() {
       const timeoutId = setTimeout(lockInitialViewportHeight, isIOS ? 200 : 100);
       const timeoutId2 = setTimeout(lockInitialViewportHeight, isIOS ? 500 : 300);
       
+      // Function to recalculate navigation bar position based on current viewport
+      const recalculateNavBarPosition = () => {
+        try {
+          const currentWidth = window.innerWidth || 1920;
+          const currentViewportHeight = window.visualViewport 
+            ? window.visualViewport.height 
+            : window.innerHeight;
+          const maxViewportHeight = Math.max(
+            window.innerHeight || 800,
+            currentViewportHeight || 800
+          );
+          
+          // Calculate safe area insets for notched devices
+          const safeAreaTop = typeof CSS !== 'undefined' && CSS.supports('padding', 'env(safe-area-inset-top)')
+            ? parseInt(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-top)') || '0')
+            : 0;
+          
+          // Base top position: responsive based on screen size
+          let baseTop = 8; // mobile (top-2)
+          if (currentWidth >= 640) baseTop = 12; // sm (top-3)
+          if (currentWidth >= 768) baseTop = 16; // md+ (top-4)
+          
+          // Adjust for address bar collapse/expand
+          // When address bar is visible (smaller viewport), add more top spacing
+          // When address bar is hidden (larger viewport), use base spacing
+          const viewportDiff = maxViewportHeight - currentViewportHeight;
+          const addressBarHeight = Math.max(0, viewportDiff);
+          
+          // Calculate final top position
+          // Add safe area inset and slight adjustment for address bar state
+          const finalTop = baseTop + safeAreaTop + (addressBarHeight > 50 ? 2 : 0);
+          
+          setNavBarTop(finalTop);
+          
+          // Update navigation bar position in DOM via CSS variable
+          // This ensures the nav bar in App.jsx uses the correct position
+          try {
+            const navElement = document.querySelector('nav[class*="fixed"]');
+            if (navElement) {
+              navElement.style.top = `${finalTop}px`;
+            }
+            // Also set CSS variable for consistency
+            document.documentElement.style.setProperty('--nav-bar-top', `${finalTop}px`);
+          } catch (domError) {
+            // Silently fail if DOM update fails
+          }
+        } catch (error) {
+          console.error('Error recalculating nav bar position:', error);
+          // Fallback to base position
+          const currentWidth = window.innerWidth || 1920;
+          const baseTop = currentWidth >= 768 ? 16 : currentWidth >= 640 ? 12 : 8;
+          setNavBarTop(baseTop);
+          try {
+            const navElement = document.querySelector('nav[class*="fixed"]');
+            if (navElement) {
+              navElement.style.top = `${baseTop}px`;
+            }
+            document.documentElement.style.setProperty('--nav-bar-top', `${baseTop}px`);
+          } catch (domError) {
+            // Silently fail
+          }
+        }
+      };
+      
+      // Initial calculation
+      recalculateNavBarPosition();
+      
       // On iOS, listen to scroll end to restore touch targets
       let scrollEndTimer = null;
       let isScrolling = false;
@@ -1460,6 +1480,23 @@ export default function About() {
         }
       }
       
+      // Listen to visualViewport resize events to recalculate nav bar position
+      const handleViewportResize = () => {
+        recalculateNavBarPosition();
+      };
+      
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', handleViewportResize, { passive: true });
+        window.visualViewport.addEventListener('scroll', handleViewportResize, { passive: true });
+      }
+      
+      // Also listen to window resize for non-visualViewport browsers
+      const handleWindowResize = debounce(() => {
+        recalculateNavBarPosition();
+      }, 100);
+      
+      window.addEventListener('resize', handleWindowResize, { passive: true });
+      
       return () => {
         clearTimeout(timeoutId);
         clearTimeout(timeoutId2);
@@ -1470,9 +1507,89 @@ export default function About() {
             window.visualViewport.removeEventListener('scroll', handleScrollEnd);
           }
         }
+        if (window.visualViewport) {
+          window.visualViewport.removeEventListener('resize', handleViewportResize);
+          window.visualViewport.removeEventListener('scroll', handleViewportResize);
+        }
+        window.removeEventListener('resize', handleWindowResize);
       };
     }
-  }, []);
+  }, [windowSize.width]);
+  
+  // Ensure navigation bar is always visible when scrolling
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const ensureNavBarVisible = () => {
+      try {
+        const navElement = document.querySelector('nav[class*="fixed"]');
+        if (!navElement) return;
+        
+        const navRect = navElement.getBoundingClientRect();
+        const viewportHeight = window.visualViewport 
+          ? window.visualViewport.height 
+          : window.innerHeight;
+        
+        // Check if nav bar is out of viewport (scrolled past)
+        const isNavBarVisible = navRect.top >= 0 && navRect.top < viewportHeight;
+        
+        // If nav bar is not visible, ensure it's positioned correctly
+        // The nav bar is fixed, so we just need to ensure its top value is correct
+        if (!isNavBarVisible && navRect.top < 0) {
+          // Nav bar scrolled above viewport - this shouldn't happen with fixed positioning
+          // But we ensure it's at the correct position
+          const currentTop = parseInt(navElement.style.top) || navBarTop;
+          if (currentTop !== navBarTop) {
+            navElement.style.top = `${navBarTop}px`;
+          }
+        }
+        
+        // Ensure nav bar has high z-index to stay on top
+        if (parseInt(navElement.style.zIndex) < 50) {
+          navElement.style.zIndex = '50';
+        }
+      } catch (error) {
+        // Silently fail
+      }
+    };
+    
+    // Check on scroll
+    const handleScroll = () => {
+      ensureNavBarVisible();
+    };
+    
+    // Throttle scroll events for performance
+    let scrollTimeout = null;
+    const throttledScroll = () => {
+      if (scrollTimeout) return;
+      scrollTimeout = setTimeout(() => {
+        handleScroll();
+        scrollTimeout = null;
+      }, 16); // ~60fps
+    };
+    
+    window.addEventListener('scroll', throttledScroll, { passive: true });
+    
+    // Also check on visualViewport changes
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('scroll', throttledScroll, { passive: true });
+      window.visualViewport.addEventListener('resize', throttledScroll, { passive: true });
+    }
+    
+    // Initial check
+    ensureNavBarVisible();
+    
+    return () => {
+      window.removeEventListener('scroll', throttledScroll);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('scroll', throttledScroll);
+        window.visualViewport.removeEventListener('resize', throttledScroll);
+      }
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+      }
+    };
+  }, [navBarTop]);
   
   const resizeHandlerRef = useRef(null);
   
@@ -1668,7 +1785,7 @@ export default function About() {
       try {
         const video = document.createElement('video');
         video.src = videoUrl;
-        video.preload = 'metadata'; // Use metadata instead of auto to reduce load
+        video.preload = windowSize.width < 768 ? 'none' : 'metadata';
         video.muted = true;
         video.playsInline = true;
         video.onerror = () => {
@@ -1700,48 +1817,30 @@ export default function About() {
     };
   }, [deviceInfo]);
 
-  // Control video playback based on scroll position - throttled to prevent crashes
   useEffect(() => {
     const isMobile = windowSize.width < 768;
-    // Use larger check interval on mobile to reduce video operations
-    const checkInterval = isMobile ? 0.05 : 0.02; // Only check every 5% on mobile, 2% on desktop
-    
-    // Skip if change is too small to reduce unnecessary video operations
+    const checkInterval = isMobile ? 0.05 : 0.02;
     if (Math.abs(scrollProgress - lastVideoCheckProgress.current) < checkInterval) {
       return;
     }
-    
     lastVideoCheckProgress.current = scrollProgress;
-    
-    const travelSectionTrigger = 0.38; // sectionTriggers[3]
-    const developSectionTrigger = 0.20; // sectionTriggers[1]
-    
+    const travelSectionTrigger = 0.38;
+    const developSectionTrigger = 0.20;
     const shouldPlayTravel = scrollProgress >= travelSectionTrigger - 0.05 && scrollProgress <= travelSectionTrigger + 0.15;
     const shouldPlayDevelop = scrollProgress >= developSectionTrigger - 0.05 && scrollProgress <= developSectionTrigger + 0.15;
-    
-    // Use requestAnimationFrame to batch video operations and prevent blocking
-    // Add delay on mobile to reduce battery drain
     const delay = isMobile ? 100 : 0;
     const timeoutId = setTimeout(() => {
       const rafId = requestAnimationFrame(() => {
         try {
           if (travelVideoRef.current) {
             if (shouldPlayTravel && travelVideoRef.current.paused) {
-              // Add user interaction requirement check for autoplay
-              travelVideoRef.current.play().catch(err => {
-                // Silently handle autoplay errors on mobile
-                if (!isMobile) {
-                  console.warn('Video autoplay prevented:', err);
-                }
-              });
+              travelVideoRef.current.play().catch(() => {});
             } else if (!shouldPlayTravel && !travelVideoRef.current.paused) {
               travelVideoRef.current.pause();
             }
           }
-          
           if (developVideoRef.current) {
             try {
-              // Check if video is ready and not errored
               if (developVideoRef.current.error || developVideoRef.current.dataset.errorLogged === 'true') {
                 return; // Skip if video has errors
               }
@@ -1791,17 +1890,12 @@ export default function About() {
     const sectionStart = 0.32; // sectionTriggers[2] - Sing Out Voices section
     const sectionEnd = 0.38; // sectionTriggers[3]
     const fadeOffset = sectionConfig.fadeOffset; // Use unified fadeOffset
-    const fadeInStart = sectionStart - fadeOffset; // When section starts appearing
-    
-    // Trigger animation when section starts appearing (not at midpoint)
+    const fadeInStart = sectionStart - fadeOffset;
     if (scrollProgress >= fadeInStart) {
-      // Use timer-based approach for reliability and to prevent blocking
       const timer = setTimeout(() => {
         try {
           setHasAnimated(true);
           setIsAnimating(true);
-          
-          // Store animation timer in ref so it persists even if effect re-runs
           if (animationTimerRef.current) {
             clearTimeout(animationTimerRef.current);
           }
@@ -1809,18 +1903,14 @@ export default function About() {
             setIsAnimating(false);
             animationTimerRef.current = null;
           }, 2700);
-        } catch (error) {
-          console.error('Error setting carousel animation:', error);
-        }
+        } catch (error) {}
       }, 100);
-      
       return () => {
         clearTimeout(timer);
       };
     }
   }, [scrollProgress, hasAnimated, windowSize.width]);
   
-  // Cleanup animation timer on unmount
   useEffect(() => {
     return () => {
       if (animationTimerRef.current) {
@@ -1830,32 +1920,29 @@ export default function About() {
     };
   }, []);
 
-  // Unlock audio context on first user interaction (required by browser autoplay policy)
+  const audioUnlockedRef = useRef(false);
   useEffect(() => {
+    if (audioUnlockedRef.current) return;
     const unlockAudio = () => {
-      if (musicAudioRef.current) {
-        // Try to play and immediately pause to unlock audio context
+      if (musicAudioRef.current && !audioUnlockedRef.current) {
         const playPromise = musicAudioRef.current.play();
         if (playPromise !== undefined) {
           playPromise
             .then(() => {
-              musicAudioRef.current.pause();
-              musicAudioRef.current.currentTime = 0;
-              console.log('Audio context unlocked');
+              if (musicAudioRef.current) {
+                musicAudioRef.current.pause();
+                musicAudioRef.current.currentTime = 0;
+                audioUnlockedRef.current = true;
+              }
             })
-            .catch(() => {
-              // Ignore errors during unlock
-            });
+            .catch(() => {});
         }
       }
     };
-
-    // Try to unlock on various user interactions
-    const events = ['click', 'touchstart', 'keydown', 'scroll'];
+    const events = ['click', 'touchstart', 'keydown'];
     events.forEach(event => {
       document.addEventListener(event, unlockAudio, { once: true, passive: true });
     });
-
     return () => {
       events.forEach(event => {
         document.removeEventListener(event, unlockAudio);
@@ -1863,104 +1950,82 @@ export default function About() {
     };
   }, []);
 
-  // Control background music for Music section - play when entering, don't stop until page exit
+  const musicSectionTriggerRef = useRef(false);
   useEffect(() => {
-    if (!musicAudioRef.current) return;
-    
+    if (!musicAudioRef.current || musicSectionTriggerRef.current) return;
     const audio = musicAudioRef.current;
-    const musicSectionStart = sectionTriggers[5]; // 0.68
-    // Add a small offset to ensure we're truly in the Music section, not just at the boundary
-    const musicSectionTrigger = musicSectionStart + 0.02; // 0.70
-    
-    // Set volume (0.0 to 1.0)
-    audio.volume = 0.5;
-    
-    // Check if we've entered the music section (with offset to prevent early triggering)
+    const musicSectionStart = sectionTriggers[5];
+    const musicSectionTrigger = musicSectionStart + 0.02;
     const hasEntered = scrollProgress >= musicSectionTrigger;
-    
     if (hasEntered && !hasEnteredMusicSection) {
-      // First time entering the section - automatically start playing
+      musicSectionTriggerRef.current = true;
+      audio.volume = 0.5;
       setHasEnteredMusicSection(true);
       setIsMusicPlaying(true);
     }
   }, [scrollProgress, hasEnteredMusicSection]);
 
-  // Control music playback based on isMusicPlaying state
+  const audioPlaybackRef = useRef(null);
   useEffect(() => {
     if (!musicAudioRef.current) return;
-    
     const audio = musicAudioRef.current;
-    
-    if (isMusicPlaying && hasEnteredMusicSection) {
-      if (audio.paused) {
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              console.log('Music started playing');
-            })
-            .catch(error => {
-              console.warn('Failed to play audio:', error);
-            });
+    if (audioPlaybackRef.current) {
+      clearTimeout(audioPlaybackRef.current);
+    }
+    audioPlaybackRef.current = setTimeout(() => {
+      if (isMusicPlaying && hasEnteredMusicSection) {
+        if (audio.paused) {
+          const playPromise = audio.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(() => {});
+          }
+        }
+      } else {
+        if (!audio.paused) {
+          audio.pause();
         }
       }
-    } else {
-      if (!audio.paused) {
-        audio.pause();
+    }, 50);
+    return () => {
+      if (audioPlaybackRef.current) {
+        clearTimeout(audioPlaybackRef.current);
       }
-    }
+    };
   }, [isMusicPlaying, hasEnteredMusicSection]);
 
-  // Toggle music playback
   const toggleMusic = useCallback(() => {
     setIsMusicPlaying(prev => !prev);
   }, []);
   
-  // Fallback: If user scrolls past section without triggering, still enable auto-rotation
   useEffect(() => {
-    // Only check if we haven't animated yet to avoid unnecessary checks
     if (hasAnimated) return;
-    
-    const sectionEnd = 0.38; // sectionTriggers[3]
-    // If we're well past the section and haven't animated, just enable auto-rotation
+    const sectionEnd = 0.38;
     if (scrollProgress > sectionEnd + 0.1) {
-      // Use setTimeout to avoid state updates during render
       const timer = setTimeout(() => {
         setHasAnimated(true);
-        setIsAnimating(false); // Skip the initial animation, go straight to auto-rotation
+        setIsAnimating(false);
       }, 0);
-      
       return () => clearTimeout(timer);
     }
   }, [scrollProgress, hasAnimated]);
   
-  // Auto-rotation for Sing Out Voices carousel - continuous rotation when not dragging
   useEffect(() => {
     const isMobile = windowSize.width < 768;
-    
     if (!isDragging && hasAnimated && !isAnimating) {
       const animate = (timestamp) => {
         if (!lastRotationTime.current) {
           lastRotationTime.current = timestamp;
         }
-        
         const elapsed = timestamp - lastRotationTime.current;
-        
-        // Use slower update frequency on mobile for better performance
-        // Mobile: ~50ms (20fps), Desktop: ~33ms (30fps)
         const updateInterval = isMobile ? 50 : 33;
-        const rotationSpeed = isMobile ? 0.2 : 0.3; // Slower rotation on mobile
-        
+        const rotationSpeed = isMobile ? 0.2 : 0.3;
         if (elapsed >= updateInterval) {
           setCarouselRotation(prev => prev + rotationSpeed);
           lastRotationTime.current = timestamp;
         }
-        
         animationFrameRef.current = requestAnimationFrame(animate);
       };
-      
       animationFrameRef.current = requestAnimationFrame(animate);
-      
       return () => {
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
@@ -2142,12 +2207,11 @@ export default function About() {
   
   const avatarScale = calculateScale();
   
-  // Navigation bar is fixed at top-4 (16px) in App.jsx, so it doesn't move when address bar collapses
-  // We use fixed values here to ensure content positioning is consistent
-  const navBarTop = 16; // Fixed: matches 'top-4' in App.jsx
+  // Navigation bar position - dynamically calculated based on viewport and address bar state
+  // navBarTop is now a state variable that updates when address bar collapses/expands
   const navBarHeight = windowSize.width >= 768 ? 64 : 56;
-  const navBarTotalHeight = navBarTop + navBarHeight; // Fixed: 72px (mobile) or 80px (desktop)
-  // availableHeight uses fixed viewport height, so it won't change when address bar collapses
+  const navBarTotalHeight = navBarTop + navBarHeight; // Dynamic: adjusts when address bar changes
+  // availableHeight uses current viewport height
   const availableHeight = Math.max(windowSize.height - navBarTotalHeight, 100);
   
   const desktopYOffset = isDesktop ? -0.5 : 0;
@@ -2242,11 +2306,11 @@ export default function About() {
   return (
     <div ref={containerRef} className="w-full" style={{ minHeight: 'calc(var(--vh, 1vh) * 800)', width: '100%', maxWidth: '100vw', position: 'relative', top: 0, left: 0, display: 'block', visibility: 'visible', opacity: 1, background: '#fafafa', overflowX: 'hidden', overflowY: 'visible' }}>
       <style>{`
-        /* Prevent horizontal scrolling globally */
+        
         * {
           max-width: 100%;
         }
-        /* Fix for mobile address bar collapse - prevent content shift */
+        
         html {
           height: 100%;
           overflow-x: hidden;
@@ -2258,94 +2322,94 @@ export default function About() {
           padding: 0;
           width: 100%;
           overflow-x: hidden;
-          /* Allow vertical scrolling */
+          
           overflow-y: auto;
-          /* Prevent overscroll bounce but allow scrolling */
+          
           overscroll-behavior-y: auto;
-          /* Use fixed viewport height to prevent shift - unified for all browsers */
+          
           min-height: 100vh;
           min-height: 100dvh;
           min-height: calc(var(--vh, 1vh) * 100);
-          /* Safari fallback */
+          
           min-height: -webkit-fill-available;
-          /* Ensure body can scroll */
+          
           position: relative;
         }
         
-        /* Main container uses fixed vh - unified for all browsers */
+        
         #root {
           width: 100%;
           min-height: 100vh;
           min-height: 100dvh;
           min-height: calc(var(--vh, 1vh) * 100);
-          /* Safari fallback */
+          
           min-height: -webkit-fill-available;
-          /* Ensure root can scroll */
+          
           position: relative;
           overflow-y: visible;
         }
         
-        /* iOS Safari address bar fix - only apply to iOS devices */
+        
         @supports (-webkit-touch-callout: none) {
           html {
             height: -webkit-fill-available;
           }
           
           body {
-            /* Don't use fixed position - it breaks scrolling */
+            
             min-height: -webkit-fill-available;
-            /* Hardware acceleration */
+            
             transform: translate3d(0, 0, 0);
             -webkit-transform: translate3d(0, 0, 0);
           }
           
           #root {
             min-height: -webkit-fill-available;
-            /* Hardware acceleration */
+            
             transform: translate3d(0, 0, 0);
             -webkit-transform: translate3d(0, 0, 0);
-            /* Ensure root can scroll */
+            
             position: relative;
             overflow-y: visible;
           }
           
-          /* Prevent touch issues after address bar collapse */
+          
           * {
             -webkit-tap-highlight-color: transparent;
           }
           
-          /* Fix for interactive elements */
+          
           button, a, [role="button"], [onClick] {
             touch-action: manipulation;
             cursor: pointer;
-            /* Ensure clickable after address bar movement */
+            
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
           }
           
-          /* Canvas and 3D elements - ensure they remain interactive */
+          
           canvas {
             touch-action: none !important;
             pointer-events: auto !important;
             -webkit-touch-callout: none;
           }
           
-          /* Fix for fixed position elements */
+          
           [style*="position: fixed"], [style*="position:fixed"] {
             transform: translate3d(0, 0, 0);
             -webkit-transform: translate3d(0, 0, 0);
             will-change: transform;
           }
           
-          /* Prevent content jump on scroll */
+          
           .w-full {
             transform: translate3d(0, 0, 0);
             -webkit-transform: translate3d(0, 0, 0);
           }
         }
         
-        /* Prevent horizontal scrolling globally */
+        
         @keyframes blink {
           0%, 50% { opacity: 1; }
           51%, 100% { opacity: 0; }
@@ -2382,7 +2446,7 @@ export default function About() {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        /* Prevent flash on initial load - hide content until ready */
+        
         .about-page-content:not(.ready) {
           opacity: 0 !important;
           visibility: hidden;
@@ -2392,15 +2456,15 @@ export default function About() {
           visibility: visible;
           transition: opacity 0.3s ease-in, visibility 0s linear 0s;
         }
-        /* Optimize for mobile - faster transition */
+        
         @media (max-width: 767px) {
           .about-page-content.ready {
             transition: opacity 0.2s ease-in, visibility 0s linear 0s;
           }
         }
         
-        /* Interests Carousel Styles */
-        /* Neon Glow Effects */
+        
+        
         .neon-glow {
           filter: drop-shadow(0 0 8px currentColor);
           animation: neon-flicker 3s infinite alternate;
@@ -2429,7 +2493,7 @@ export default function About() {
           }
         }
 
-        /* Cyberpunk Card Effects */
+        
         .cyberpunk-card {
           position: relative;
           background-clip: padding-box;
@@ -2465,7 +2529,7 @@ export default function About() {
           100% { background-position: 200% 50%; }
         }
 
-        /* Cyberpunk Text Effects */
+        
         .cyber-text {
           text-shadow: 
             0 0 10px rgba(0, 255, 255, 0.8),
@@ -2512,7 +2576,7 @@ export default function About() {
           text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
         }
 
-        /* Cyberpunk UI Elements */
+        
         .cyber-close-btn {
           position: relative;
           clip-path: polygon(
@@ -2560,7 +2624,7 @@ export default function About() {
           }
         }
 
-        /* Modal Effects */
+        
         .cyberpunk-modal {
           box-shadow: 
             0 0 40px rgba(0, 255, 255, 0.3),
@@ -2606,7 +2670,7 @@ export default function About() {
           }
         }
 
-        /* Carousel Animation */
+        
         @keyframes carousel-spin {
           from {
             transform: rotateY(0deg);
@@ -2668,7 +2732,7 @@ export default function About() {
         }
       `}</style>
       
-      {/* Disable decorative particles on mobile/tablet for better performance */}
+      {}
       {isDesktop && [...Array(6)].map((_, i) => (
         <div
           key={i}
@@ -2763,7 +2827,7 @@ export default function About() {
             </Suspense>
           </Canvas>
           
-          {/* Open to Internship / Part time jobs - Above Avatar */}
+          {}
           <div
             style={{
               position: 'absolute',
@@ -2793,7 +2857,7 @@ export default function About() {
             Open to Internship / Part time jobs
           </div>
           
-          {/* Tags Below Avatar */}
+          {}
           <div
             style={{
               position: 'absolute',
@@ -3171,7 +3235,7 @@ export default function About() {
           </p>
         </div>
         
-        {/* Floating icons with orbital animation */}
+        {}
         <div
           style={{
             position: 'absolute',
@@ -3350,7 +3414,7 @@ export default function About() {
             );
           })}
         </div>
-        {/* Gradient fade at bottom for blending with Develop With Creativity section */}
+        {}
         <div
           style={{
             position: 'absolute',
@@ -3380,7 +3444,7 @@ export default function About() {
           boxSizing: 'border-box'
         }}
       >
-        {/* Video Background */}
+        {}
         <video
           ref={developVideoRef}
           src="/images/develop bg.mp4"
@@ -3388,7 +3452,7 @@ export default function About() {
           loop
           muted
           playsInline
-          preload="metadata"
+          preload={windowSize.width < 768 ? "none" : "metadata"}
           style={{
             position: 'absolute',
             top: 0,
@@ -3423,7 +3487,7 @@ export default function About() {
             }
           }}
         />
-        {/* Gradient fade at top for blending with previous section */}
+        {}
         <div
           style={{
             position: 'absolute',
@@ -3613,7 +3677,7 @@ export default function About() {
             </Suspense>
           </div>
         </div>
-        {/* Gradient fade at bottom for blending with Sing Out Voices section */}
+        {}
         <div
           style={{
             position: 'absolute',
@@ -3656,7 +3720,7 @@ export default function About() {
           transition: 'opacity 0.3s ease-out'
         }}
       >
-        {/* Gradient fade at top for blending with Develop With Creativity section */}
+        {}
         <div
           style={{
             position: 'absolute',
@@ -3670,7 +3734,7 @@ export default function About() {
           }}
         />
         
-        {/* Sing Out Voices Text - Mobile/Tablet */}
+        {}
         {windowSize.width < 1024 && (
           <div 
             style={{
@@ -3722,7 +3786,7 @@ export default function About() {
           </div>
         )}
         
-        {/* Spinning Cards Carousel */}
+        {}
         <div 
           className="relative z-20 w-full flex items-center justify-center"
           style={{
@@ -3806,7 +3870,7 @@ export default function About() {
             </div>
           </div>
         
-        {/* Singing Avatar - Below Carousel */}
+        {}
         <div
           style={{
             position: 'absolute',
@@ -3862,7 +3926,7 @@ export default function About() {
               }}
               dpr={windowSize.width < 768 ? Math.min(window.devicePixelRatio, 1.5) : window.devicePixelRatio}
             >
-              {/* Responsive lighting based on breakpoints */}
+              {}
               {windowSize.width >= 1024 ? (
                 // Desktop lighting
                 <>
@@ -3908,7 +3972,7 @@ export default function About() {
           </Suspense>
         </div>
         
-        {/* Sing Out Voices Text - Desktop */}
+        {}
         {windowSize.width >= 1024 && (
           <div 
             style={{
@@ -3963,7 +4027,7 @@ export default function About() {
           </div>
         )}
 
-        {/* Gradient fade at bottom for blending with travel section - more intense at boundary */}
+        {}
         <div
           style={{
             position: 'absolute',
@@ -3995,7 +4059,7 @@ export default function About() {
           zIndex: 10
         }}
       >
-        {/* Gradient fade at top for blending with Singing section - more intense at boundary, always visible */}
+        {}
         <div
           style={{
             position: 'absolute',
@@ -4009,7 +4073,7 @@ export default function About() {
             opacity: 1
           }}
         />
-        {/* Video Background */}
+        {}
         <video
           ref={travelVideoRef}
           src="https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/IMG_0496.MP4"
@@ -4017,7 +4081,7 @@ export default function About() {
           loop
           muted
           playsInline
-          preload="auto"
+          preload={windowSize.width < 768 ? "none" : "metadata"}
           style={{
             position: 'absolute',
             top: 0,
@@ -4031,7 +4095,7 @@ export default function About() {
             transition: 'opacity 0.8s ease-out'
           }}
         />
-        {/* Gradient fade at bottom for blending with next section */}
+        {}
         <div
           style={{
             position: 'absolute',
@@ -4149,7 +4213,7 @@ export default function About() {
             overflow: 'visible'
           }}
         >
-          {/* Header Section */}
+          {}
           <div style={{ marginBottom: `${calculateSpacing(40)}px`, paddingRight: 'clamp(1.5rem, 4vw, 4rem)' }}>
             {(() => {
               // Header fade-in starts very early - appears when Travel section is at top
@@ -4214,7 +4278,7 @@ export default function About() {
             })()}
           </div>
 
-          {/* Horizontal Scrollable Gallery */}
+          {}
           <div style={{ position: 'relative', width: '100%', zIndex: 10, overflow: 'visible' }}>
             <div
               ref={galleryRef}
@@ -4390,7 +4454,7 @@ export default function About() {
                         }
                       }}
                     />
-                    {/* Location overlay on hover/touch */}
+                    {}
                     {isHovered && item.location && (
                       <div style={{
                         position: 'absolute',
@@ -4417,7 +4481,7 @@ export default function About() {
               })}
             </div>
 
-            {/* Navigation Controls */}
+            {}
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -4578,7 +4642,7 @@ export default function About() {
           position: 'relative'
         }}
       >
-        {/* Video Background */}
+        {}
         <video
           ref={competeVideoRef}
           src="/images/compete bg.mp4"
@@ -4586,7 +4650,7 @@ export default function About() {
           loop
           muted
           playsInline
-          preload="metadata"
+          preload={windowSize.width < 768 ? "none" : "metadata"}
           style={{
             position: 'absolute',
             top: 0,
@@ -4618,7 +4682,7 @@ export default function About() {
             }
           }}
         />
-        {/* Overlay for better text readability - darker overlay for all breakpoints */}
+        {}
         <div
           style={{
             position: 'absolute',
@@ -4631,7 +4695,7 @@ export default function About() {
             pointerEvents: 'none'
           }}
         />
-        {/* Gradient fade at top for blending with previous section */}
+        {}
         <div
           style={{
             position: 'absolute',
@@ -4644,7 +4708,7 @@ export default function About() {
             pointerEvents: 'none'
           }}
         />
-        {/* Gradient fade at bottom for blending with next section */}
+        {}
         <div
           style={{
             position: 'absolute',
@@ -4722,25 +4786,22 @@ export default function About() {
           boxSizing: 'border-box'
         }}
       >
-        {/* Background Music - Ariana Grande Twilight Zone (Instrumental) */}
+        {}
         <audio
           ref={musicAudioRef}
           src="/images/music.m4a"
           loop
-          preload="auto"
+          preload={windowSize.width < 768 ? "none" : "metadata"}
           volume={0.5}
           style={{ display: 'none' }}
-          onError={(e) => {
-            console.error('Audio loading error:', e);
-          }}
+          onError={() => {}}
           onLoadedData={() => {
-            console.log('Audio loaded successfully');
             if (musicAudioRef.current) {
               musicAudioRef.current.volume = 0.5;
             }
           }}
         />
-        {/* Gradient fade at top for blending with previous section */}
+        {}
         <div
           style={{
             position: 'absolute',
@@ -4753,51 +4814,52 @@ export default function About() {
             pointerEvents: 'none'
           }}
         />
-        {/* Video Background */}
-        <video
-          ref={musicVideoRef}
-          src="/images/music.MP4"
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="metadata"
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            objectPosition: 'center',
-            zIndex: 0,
-            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[5] - sectionConfig.fadeOffset - 0.03)) * (sectionConfig.fadeInSpeed * 0.8))),
-            transition: 'opacity 1.5s ease-out'
-          }}
-          onError={(e) => {
-            try {
-              if (e && e.target && !e.target.dataset.errorLogged) {
-                e.target.dataset.errorLogged = 'true';
-                console.warn('Music video failed to load, using fallback background');
-                if (e.target) {
-                  e.target.style.display = 'none';
+        {hasEnteredMusicSection && (
+          <video
+            ref={musicVideoRef}
+            src="/images/music.MP4"
+            autoPlay={false}
+            loop
+            muted
+            playsInline
+            preload={windowSize.width < 768 ? "none" : "metadata"}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              objectPosition: 'center',
+              zIndex: 0,
+              opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[5] - sectionConfig.fadeOffset - 0.03)) * (sectionConfig.fadeInSpeed * 0.8))),
+              transition: 'opacity 1.5s ease-out'
+            }}
+            onError={(e) => {
+              try {
+                if (e && e.target && !e.target.dataset.errorLogged) {
+                  e.target.dataset.errorLogged = 'true';
+                  if (e.target) {
+                    e.target.style.display = 'none';
+                  }
+                }
+              } catch (error) {}
+            }}
+            onLoadStart={() => {
+              if (musicVideoRef.current) {
+                musicVideoRef.current.dataset.errorLogged = 'false';
+              }
+            }}
+            onLoadedMetadata={() => {
+              if (musicVideoRef.current) {
+                musicVideoRef.current.playbackRate = 0.7;
+                if (scrollProgress >= sectionTriggers[5] - 0.05) {
+                  musicVideoRef.current.play().catch(() => {});
                 }
               }
-            } catch (error) {
-              // Silently handle error handler errors
-            }
-          }}
-          onLoadStart={() => {
-            if (musicVideoRef.current) {
-              musicVideoRef.current.dataset.errorLogged = 'false';
-            }
-          }}
-          onLoadedMetadata={() => {
-            if (musicVideoRef.current) {
-              musicVideoRef.current.playbackRate = 0.7;
-            }
-          }}
-        />
+            }}
+          />
+        )}
         <img
           src="/images/music.png"
           alt="Music"
@@ -4876,7 +4938,6 @@ export default function About() {
             Music plays a central role in my life. I primarily listen to pop, Christian, sometimes country and a little rap. I value rhythm and beat as key indicators of a great song. Music both reflects and shapes my mood, bringing balance, energy, and joy to my daily life.
           </p>
         </div>
-        {/* Music Control Button - Small rotating icon */}
         <button
           onClick={toggleMusic}
           style={{
@@ -4920,18 +4981,16 @@ export default function About() {
             }}
           >
             {isMusicPlaying ? (
-              // Pause icon
               <>
                 <rect x="6" y="4" width="4" height="16" fill="currentColor" />
                 <rect x="14" y="4" width="4" height="16" fill="currentColor" />
               </>
             ) : (
-              // Play icon
               <path d="M8 5v14l11-7z" fill="currentColor" />
             )}
           </svg>
         </button>
-        {/* Gradient fade at bottom for blending with next section */}
+        {}
         <div
           style={{
             position: 'absolute',
@@ -4962,7 +5021,7 @@ export default function About() {
           position: 'relative'
         }}
       >
-        {/* Background Image - always visible when section is visible */}
+        {}
         <div
           style={{
             position: 'absolute',
@@ -4982,7 +5041,7 @@ export default function About() {
           }}
         />
         
-        {/* Overlay for better text readability - darker overlay for all breakpoints */}
+        {}
         <div
           style={{
             position: 'absolute',
