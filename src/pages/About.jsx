@@ -944,53 +944,78 @@ export default function About() {
     };
   }, [subtitlePrefixVisible]);
   
-  // Set viewport height and handle mobile address bar collapse - unified for all browsers
+  // Set viewport height and handle mobile address bar collapse - iOS Safari fix
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const updateViewportHeight = () => {
-        const currentVh = window.innerHeight;
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      
+      // Lock viewport height on first load - never update on iOS after initial set
+      const lockInitialViewportHeight = () => {
+        let initialHeight;
         
-        // On iOS, always use visualViewport if available for better address bar handling
-        const height = isIOS && window.visualViewport 
-          ? window.visualViewport.height 
-          : currentVh;
+        if (isIOS && window.visualViewport) {
+          // Use visualViewport API for iOS - get the actual visual viewport
+          initialHeight = window.visualViewport.height;
+        } else {
+          // Fallback for other browsers
+          initialHeight = window.innerHeight;
+        }
         
-        // On first load, always use current viewport height
-        // After that, only update if viewport gets LARGER (prevents shrinking when address bar hides)
-        if (fixedViewportHeight.current === null || isIOS) {
-          const vh = height * 0.01;
-          fixedViewportHeight.current = height;
+        // Only set once on initial load - never update after that on iOS
+        if (fixedViewportHeight.current === null) {
+          fixedViewportHeight.current = initialHeight;
+          const vh = initialHeight * 0.01;
           
-          // Set CSS variables - ensure they're set for all browsers
+          // Set CSS variables
           document.documentElement.style.setProperty('--vh', `${vh}px`);
           document.documentElement.style.setProperty('--fixed-vh', `${vh}px`);
-          document.documentElement.style.setProperty('--fixed-vh-px', `${height}px`);
+          document.documentElement.style.setProperty('--fixed-vh-px', `${initialHeight}px`);
           
           // Update window size state
-          setWindowSize({ width: window.innerWidth, height });
+          setWindowSize({ width: window.innerWidth, height: initialHeight });
+          
+          // On iOS, set body to fixed position to prevent address bar shifts
+          if (isIOS) {
+            document.body.style.position = 'fixed';
+            document.body.style.width = '100%';
+            document.body.style.height = `${initialHeight}px`;
+            document.body.style.overflowY = 'scroll';
+            document.body.style.WebkitOverflowScrolling = 'touch';
+          }
         }
       };
       
       // Set immediately on mount
-      updateViewportHeight();
+      lockInitialViewportHeight();
       
       // Set again after short delay for better browser compatibility
-      const timeoutId = setTimeout(updateViewportHeight, 100);
+      const timeoutId = setTimeout(lockInitialViewportHeight, 100);
       
-      // Listen to iOS-specific viewport changes
-      let visualViewportCleanup = null;
-      if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', updateViewportHeight);
-        visualViewportCleanup = () => {
-          window.visualViewport.removeEventListener('resize', updateViewportHeight);
-        };
+      // On iOS, listen to scroll end to restore touch targets
+      let scrollEndTimer = null;
+      const handleScrollEnd = () => {
+        clearTimeout(scrollEndTimer);
+        scrollEndTimer = setTimeout(() => {
+          // Force reflow to restore touch targets after address bar movement
+          if (isIOS && document.body) {
+            document.body.style.transform = 'translate3d(0,0,0)';
+            // Trigger reflow
+            void document.body.offsetHeight;
+            document.body.style.transform = '';
+          }
+        }, 150);
+      };
+      
+      if (isIOS) {
+        window.addEventListener('scroll', handleScrollEnd, { passive: true });
       }
       
       return () => {
         clearTimeout(timeoutId);
-        if (visualViewportCleanup) {
-          visualViewportCleanup();
+        clearTimeout(scrollEndTimer);
+        if (isIOS) {
+          window.removeEventListener('scroll', handleScrollEnd);
         }
       };
     }
@@ -1084,9 +1109,41 @@ export default function About() {
     }
   }, [windowSize.width]);
 
-  // Intersection Observer for optimized image lazy loading
+  // Intersection Observer for optimized image lazy loading with queue management
   useEffect(() => {
     if (!galleryRef.current || typeof IntersectionObserver === 'undefined') return;
+    
+    let loadingQueue = [];
+    let currentlyLoading = 0;
+    const maxConcurrentLoads = 3; // Limit concurrent image loads
+    const loadDelay = 100; // Delay between loads in ms
+    
+    const processQueue = () => {
+      if (currentlyLoading >= maxConcurrentLoads || loadingQueue.length === 0) {
+        return;
+      }
+      
+      const img = loadingQueue.shift();
+      if (img && img.dataset.src && !img.src) {
+        currentlyLoading++;
+        const dataSrc = img.dataset.src;
+        img.src = dataSrc;
+        img.removeAttribute('data-src');
+        
+        const handleLoadComplete = () => {
+          currentlyLoading--;
+          if (loadingQueue.length > 0) {
+            setTimeout(processQueue, loadDelay);
+          }
+        };
+        
+        img.onload = handleLoadComplete;
+        img.onerror = handleLoadComplete;
+      } else if (loadingQueue.length > 0) {
+        // If current img is invalid, try next one
+        setTimeout(processQueue, loadDelay);
+      }
+    };
     
     const observer = new IntersectionObserver(
       (entries) => {
@@ -1095,15 +1152,18 @@ export default function About() {
             const img = entry.target;
             const dataSrc = img.dataset.src;
             if (dataSrc && !img.src) {
-              img.src = dataSrc;
-              img.removeAttribute('data-src');
-              observer.unobserve(img);
+              // Add to queue instead of loading immediately
+              if (!loadingQueue.includes(img)) {
+                loadingQueue.push(img);
+                observer.unobserve(img);
+              }
+              processQueue();
             }
           }
         });
       },
       { 
-        rootMargin: '200px', // Load 200px before visible
+        rootMargin: windowSize.width < 768 ? '100px' : '150px', // Reduced margin to prevent loading too many at once
         threshold: 0.01 
       }
     );
@@ -1114,8 +1174,10 @@ export default function About() {
     
     return () => {
       observer.disconnect();
+      loadingQueue = [];
+      currentlyLoading = 0;
     };
-  }, [galleryRef.current]);
+  }, [galleryRef.current, windowSize.width]);
 
   // Preload travel video - delay on mobile to improve initial load
   useEffect(() => {
@@ -1591,6 +1653,70 @@ export default function About() {
           min-height: calc(var(--vh, 1vh) * 100);
           /* Safari fallback */
           min-height: -webkit-fill-available;
+        }
+        
+        /* iOS Safari address bar fix */
+        @supports (-webkit-touch-callout: none) {
+          html {
+            height: -webkit-fill-available;
+          }
+          
+          body {
+            /* Lock height to prevent shifts */
+            height: -webkit-fill-available;
+            min-height: -webkit-fill-available;
+            position: fixed;
+            width: 100%;
+            overflow-y: scroll;
+            -webkit-overflow-scrolling: touch;
+            /* Hardware acceleration */
+            transform: translate3d(0, 0, 0);
+            -webkit-transform: translate3d(0, 0, 0);
+          }
+          
+          #root {
+            height: -webkit-fill-available;
+            min-height: -webkit-fill-available;
+            /* Hardware acceleration */
+            transform: translate3d(0, 0, 0);
+            -webkit-transform: translate3d(0, 0, 0);
+          }
+          
+          /* Prevent touch issues after address bar collapse */
+          * {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+          }
+          
+          /* Fix for interactive elements */
+          button, a, [role="button"], [onClick] {
+            touch-action: manipulation;
+            cursor: pointer;
+            /* Ensure clickable after address bar movement */
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+          }
+          
+          /* Canvas and 3D elements - ensure they remain interactive */
+          canvas {
+            touch-action: none !important;
+            pointer-events: auto !important;
+            -webkit-touch-callout: none;
+          }
+          
+          /* Fix for fixed position elements */
+          [style*="position: fixed"], [style*="position:fixed"] {
+            transform: translate3d(0, 0, 0);
+            -webkit-transform: translate3d(0, 0, 0);
+            will-change: transform;
+          }
+          
+          /* Prevent content jump on scroll */
+          .w-full {
+            transform: translate3d(0, 0, 0);
+            -webkit-transform: translate3d(0, 0, 0);
+          }
         }
         
         /* Prevent horizontal scrolling globally */
@@ -3333,7 +3459,7 @@ export default function About() {
                   }}>
                     <img 
                       data-src={item.image}
-                      src={i < 3 ? item.image : undefined}
+                      src={i < 2 ? item.image : undefined}
                       alt={item.title}
                       style={{
                         width: '100%',
@@ -3348,7 +3474,7 @@ export default function About() {
                         willChange: windowSize.width < 768 ? 'auto' : 'transform',
                         opacity: 1
                       }}
-                      loading={i < 3 ? "eager" : "lazy"}
+                      loading={i < 2 ? "eager" : "lazy"}
                       decoding="async"
                       onError={(e) => {
                         try {
