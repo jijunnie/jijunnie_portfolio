@@ -569,7 +569,10 @@ export default function About() {
   const [currentAnimation, setCurrentAnimation] = useState('/animations/idle.fbx');
   const [windowSize, setWindowSize] = useState(() => {
     if (typeof window !== 'undefined') {
-      const initialHeight = window.innerHeight;
+      // Use the maximum height to account for address bar
+      const windowHeight = window.innerHeight;
+      const visualViewportHeight = window.visualViewport ? window.visualViewport.height : windowHeight;
+      const initialHeight = Math.max(windowHeight, visualViewportHeight);
       // Set fixed height on initial load
       fixedViewportHeight.current = initialHeight;
       return { width: window.innerWidth, height: initialHeight };
@@ -947,22 +950,23 @@ export default function About() {
   // Set viewport height and handle mobile address bar collapse - iOS Safari fix
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      // More accurate iOS detection
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && 
+                   !window.MSStream; // Exclude IE
+      const isIOSStandalone = window.navigator.standalone === true;
       
-      // Lock viewport height on first load - never update on iOS after initial set
+      // Lock viewport height on first load - use the largest initial height
       const lockInitialViewportHeight = () => {
         let initialHeight;
         
-        if (isIOS && window.visualViewport) {
-          // Use visualViewport API for iOS - get the actual visual viewport
-          initialHeight = window.visualViewport.height;
-        } else {
-          // Fallback for other browsers
-          initialHeight = window.innerHeight;
-        }
+        // Get the maximum height to account for address bar
+        const windowHeight = window.innerHeight;
+        const visualViewportHeight = window.visualViewport ? window.visualViewport.height : windowHeight;
         
-        // Only set once on initial load - never update after that on iOS
+        // Use the larger value to ensure content is visible
+        initialHeight = Math.max(windowHeight, visualViewportHeight);
+        
+        // Only set once on initial load
         if (fixedViewportHeight.current === null) {
           fixedViewportHeight.current = initialHeight;
           const vh = initialHeight * 0.01;
@@ -975,13 +979,15 @@ export default function About() {
           // Update window size state
           setWindowSize({ width: window.innerWidth, height: initialHeight });
           
-          // On iOS, set body to fixed position to prevent address bar shifts
-          if (isIOS) {
-            document.body.style.position = 'fixed';
-            document.body.style.width = '100%';
-            document.body.style.height = `${initialHeight}px`;
-            document.body.style.overflowY = 'scroll';
-            document.body.style.WebkitOverflowScrolling = 'touch';
+          // Only apply fixed body on iOS Safari (not other mobile browsers)
+          if (isIOS && !isIOSStandalone) {
+            // Use a wrapper approach instead of fixed body to prevent scroll issues
+            const root = document.getElementById('root');
+            if (root) {
+              root.style.height = `${initialHeight}px`;
+              root.style.overflowY = 'auto';
+              root.style.WebkitOverflowScrolling = 'touch';
+            }
           }
         }
       };
@@ -991,6 +997,7 @@ export default function About() {
       
       // Set again after short delay for better browser compatibility
       const timeoutId = setTimeout(lockInitialViewportHeight, 100);
+      const timeoutId2 = setTimeout(lockInitialViewportHeight, 300);
       
       // On iOS, listen to scroll end to restore touch targets
       let scrollEndTimer = null;
@@ -1009,13 +1016,21 @@ export default function About() {
       
       if (isIOS) {
         window.addEventListener('scroll', handleScrollEnd, { passive: true });
+        // Also listen to visualViewport changes
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('scroll', handleScrollEnd, { passive: true });
+        }
       }
       
       return () => {
         clearTimeout(timeoutId);
+        clearTimeout(timeoutId2);
         clearTimeout(scrollEndTimer);
         if (isIOS) {
           window.removeEventListener('scroll', handleScrollEnd);
+          if (window.visualViewport) {
+            window.visualViewport.removeEventListener('scroll', handleScrollEnd);
+          }
         }
       };
     }
@@ -1635,14 +1650,18 @@ export default function About() {
           padding: 0;
           width: 100%;
           overflow-x: hidden;
-          /* Prevent overscroll bounce */
-          overscroll-behavior-y: none;
+          /* Allow vertical scrolling */
+          overflow-y: auto;
+          /* Prevent overscroll bounce but allow scrolling */
+          overscroll-behavior-y: auto;
           /* Use fixed viewport height to prevent shift - unified for all browsers */
           min-height: 100vh;
           min-height: 100dvh;
           min-height: calc(var(--vh, 1vh) * 100);
           /* Safari fallback */
           min-height: -webkit-fill-available;
+          /* Ensure body can scroll */
+          position: relative;
         }
         
         /* Main container uses fixed vh - unified for all browsers */
@@ -1653,38 +1672,37 @@ export default function About() {
           min-height: calc(var(--vh, 1vh) * 100);
           /* Safari fallback */
           min-height: -webkit-fill-available;
+          /* Ensure root can scroll */
+          position: relative;
+          overflow-y: visible;
         }
         
-        /* iOS Safari address bar fix */
+        /* iOS Safari address bar fix - only apply to iOS devices */
         @supports (-webkit-touch-callout: none) {
           html {
             height: -webkit-fill-available;
           }
           
           body {
-            /* Lock height to prevent shifts */
-            height: -webkit-fill-available;
+            /* Don't use fixed position - it breaks scrolling */
             min-height: -webkit-fill-available;
-            position: fixed;
-            width: 100%;
-            overflow-y: scroll;
-            -webkit-overflow-scrolling: touch;
             /* Hardware acceleration */
             transform: translate3d(0, 0, 0);
             -webkit-transform: translate3d(0, 0, 0);
           }
           
           #root {
-            height: -webkit-fill-available;
             min-height: -webkit-fill-available;
             /* Hardware acceleration */
             transform: translate3d(0, 0, 0);
             -webkit-transform: translate3d(0, 0, 0);
+            /* Ensure root can scroll */
+            position: relative;
+            overflow-y: visible;
           }
           
           /* Prevent touch issues after address bar collapse */
           * {
-            touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
           }
           
