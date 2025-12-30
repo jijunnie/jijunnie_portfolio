@@ -602,6 +602,24 @@ export default function About() {
   const isMobile = deviceType === 'mobile';
   const isTablet = deviceType === 'tablet';
   const isDesktop = deviceType === 'desktop';
+  
+  // Proportional scaling helper for Sing Out Voices section
+  // Interpolates between mobile and desktop values for tablet sizes (640px - 1024px)
+  const interpolateValue = useMemo(() => {
+    return (mobileValue, desktopValue) => {
+      const width = windowSize.width;
+      if (width < 640) return mobileValue; // Mobile: use mobile value
+      if (width >= 1024) return desktopValue; // Desktop: use desktop value
+      // Tablet: interpolate between mobile and desktop
+      const progress = (width - 640) / (1024 - 640); // 0 to 1
+      if (typeof mobileValue === 'number' && typeof desktopValue === 'number') {
+        return mobileValue + (desktopValue - mobileValue) * progress;
+      }
+      // For string values like 'clamp()', return desktop for tablet
+      return desktopValue;
+    };
+  }, [windowSize.width]);
+  
   const [modelCenterY, setModelCenterY] = useState(0);
   const [singingModelCenterY, setSingingModelCenterY] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -641,6 +659,7 @@ export default function About() {
   const galleryRef = useRef(null);
   const travelVideoRef = useRef(null);
   const developVideoRef = useRef(null);
+  const competeVideoRef = useRef(null);
   const galleryScrollThrottleRef = useRef(0);
   
   const titleText = 'Hi, I am Jijun Nie';
@@ -1304,15 +1323,28 @@ export default function About() {
   useEffect(() => {
     const isMobile = windowSize.width < 768;
     const videoUrl = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/IMG_0496.MP4';
+    let preloadAttempted = false;
     
     const preloadVideo = () => {
-      const video = document.createElement('video');
-      video.src = videoUrl;
-      video.preload = 'auto';
-      video.muted = true;
-      video.playsInline = true;
-      // Preload the video
-      video.load();
+      if (preloadAttempted) return; // Prevent multiple preload attempts
+      preloadAttempted = true;
+      
+      try {
+        const video = document.createElement('video');
+        video.src = videoUrl;
+        video.preload = 'metadata'; // Use metadata instead of auto to reduce load
+        video.muted = true;
+        video.playsInline = true;
+        video.onerror = () => {
+          // Silently handle preload errors
+          preloadAttempted = false; // Allow retry on error
+        };
+        // Preload the video
+        video.load();
+      } catch (error) {
+        // Silently handle preload errors
+        preloadAttempted = false;
+      }
     };
     
     let timeoutId = null;
@@ -1370,15 +1402,27 @@ export default function About() {
           }
           
           if (developVideoRef.current) {
-            if (shouldPlayDevelop && developVideoRef.current.paused) {
-              developVideoRef.current.play().catch(err => {
-                // Silently handle autoplay errors on mobile
-                if (!isMobile) {
-                  console.warn('Develop video autoplay prevented:', err);
-                }
-              });
-            } else if (!shouldPlayDevelop && !developVideoRef.current.paused) {
-              developVideoRef.current.pause();
+            try {
+              // Check if video is ready and not errored
+              if (developVideoRef.current.error || developVideoRef.current.dataset.errorLogged === 'true') {
+                return; // Skip if video has errors
+              }
+              
+              if (shouldPlayDevelop && developVideoRef.current.paused) {
+                developVideoRef.current.play().catch(err => {
+                  // Silently handle autoplay errors on mobile
+                  if (!isMobile) {
+                    console.warn('Develop video autoplay prevented:', err);
+                  }
+                });
+              } else if (!shouldPlayDevelop && !developVideoRef.current.paused) {
+                developVideoRef.current.pause();
+              }
+            } catch (error) {
+              // Silently handle video control errors
+              if (!isMobile) {
+                console.warn('Error controlling develop video:', error);
+              }
             }
           }
         } catch (error) {
@@ -2314,7 +2358,7 @@ export default function About() {
             position: 'relative',
             zIndex: 10,
             marginLeft: isDesktop
-              ? '32%' 
+              ? '28%'  // Shifted right a little for desktop
               : isTablet
                 ? '15%'  // Tablet: centered with margin
                 : windowSize.width < 480 
@@ -2440,7 +2484,7 @@ export default function About() {
           <div 
             className="absolute pointer-events-auto"
             style={{
-              right: isDesktop ? '2%' : isTablet ? '5%' : 'auto',
+              right: isDesktop ? '2%' : isTablet ? '5%' : 'auto',  // Back to original right bottom position for desktop
               left: isDesktop ? 'auto' : isTablet ? 'auto' : '50%',
               bottom: isDesktop ? '0%' : isTablet ? '5%' : '15%',
               top: isDesktop ? 'auto' : 'auto',
@@ -2532,8 +2576,9 @@ export default function About() {
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
-          overflow: 'hidden',
-          overflowX: 'hidden',
+          overflow: 'visible',  // Changed to visible to allow icons to show
+          overflowX: 'hidden',  // Keep horizontal overflow hidden
+          overflowY: 'visible',  // Allow vertical overflow for icons
           width: '100%',
           maxWidth: '100vw',
           boxSizing: 'border-box'
@@ -2551,7 +2596,13 @@ export default function About() {
               // Use faster fade speed when scrolling up, but slower overall
               const fadeSpeed = scrollDirection.current === 'up' ? sectionConfig.fadeInSpeed * 2.0 : sectionConfig.fadeInSpeed * 1.2;
               const fadeIn = Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[0] - sectionConfig.fadeOffset)) * fadeSpeed));
-              const fadeOut = Math.max(0, Math.min(1, (scrollProgress - (sectionTriggers[1] - 0.08)) / 0.07));
+              // Fade out starts when Develop section begins, completes at the middle of Develop section
+              // Develop section: sectionTriggers[1] (0.20) to sectionTriggers[2] (0.32)
+              // Middle of Develop section: 0.20 + (0.32 - 0.20) / 2 = 0.26
+              const fadeOutStart = sectionTriggers[1] - 0.08; // Start fading out slightly before Develop section (0.12)
+              const fadeOutEnd = sectionTriggers[1] + (sectionTriggers[2] - sectionTriggers[1]) / 2; // Middle of Develop section (0.26)
+              const fadeOutDuration = fadeOutEnd - fadeOutStart; // 0.14 (longer fade out)
+              const fadeOut = Math.max(0, Math.min(1, (scrollProgress - fadeOutStart) / fadeOutDuration));
               return fadeIn * (1 - fadeOut);
             })(),
             transition: 'transform 0.8s ease-out, opacity 0.5s ease-out',  // Same transition for mobile and desktop
@@ -2560,7 +2611,7 @@ export default function About() {
             marginRight: 'auto',
             textAlign: 'center',
             position: 'relative',
-            zIndex: 10
+            zIndex: isDesktop ? 35 : 20  // Higher z-index than icons to ensure text appears on top
           }}
         >
           <h2
@@ -2584,10 +2635,10 @@ export default function About() {
           <p
             style={{
               fontSize: isMobile
-                ? calculateFontSize(20, 12, 26)
+                ? calculateFontSize(22, 14, 28)
                 : isTablet
-                  ? calculateFontSize(22, 14, 26)
-                  : calculateFontSize(22, 16, 28),
+                  ? calculateFontSize(24, 16, 28)
+                  : calculateFontSize(24, 18, 30),
               fontWeight: 400,
               lineHeight: 1.5,
               color: '#525252',
@@ -2611,12 +2662,14 @@ export default function About() {
             right: 0,
             bottom: 0,
             pointerEvents: 'none',
-            zIndex: 5,
-            overflow: 'visible'
+            zIndex: isDesktop ? 25 : 15,  // Higher z-index for desktop to ensure icons appear above previous section's gradient
+            overflow: 'visible',  // Allow icons to overflow and show in other sections
+            clipPath: 'none'  // Ensure no clipping so overflowing icons can show
           }}
         >
           {learningIcons.map((icon, i) => {
             const isMobile = windowSize.width < 768;
+            const isDesktop = windowSize.width >= 1024;
             const animationStart = sectionTriggers[0] - sectionConfig.fadeOffset; // 0.03
             
             // Mobile: Animation completes at 75% of section, but with shorter duration (0.09)
@@ -2630,19 +2683,36 @@ export default function About() {
             }
             
             const sectionProgress = Math.max(0, Math.min(1, (scrollProgress - animationStart) / animationDuration));
-            const fadeOutProgress = Math.max(0, Math.min(1, (scrollProgress - (sectionTriggers[1] - 0.08)) / 0.07));
-            
-            const iconOpacity = sectionProgress * (1 - fadeOutProgress);
+            // Icons should always be visible once they fade in, no fade out effect
+            // Only apply fade in, keep opacity at 1 once visible
+            const iconOpacity = Math.min(1, sectionProgress);
             
             // Create multiple orbital paths - ensure equal distribution across 4 orbits
             // Use round-robin distribution: icon 0→orbit0, icon 1→orbit1, icon 2→orbit2, icon 3→orbit3, icon 4→orbit0, etc.
-            const orbitIndex = i % 4;
+            let orbitIndex = i % 4;
             
             // Count how many icons are in this orbit
-            const iconsInThisOrbit = Math.floor((learningIcons.length - orbitIndex + 3) / 4);
+            let iconsInThisOrbit = Math.floor((learningIcons.length - orbitIndex + 3) / 4);
             
             // Calculate which icon this is within its orbit (0-based)
-            const itemInOrbit = Math.floor(i / 4);
+            let itemInOrbit = Math.floor(i / 4);
+            
+            // Swap Spline and JiMengAI positions on desktop
+            if (isDesktop) {
+              const splineIndex = learningIcons.findIndex(ic => ic.name === 'Spline');
+              const jiMengAIIndex = learningIcons.findIndex(ic => ic.name === 'JiMengAI');
+              if (icon.name === 'Spline' && jiMengAIIndex !== -1) {
+                // Use JiMengAI's position
+                orbitIndex = jiMengAIIndex % 4;
+                itemInOrbit = Math.floor(jiMengAIIndex / 4);
+                iconsInThisOrbit = Math.floor((learningIcons.length - orbitIndex + 3) / 4);
+              } else if (icon.name === 'JiMengAI' && splineIndex !== -1) {
+                // Use Spline's position
+                orbitIndex = splineIndex % 4;
+                itemInOrbit = Math.floor(splineIndex / 4);
+                iconsInThisOrbit = Math.floor((learningIcons.length - orbitIndex + 3) / 4);
+              }
+            }
             
             const totalInOrbit = iconsInThisOrbit;
             
@@ -2673,6 +2743,11 @@ export default function About() {
             let finalX = centerX + Math.cos(angle) * spiralRadius * sectionProgress;
             let finalY = centerY + Math.sin(angle) * spiralRadius * sectionProgress;
             
+            // Shift down all four orbit icons on desktop
+            if (isDesktop) {
+              finalY += 40;  // Shift down by 40px on desktop
+            }
+            
             // Special adjustment for Meitu icon to shift it up
             if (icon.name === 'Meitu') {
               finalY -= 50;
@@ -2685,6 +2760,18 @@ export default function About() {
             // Special adjustment for Blender icon to shift it down
             if (icon.name === 'Blender') {
               finalY += 80;
+            }
+            
+            // Desktop-specific adjustments
+            if (isDesktop) {
+              // Shift Cursor icon down on desktop
+              if (icon.name === 'Cursor') {
+                finalY += 60;
+              }
+              // Shift Claude icon up on desktop
+              if (icon.name === 'Claude') {
+                finalY -= 50;
+              }
             }
             
             // Scale animation
@@ -2724,7 +2811,9 @@ export default function About() {
                   animationDuration: iconOpacity > 0 ? '3s' : 'none',
                   animationTimingFunction: iconOpacity > 0 ? 'ease-in-out' : 'none',
                   animationIterationCount: iconOpacity > 0 ? 'infinite' : 'none',
-                  animationDelay: `${itemInOrbit * 0.2}s`
+                  animationDelay: `${itemInOrbit * 0.2}s`,
+                  zIndex: isDesktop ? 30 : 20,  // Higher z-index for desktop to ensure icons appear above previous section's gradient
+                  overflow: 'visible'  // Ensure icons are not clipped
                 }}
                 title={icon.name}
               >
@@ -2786,7 +2875,7 @@ export default function About() {
           loop
           muted
           playsInline
-          preload="auto"
+          preload="metadata"
           style={{
             position: 'absolute',
             top: 0,
@@ -2798,6 +2887,27 @@ export default function About() {
             zIndex: 0,
             opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[1] - sectionConfig.fadeOffset - 0.03)) * (sectionConfig.fadeInSpeed * 0.8))),
             transition: 'opacity 1.5s ease-out'
+          }}
+          onError={(e) => {
+            try {
+              // Prevent repeated error logging
+              if (e && e.target && !e.target.dataset.errorLogged) {
+                e.target.dataset.errorLogged = 'true';
+                console.warn('Develop video failed to load, using fallback background');
+                // Hide video element on error
+                if (e.target) {
+                  e.target.style.display = 'none';
+                }
+              }
+            } catch (error) {
+              // Silently handle error handler errors
+            }
+          }}
+          onLoadStart={() => {
+            // Reset error flag when loading starts
+            if (developVideoRef.current) {
+              developVideoRef.current.dataset.errorLogged = 'false';
+            }
           }}
         />
         {/* Gradient fade at top for blending with previous section */}
@@ -2816,14 +2926,20 @@ export default function About() {
         <div 
           className="w-full"
           style={{
-            paddingTop: 'clamp(4rem, 8vw, 8rem)',
+            paddingTop: windowSize.width < 768 
+              ? 'clamp(5rem, 10vw, 9rem)'  // Slightly increased padding on mobile
+              : 'clamp(4rem, 8vw, 8rem)',
             paddingBottom: 'clamp(3rem, 6vw, 6rem)',
             paddingLeft: 'clamp(1.5rem, 4vw, 4rem)',
             paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
             maxWidth: '1400px',
             marginLeft: 'auto',
             marginRight: 'auto',
-            transform: `translateY(${-100 + Math.max(0, (scrollProgress - sectionTriggers[1]) * -sectionConfig.translateYAmplitude)}px)`,
+            transform: windowSize.width < 768
+              ? `translateY(${-100 + Math.max(0, (scrollProgress - sectionTriggers[1]) * -sectionConfig.translateYAmplitude) + 30}px)`  // Add 30px shift down on mobile
+              : windowSize.width >= 1024
+              ? `translateY(${-120 + Math.max(0, (scrollProgress - sectionTriggers[1]) * -sectionConfig.translateYAmplitude)}px)`  // Shift up a bit for desktop
+              : `translateY(${-100 + Math.max(0, (scrollProgress - sectionTriggers[1]) * -sectionConfig.translateYAmplitude)}px)`,
             opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[1] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
             transition: 'transform 0.8s ease-out, opacity 0.8s ease-out',
             position: 'relative',
@@ -2849,12 +2965,12 @@ export default function About() {
             <p
               style={{
                 fontSize: windowSize.width < 768 
-                  ? calculateFontSize(18, 9, 22)
-                  : calculateFontSize(20, 14, 24),
+                  ? calculateFontSize(22, 13, 26)
+                  : calculateFontSize(24, 18, 28),
                 fontWeight: 400,
                 lineHeight: 1.6,
                 color: '#ffffff',
-                maxWidth: '700px',
+                maxWidth: windowSize.width >= 1024 ? '900px' : '700px',  // Wider container on desktop
                 textShadow: '0 1px 4px rgba(0, 0, 0, 0.5)'
               }}
             >
@@ -2865,7 +2981,12 @@ export default function About() {
           <div style={{
             display: 'grid',
             gridTemplateColumns: windowSize.width >= 1024 ? 'repeat(3, 1fr)' : windowSize.width >= 640 ? 'repeat(2, 1fr)' : '1fr',
-            gap: `${calculateSpacing(32)}px`
+            gap: `${calculateSpacing(32)}px`,
+            marginTop: windowSize.width < 768 
+              ? `${calculateSpacing(20)}px`  // Add extra margin on mobile to shift boxes down
+              : windowSize.width >= 1024 
+              ? '-20px'  // Shift up on desktop
+              : '0'
           }}>
             {[
               { title: 'Innovative Solutions', description: 'Develop projects that create meaningful, measurable impact for communities' },
@@ -2921,9 +3042,9 @@ export default function About() {
           style={{
             position: 'absolute',
             right: windowSize.width < 640 ? '1rem' : '2rem',
-            bottom: windowSize.width < 640 ? '0.5rem' : '1rem',
-            width: windowSize.width < 640 ? 'clamp(120px, 25vw, 150px)' : 
-                   windowSize.width < 768 ? 'clamp(150px, 30vw, 200px)' :
+            bottom: windowSize.width < 640 ? '-0.5rem' : windowSize.width < 768 ? '-0.5rem' : '0',  // Shift down even more
+            width: windowSize.width < 640 ? 'clamp(180px, 40vw, 220px)' :  // Bigger container for mobile
+                   windowSize.width < 768 ? 'clamp(200px, 40vw, 280px)' :  // Bigger container for mobile
                    windowSize.width < 1024 ? 'clamp(200px, 35vw, 300px)' :
                    windowSize.width < 1440 ? 'clamp(250px, 40vw, 400px)' : 'clamp(300px, 40vw, 500px)',
             aspectRatio: '1 / 1',
@@ -2962,7 +3083,9 @@ export default function About() {
               </div>
             }>
               <Spline 
-                scene="https://prod.spline.design/o2BjYpYprFxeYswd/scene.splinecode"
+                scene={windowSize.width < 768 
+                  ? "https://prod.spline.design/a-Lkih3pG1Z1zQP8/scene.splinecode"  // Mobile: different scene
+                  : "https://prod.spline.design/o2BjYpYprFxeYswd/scene.splinecode"}  // Desktop/Tablet: original scene
                 style={{
                   width: '100%',
                   height: '100%',
@@ -3038,10 +3161,12 @@ export default function About() {
           <div 
             style={{
               position: 'absolute',
-              top: windowSize.width < 640 ? 'clamp(9rem, 16vw, 11rem)' : 'clamp(10rem, 18vw, 12rem)',
+              top: windowSize.width < 640 
+                ? 'clamp(7rem, 14vw, 9rem)' 
+                : `${interpolateValue(12, 15)}%`,  // Interpolate between tablet start (12%) and desktop (15%)
               left: '50%',
               textAlign: 'center',
-              maxWidth: '800px',
+              maxWidth: windowSize.width < 640 ? '800px' : `${interpolateValue(800, 1000)}px`,
               width: '90%',
               paddingLeft: '1rem',
               paddingRight: '1rem',
@@ -3068,8 +3193,8 @@ export default function About() {
             <p
               style={{
                 fontSize: windowSize.width < 768 
-                  ? calculateFontSize(20, 12, 26)
-                  : calculateFontSize(20, 14, 24),
+                  ? calculateFontSize(22, 14, 28)
+                  : calculateFontSize(22, 16, 26),
                 fontWeight: 400,
                 lineHeight: 1.6,
                 color: '#525252',
@@ -3088,9 +3213,13 @@ export default function About() {
           className="relative z-20 w-full flex items-center justify-center"
           style={{
             position: 'absolute',
-            top: windowSize.width >= 1024 ? '42%' : windowSize.width < 640 ? 'clamp(24rem, 50vw, 30rem)' : 'clamp(26rem, 54vw, 32rem)',
+            top: windowSize.width >= 1024 
+              ? '38%' 
+              : windowSize.width < 640 
+              ? 'clamp(22rem, 48vw, 28rem)' 
+              : `${interpolateValue(24, 38)}%`,  // Interpolate between tablet mobile equivalent and desktop
             left: '50%',
-            transform: `translate(-50%, -50%) translateY(${Math.max(0, (scrollProgress - sectionTriggers[2]) * -sectionConfig.translateYAmplitude)}px) ${windowSize.width < 768 ? 'scale(0.75)' : ''}`,  // Scale down on mobile
+            transform: `translate(-50%, -50%) translateY(${Math.max(0, (scrollProgress - sectionTriggers[2]) * -sectionConfig.translateYAmplitude)}px) ${windowSize.width < 640 ? 'scale(0.75)' : windowSize.width >= 1024 ? 'scale(1)' : `scale(${interpolateValue(0.75, 1)})`}`,  // Proportional scale for tablet
             opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[2] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
             transition: 'transform 0.8s ease-out, opacity 0.8s ease-out',
             width: '100%',
@@ -3167,13 +3296,29 @@ export default function About() {
         <div
           style={{
             position: 'absolute',
-            bottom: windowSize.width >= 1024 ? '3vh' : windowSize.width >= 640 ? '13vh' : '8vh',
-            left: windowSize.width >= 1024 ? 'calc(50% - 30px)' : windowSize.width >= 640 ? 'calc(50% - 25px)' : 'calc(50% - 20px)',
+            bottom: windowSize.width >= 1024 
+              ? '3vh' 
+              : windowSize.width < 640 
+              ? '8vh' 
+              : `${interpolateValue(13, 3)}vh`,  // Interpolate between tablet mobile equivalent and desktop
+            left: windowSize.width >= 1024 
+              ? 'calc(50% - 30px)' 
+              : windowSize.width < 640 
+              ? 'calc(50% - 20px)' 
+              : `calc(50% - ${interpolateValue(25, 30)}px)`,  // Interpolate between tablet and desktop
             transform: `translateX(-50%) translateY(${Math.max(0, (scrollProgress - sectionTriggers[2]) * -sectionConfig.translateYAmplitude)}px)`,
             opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[2] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
             transition: 'transform 0.8s ease-out, opacity 0.8s ease-out',
-            width: windowSize.width >= 1024 ? '680px' : windowSize.width >= 640 ? '600px' : '500px',
-            height: windowSize.width >= 1024 ? '500px' : windowSize.width >= 640 ? '450px' : '400px',
+            width: windowSize.width >= 1024 
+              ? '680px' 
+              : windowSize.width < 640 
+              ? '500px' 
+              : `${interpolateValue(600, 680)}px`,  // Interpolate between tablet and desktop
+            height: windowSize.width >= 1024 
+              ? '500px' 
+              : windowSize.width < 640 
+              ? '400px' 
+              : `${interpolateValue(450, 500)}px`,  // Interpolate between tablet and desktop
             zIndex: 15,
             pointerEvents: 'none',
             overflow: 'visible',
@@ -3234,8 +3379,16 @@ export default function About() {
               )}
               <Avatar
                 animationPath="/animations/Singing.fbx"
-                scale={windowSize.width >= 1024 ? 1.6 : windowSize.width >= 640 ? 1.45 : 1.3}
-                position={windowSize.width < 768 ? [0, -1.8, 0] : [0, -1.5, 0]}  // Shift down on mobile (more negative Y = down)
+                scale={windowSize.width >= 1024 
+                  ? 1.4 
+                  : windowSize.width < 640 
+                  ? 1.3 
+                  : interpolateValue(1.45, 1.4)}  // Interpolate between tablet and desktop
+                position={windowSize.width < 640 
+                  ? [0, -1.8, 0] 
+                  : windowSize.width >= 1024
+                  ? [0, -1.5, 0]
+                  : [0, interpolateValue(-1.65, -1.5), 0]}  // Interpolate Y position between tablet and desktop
               />
             </Canvas>
           </Suspense>
@@ -3246,7 +3399,7 @@ export default function About() {
           <div 
             style={{
               position: 'absolute',
-              top: '18%',
+              top: '15%',  // Shifted up for desktop
               left: '50%',
               textAlign: 'center',
               maxWidth: '1000px',
@@ -3276,8 +3429,8 @@ export default function About() {
           <p
             style={{
               fontSize: windowSize.width < 768 
-                ? calculateFontSize(20, 12, 26)
-                : calculateFontSize(20, 14, 24),
+                ? calculateFontSize(22, 14, 28)
+                : calculateFontSize(22, 16, 26),
               fontWeight: 400,
               lineHeight: 1.6,
               color: '#525252',
@@ -3414,8 +3567,8 @@ export default function About() {
           <p
             style={{
               fontSize: windowSize.width < 768 
-                ? calculateFontSize(20, 12, 26)
-                : calculateFontSize(20, 14, 24),
+                ? calculateFontSize(22, 14, 28)
+                : calculateFontSize(22, 16, 26),
               fontWeight: 400,
               lineHeight: 1.6,
               color: '#ffffff',
@@ -3526,8 +3679,8 @@ export default function About() {
                   <p
                     style={{
                       fontSize: windowSize.width < 768 
-                        ? calculateFontSize(20, 10, 24)
-                        : calculateFontSize(20, 14, 24),
+                        ? calculateFontSize(22, 12, 26)
+                        : calculateFontSize(22, 16, 26),
                       fontWeight: 400,
                       lineHeight: 1.6,
                       color: '#525252',
@@ -3907,9 +4060,76 @@ export default function About() {
           overflowX: 'hidden',
           width: '100%',
           maxWidth: '100vw',
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          position: 'relative'
         }}
       >
+        {/* Video Background */}
+        <video
+          ref={competeVideoRef}
+          src="/images/compete bg.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center',
+            zIndex: 0,
+            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[4] - sectionConfig.fadeOffset - 0.03)) * (sectionConfig.fadeInSpeed * 0.8))),
+            transition: 'opacity 1.5s ease-out'
+          }}
+          onError={(e) => {
+            try {
+              if (e && e.target && !e.target.dataset.errorLogged) {
+                e.target.dataset.errorLogged = 'true';
+                console.warn('Compete video failed to load, using fallback background');
+                if (e.target) {
+                  e.target.style.display = 'none';
+                }
+              }
+            } catch (error) {
+              // Silently handle error handler errors
+            }
+          }}
+          onLoadStart={() => {
+            if (competeVideoRef.current) {
+              competeVideoRef.current.dataset.errorLogged = 'false';
+            }
+          }}
+        />
+        {/* Gradient fade at top for blending with previous section */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '400px',
+            background: 'linear-gradient(to bottom, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.85) 20%, rgba(255, 255, 255, 0.6) 40%, rgba(255, 255, 255, 0.3) 60%, rgba(255, 255, 255, 0.1) 80%, transparent 100%)',
+            zIndex: 1,
+            pointerEvents: 'none'
+          }}
+        />
+        {/* Gradient fade at bottom for blending with next section */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '400px',
+            background: 'linear-gradient(to top, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.85) 20%, rgba(255, 255, 255, 0.6) 40%, rgba(255, 255, 255, 0.3) 60%, rgba(255, 255, 255, 0.1) 80%, transparent 100%)',
+            zIndex: 1,
+            pointerEvents: 'none'
+          }}
+        />
         <div 
           className="w-full"
           style={{
@@ -3918,12 +4138,14 @@ export default function About() {
             paddingLeft: 'clamp(1.5rem, 4vw, 4rem)',
             paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
             maxWidth: '1200px',
-            marginLeft: 'auto',
-            marginRight: 'auto',
             textAlign: 'left',
             transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[4]) * -sectionConfig.translateYAmplitude)}px)`,
             opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[4] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
-            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out'
+            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out',
+            position: 'absolute',
+            bottom: windowSize.width < 768 ? 'clamp(2rem, 5vw, 4rem)' : 0,
+            left: 0,
+            zIndex: 2
           }}
         >
           <h2
