@@ -611,21 +611,144 @@ export default function About() {
     return { width: 1920, height: 1080 };
   });
   
-  // Device type detection with error handling
-  const deviceType = useMemo(() => {
+  // Comprehensive device and browser detection
+  const deviceInfo = useMemo(() => {
     try {
       const width = windowSize.width;
-      if (width < 640) return 'mobile';
-      if (width >= 640 && width < 1024) return 'tablet';
-      return 'desktop';
+      const ua = typeof navigator !== 'undefined' ? navigator.userAgent.toLowerCase() : '';
+      const platform = typeof navigator !== 'undefined' ? navigator.platform.toLowerCase() : '';
+      
+      // Device type detection
+      let deviceType = 'desktop';
+      if (width < 640) {
+        deviceType = 'mobile';
+      } else if (width >= 640 && width < 1024) {
+        deviceType = 'tablet';
+      }
+      
+      // Browser detection
+      let browser = 'unknown';
+      let browserVersion = 0;
+      if (ua.includes('chrome') && !ua.includes('edg')) {
+        browser = 'chrome';
+        const match = ua.match(/chrome\/(\d+)/);
+        browserVersion = match ? parseInt(match[1]) : 0;
+      } else if (ua.includes('safari') && !ua.includes('chrome')) {
+        browser = 'safari';
+        const match = ua.match(/version\/(\d+)/);
+        browserVersion = match ? parseInt(match[1]) : 0;
+      } else if (ua.includes('firefox')) {
+        browser = 'firefox';
+        const match = ua.match(/firefox\/(\d+)/);
+        browserVersion = match ? parseInt(match[1]) : 0;
+      } else if (ua.includes('edg')) {
+        browser = 'edge';
+        const match = ua.match(/edg\/(\d+)/);
+        browserVersion = match ? parseInt(match[1]) : 0;
+      }
+      
+      // OS detection
+      let os = 'unknown';
+      if (ua.includes('android')) os = 'android';
+      else if (ua.includes('iphone') || ua.includes('ipad') || ua.includes('ipod')) os = 'ios';
+      else if (ua.includes('mac')) os = 'macos';
+      else if (ua.includes('win')) os = 'windows';
+      else if (ua.includes('linux')) os = 'linux';
+      
+      // Performance tier detection (based on hardware concurrency, memory hints, and device type)
+      let performanceTier = 'high'; // Default to high for desktop
+      if (deviceType === 'mobile') {
+        // Check for low-end device indicators
+        const hardwareConcurrency = typeof navigator !== 'undefined' ? (navigator.hardwareConcurrency || 4) : 4;
+        const deviceMemory = typeof navigator !== 'undefined' ? (navigator.deviceMemory || 4) : 4;
+        
+        // Low-end: < 4 cores or < 4GB RAM
+        if (hardwareConcurrency < 4 || deviceMemory < 4) {
+          performanceTier = 'low';
+        } 
+        // Mid-range: 4-6 cores or 4-6GB RAM
+        else if (hardwareConcurrency <= 6 && deviceMemory <= 6) {
+          performanceTier = 'medium';
+        }
+        // High-end: > 6 cores and > 6GB RAM
+        else {
+          performanceTier = 'high';
+        }
+        
+        // Additional checks for known low-end devices
+        if (ua.includes('android') && (ua.includes('go edition') || ua.includes('lite'))) {
+          performanceTier = 'low';
+        }
+      } else if (deviceType === 'tablet') {
+        performanceTier = 'medium'; // Tablets are generally medium performance
+      }
+      
+      // Safari-specific optimizations (especially iOS Safari)
+      const isSafari = browser === 'safari';
+      const isIOSSafari = isSafari && os === 'ios';
+      const isAndroid = os === 'android';
+      
+      return {
+        deviceType,
+        browser,
+        browserVersion,
+        os,
+        performanceTier, // 'low', 'medium', 'high'
+        isMobile: deviceType === 'mobile',
+        isTablet: deviceType === 'tablet',
+        isDesktop: deviceType === 'desktop',
+        isSafari,
+        isIOSSafari,
+        isAndroid,
+        isChrome: browser === 'chrome',
+        isFirefox: browser === 'firefox',
+        isEdge: browser === 'edge',
+        // Performance flags
+        shouldReduceAnimations: performanceTier === 'low' || (deviceType === 'mobile' && performanceTier === 'medium'),
+        shouldDisable3D: performanceTier === 'low',
+        shouldLazyLoadImages: deviceType === 'mobile' || performanceTier === 'low' || performanceTier === 'medium',
+        shouldReduceParticles: performanceTier === 'low' || deviceType === 'mobile',
+        shouldOptimizeVideo: deviceType === 'mobile' || isIOSSafari,
+        maxConcurrentImageLoads: performanceTier === 'low' ? 1 : performanceTier === 'medium' ? 2 : deviceType === 'mobile' ? 2 : 6,
+        imageLoadDelay: performanceTier === 'low' ? 500 : performanceTier === 'medium' ? 300 : deviceType === 'mobile' ? 200 : 0,
+        scrollThrottle: performanceTier === 'low' ? 200 : performanceTier === 'medium' ? 100 : deviceType === 'mobile' ? 100 : 16,
+        animationFrameRate: performanceTier === 'low' ? 20 : performanceTier === 'medium' ? 30 : deviceType === 'mobile' ? 30 : 60
+      };
     } catch (error) {
-      return 'desktop';
+      console.error('Error detecting device info:', error);
+      // Fallback to safe defaults
+      return {
+        deviceType: 'desktop',
+        browser: 'unknown',
+        browserVersion: 0,
+        os: 'unknown',
+        performanceTier: 'medium',
+        isMobile: false,
+        isTablet: false,
+        isDesktop: true,
+        isSafari: false,
+        isIOSSafari: false,
+        isAndroid: false,
+        isChrome: false,
+        isFirefox: false,
+        isEdge: false,
+        shouldReduceAnimations: false,
+        shouldDisable3D: false,
+        shouldLazyLoadImages: false,
+        shouldReduceParticles: false,
+        shouldOptimizeVideo: false,
+        maxConcurrentImageLoads: 6,
+        imageLoadDelay: 0,
+        scrollThrottle: 16,
+        animationFrameRate: 60
+      };
     }
   }, [windowSize.width]);
   
-  const isMobile = deviceType === 'mobile';
-  const isTablet = deviceType === 'tablet';
-  const isDesktop = deviceType === 'desktop';
+  // Extract commonly used properties for backward compatibility
+  const isMobile = deviceInfo.isMobile;
+  const isTablet = deviceInfo.isTablet;
+  const isDesktop = deviceInfo.isDesktop;
   
   // Proportional scaling helper for Sing Out Voices section
   // Interpolates between mobile and desktop values for tablet sizes (640px - 1024px)
@@ -795,16 +918,21 @@ export default function About() {
       cameraPosition: isMobile ? [0, 0.8, 3.5] : isTablet ? [0, 1.0, 4.2] : [0, 1, 4.5],
       cameraFov: isMobile ? 55 : isTablet ? 50 : 50,
     };
-  }, [isMobile, isTablet]);
+  }, [deviceInfo]);
   
-  // Preload gallery images with concurrency control to prevent crashes
+  // Preload gallery images with concurrency control based on device and browser
   const preloadGalleryImages = useCallback(() => {
     if (galleryPreloadRef.current) return; // Already started
     galleryPreloadRef.current = true;
     
-    // Reduce concurrent loads on mobile to prevent crashes and refresh
-    const isMobile = windowSize.width < 768;
-    const CONCURRENT_LOADS = isMobile ? 2 : 6; // Load fewer images on mobile
+    // Use device-specific settings
+    const CONCURRENT_LOADS = deviceInfo.maxConcurrentImageLoads;
+    const INITIAL_DELAY = deviceInfo.imageLoadDelay;
+    const BATCH_DELAY = deviceInfo.performanceTier === 'low' ? 500 : 
+                       deviceInfo.performanceTier === 'medium' ? 300 : 
+                       deviceInfo.isMobile ? 200 : 50;
+    const TIMEOUT = deviceInfo.performanceTier === 'low' ? 15000 : 10000;
+    
     let currentIndex = 0;
     const loadedImages = new Set();
     const failedImages = new Set();
@@ -819,11 +947,11 @@ export default function About() {
         
         const img = new Image();
         
-        // Set timeout to prevent hanging
+        // Set timeout to prevent hanging (longer for low-end devices)
         const timeout = setTimeout(() => {
           failedImages.add(src);
           resolve();
-        }, 10000); // 10 second timeout per image
+        }, TIMEOUT);
         
         img.onload = () => {
           clearTimeout(timeout);
@@ -860,54 +988,55 @@ export default function About() {
       currentIndex = endIndex;
       
       if (currentIndex < galleryImages.length) {
-        // Longer delay on mobile to prevent crashes
-        const delay = isMobile ? 300 : 50;
-        setTimeout(loadBatch, delay);
+        setTimeout(loadBatch, BATCH_DELAY);
       } else {
         setGalleryImagesPreloaded(true);
       }
     };
     
-    // Delay preloading on mobile to prevent initial crash
-    if (isMobile) {
+    // Delay preloading based on device performance
+    const startDelay = deviceInfo.performanceTier === 'low' ? 5000 :
+                      deviceInfo.performanceTier === 'medium' ? 3000 :
+                      deviceInfo.isMobile ? 2000 : 0;
+    
+    if (startDelay > 0) {
       setTimeout(() => {
         requestAnimationFrame(() => {
           loadBatch();
         });
-      }, 2000); // Delay 2 seconds on mobile
+      }, startDelay);
     } else {
-      // Start loading immediately on desktop
       requestAnimationFrame(() => {
         loadBatch();
       });
     }
-  }, [galleryImages, windowSize.width]);
+  }, [galleryImages, deviceInfo]);
   
   useEffect(() => {
     // Set page ready immediately to prevent flash
     setPageReady(true);
     
-    // On mobile/tablet, use a simpler, faster initialization to avoid lag and crashes
-    if (isMobile || isTablet) {
-      // Immediate opacity for mobile/tablet to prevent flash
-      setPageOpacity(1);
-      // Delay 3D models longer on mobile to prevent crashes and refresh
+    // Use device-specific initialization based on performance tier
+    setPageOpacity(1);
+    
+    if (deviceInfo.shouldDisable3D) {
+      // Low-end devices: disable 3D models completely
+      setModelsVisible(false);
+    } else if (deviceInfo.performanceTier === 'low' || deviceInfo.isMobile) {
+      // Low-end or mobile: delay 3D models significantly
+      const delay = deviceInfo.performanceTier === 'low' ? 2000 : deviceInfo.isMobile ? 500 : 200;
       setTimeout(() => {
         try {
           setModelsVisible(true);
         } catch (error) {
           console.error('Error setting models visible:', error);
         }
-      }, isMobile ? 500 : 200); // Longer delay on mobile
+      }, delay);
     } else {
-      // Desktop: optimize initialization to reduce lag
-      // Set opacity immediately for faster perceived load
-      setPageOpacity(1);
-      // Use triple RAF to ensure smooth rendering after browser paint
+      // Desktop/High-end: optimize initialization to reduce lag
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
-            // Delay models slightly to allow page to render first
             setTimeout(() => {
               setModelsVisible(true);
             }, 50);
@@ -915,7 +1044,7 @@ export default function About() {
         });
       });
     }
-  }, [windowSize.width]);
+  }, [deviceInfo]);
   
   const titleTypingRef = useRef({ currentIndex: 0, timeoutId: null });
   
@@ -973,42 +1102,44 @@ export default function About() {
   }, [subtitlePrefixVisible]);
   
   useEffect(() => {
-    // Disable mouse tracking on mobile to improve performance
-    if (isMobile || isTablet) {
-      return; // Disable mouse tracking on mobile/tablet
+    // Disable mouse tracking on mobile/tablet or low-performance devices to improve performance
+    if (deviceInfo.isMobile || deviceInfo.isTablet || deviceInfo.performanceTier === 'low') {
+      return; // Disable mouse tracking on mobile/tablet/low-end devices
     }
     
+    const throttleTime = deviceInfo.performanceTier === 'medium' ? 32 : 16; // ~30fps for medium, ~60fps for high
     const handleMouseMove = throttle((e) => {
       const x = (e.clientX / window.innerWidth - 0.5) * 2;
       // Use fixed viewport height to prevent content shift
       const fixedHeight = fixedViewportHeight.current || window.innerHeight;
       const y = (e.clientY / fixedHeight - 0.5) * 2;
       setMousePosition({ x, y });
-    }, 16); // ~60fps
+    }, throttleTime);
     
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
     return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, [windowSize.width]);
+  }, [deviceInfo]);
   
-  // Start preloading gallery images with delay on mobile to prevent crashes
+  // Start preloading gallery images based on device performance
   // This ensures images are ready when user reaches the "Capture the Beauty" section
   useEffect(() => {
-    const isMobile = windowSize.width < 768;
-    if (isMobile) {
-      // Delay preloading on mobile to prevent initial crash
+    const delay = deviceInfo.performanceTier === 'low' ? 5000 :
+                 deviceInfo.performanceTier === 'medium' ? 3000 :
+                 deviceInfo.isMobile ? 2000 : 0;
+    
+    if (delay > 0) {
       const timeoutId = setTimeout(() => {
         preloadGalleryImages();
-      }, 3000); // Delay 3 seconds on mobile
+      }, delay);
       return () => clearTimeout(timeoutId);
     } else {
-      // Start preloading immediately on desktop
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           preloadGalleryImages();
         });
       });
     }
-  }, [preloadGalleryImages, windowSize.width]);
+  }, [preloadGalleryImages, deviceInfo]);
   
   // Preload sport background images
   useEffect(() => {
@@ -1041,9 +1172,10 @@ export default function About() {
           return;
         }
         
-        // Throttle updates on mobile more aggressively to prevent crashes
+        // Throttle updates based on device performance to prevent crashes
         const now = Date.now();
-        if (isMobile && now - lastUpdateTime < 100) {
+        const throttleMs = deviceInfo.scrollThrottle;
+        if (now - lastUpdateTime < throttleMs) {
           ticking = false;
           return;
         }
@@ -1070,8 +1202,10 @@ export default function About() {
         }
         
         // Only update if progress changed significantly to prevent unnecessary re-renders
-        // Use much larger threshold on mobile to prevent crashes and refresh
-        const progressThreshold = isMobile ? 0.015 : 0.001;
+        // Use larger threshold on low-performance devices to prevent crashes
+        const progressThreshold = deviceInfo.performanceTier === 'low' ? 0.02 :
+                                 deviceInfo.performanceTier === 'medium' ? 0.015 :
+                                 deviceInfo.isMobile ? 0.01 : 0.001;
         const progressDiff = Math.abs(progress - previousScrollProgress.current);
         if (progressDiff < progressThreshold) {
           ticking = false;
@@ -1122,9 +1256,8 @@ export default function About() {
       }
     };
     
-    // Throttle scroll event listener more aggressively on mobile to prevent crashes
-    // Use much longer throttle on mobile to prevent refresh and crashes
-    const throttleTime = isMobile ? 200 : 16;
+    // Throttle scroll event listener based on device performance to prevent crashes
+    const throttleTime = deviceInfo.scrollThrottle;
     const throttledHandleScroll = throttle(handleScroll, throttleTime);
     
     try {
@@ -1155,7 +1288,7 @@ export default function About() {
         console.warn('Error cleaning up scroll listener:', error);
       }
     };
-  }, [windowSize.width, isMobile]);
+  }, [windowSize.width, deviceInfo]);
   
   const typingStateRef = useRef({
     currentCharIndex: 0,
@@ -1551,9 +1684,11 @@ export default function About() {
     };
     
     let timeoutId = null;
-    if (isMobile) {
-      // Delay video preload significantly on mobile to prevent crashes and refresh
-      timeoutId = setTimeout(preloadVideo, 5000); // Increased delay to 5 seconds
+    if (deviceInfo.shouldOptimizeVideo || deviceInfo.performanceTier === 'low') {
+      // Delay video preload significantly on mobile/low-end devices to prevent crashes
+      const delay = deviceInfo.performanceTier === 'low' ? 8000 : 
+                   deviceInfo.isMobile ? 5000 : 3000;
+      timeoutId = setTimeout(preloadVideo, delay);
     } else {
       preloadVideo();
     }
@@ -1563,7 +1698,7 @@ export default function About() {
         clearTimeout(timeoutId);
       }
     };
-  }, [windowSize.width]);
+  }, [deviceInfo]);
 
   // Control video playback based on scroll position - throttled to prevent crashes
   useEffect(() => {
@@ -4108,8 +4243,9 @@ export default function About() {
                   const newScroll = scrollWidth > 0 && !isNaN(scrollLeft) && !isNaN(scrollWidth) 
                     ? Math.min(Math.max(0, scrollLeft / scrollWidth), 1) 
                     : 0;
-                  // Throttle updates on mobile
-                  if (!isMobile || Date.now() - (galleryScrollThrottleRef.current || 0) > 100) {
+                  // Throttle updates based on device performance
+                  const throttleTime = deviceInfo.scrollThrottle;
+                  if (Date.now() - (galleryScrollThrottleRef.current || 0) > throttleTime) {
                     galleryScrollThrottleRef.current = Date.now();
                     setGalleryScroll(newScroll);
                   }
@@ -4218,9 +4354,9 @@ export default function About() {
                     height: '100%',
                     position: 'relative',
                     overflow: 'hidden',
-                    backfaceVisibility: 'hidden',
-                    WebkitBackfaceVisibility: 'hidden',
-                    transform: 'translateZ(0)',
+                    backfaceVisibility: windowSize.width < 768 ? 'visible' : 'hidden',
+                    WebkitBackfaceVisibility: windowSize.width < 768 ? 'visible' : 'hidden',
+                    transform: windowSize.width < 768 ? 'none' : 'translateZ(0)',
                     willChange: windowSize.width < 768 ? 'auto' : 'transform'
                   }}>
                     <img 
@@ -4233,13 +4369,13 @@ export default function About() {
                         display: 'block',
                         imageRendering: 'auto',
                         WebkitImageRendering: 'auto',
-                        backfaceVisibility: 'hidden',
-                        WebkitBackfaceVisibility: 'hidden',
-                        transform: 'translateZ(0)',
+                        backfaceVisibility: windowSize.width < 768 ? 'visible' : 'hidden',
+                        WebkitBackfaceVisibility: windowSize.width < 768 ? 'visible' : 'hidden',
+                        transform: windowSize.width < 768 ? 'none' : 'translateZ(0)',
                         willChange: windowSize.width < 768 ? 'auto' : 'transform',
                         opacity: 1
                       }}
-                      loading="eager"
+                      loading={deviceInfo.shouldLazyLoadImages ? "lazy" : "eager"}
                       decoding="async"
                       onError={(e) => {
                         try {

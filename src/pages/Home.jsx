@@ -484,13 +484,13 @@ IMPORTANT RULES:
   };
   
   return (
-    <section className="fixed inset-0 px-4 sm:px-6 lg:px-8 flex items-center justify-center overflow-hidden bg-gradient-to-br from-white via-slate-50 to-blue-50">
+    <section className="fixed inset-0 px-3 xs:px-4 sm:px-6 lg:px-8 flex items-center justify-center overflow-hidden bg-gradient-to-br from-white via-slate-50 to-blue-50">
       {/* 3D Background */}
       <ThreeBackground />
       
       {/* Center Content */}
-      <div className={`max-w-6xl mx-auto text-center relative z-10 w-full px-2 sm:px-4 md:px-6 transition-all duration-[4000ms] ease-in-out ${
-        showAvatar ? 'pt-6 sm:pt-10' : 'pt-10 sm:pt-16'
+      <div className={`max-w-6xl mx-auto text-center relative z-10 w-full px-2 xs:px-3 sm:px-4 md:px-6 transition-all duration-[4000ms] ease-in-out ${
+        showAvatar ? 'pt-4 xs:pt-6 sm:pt-8 md:pt-10' : 'pt-8 xs:pt-10 sm:pt-14 md:pt-16'
       }`}>
          {/* Spline 3D Text Title - Responsive Height */}
          <div className="spline-container mb-2 px-2 sm:px-3 md:px-4" style={{ transform: 'translateY(30px)' }}>
@@ -500,7 +500,7 @@ IMPORTANT RULES:
          </div>
         
          {/* Subtitle with 3D effect - Responsive */}
-         <div className={`subtitle-container mb-6 sm:mb-8 px-4 transition-all duration-[4000ms] ease-in-out ${
+         <div className={`subtitle-container mb-4 xs:mb-5 sm:mb-6 md:mb-8 px-3 xs:px-4 transition-all duration-[4000ms] ease-in-out ${
           showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
          }`}
         style={{
@@ -510,7 +510,7 @@ IMPORTANT RULES:
            zIndex: 1,
         }}>
           <p 
-            className="subtitle-text text-lg sm:text-xl md:text-xl lg:text-xl text-gray-600 font-medium"
+            className="subtitle-text text-base xs:text-lg sm:text-xl md:text-xl lg:text-xl text-gray-600 font-medium"
             style={{
               animation: showSubtitle ? 'floatText 4s ease-in-out infinite 0.5s' : 'none',
               filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1))',
@@ -531,12 +531,12 @@ IMPORTANT RULES:
             }}>
             <div className="flex flex-col items-center justify-center">
                {/* Speech Bubble - Responsive */}
-               <div className="response-bubble-container mb-4 mt-4 sm:mt-6 relative px-2 sm:px-4 flex justify-center">
+               <div className="response-bubble-container mb-3 xs:mb-4 mt-3 xs:mt-4 sm:mt-6 relative px-2 xs:px-3 sm:px-4 flex justify-center">
                 {showBubble && (bubbleText || typingBubbleText) && (
                   <div className="animate-fade-in flex justify-center w-full">
-                    <div className="relative w-full max-w-[85vw] sm:max-w-[80vw] md:max-w-[70vw] lg:max-w-[600px]">
+                    <div className="relative w-full max-w-[90vw] xs:max-w-[88vw] sm:max-w-[80vw] md:max-w-[70vw] lg:max-w-[600px]">
                       <div 
-                        className="bg-white/95 backdrop-blur-xl rounded-xl sm:rounded-2xl px-3 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4 shadow-2xl relative"
+                        className="bg-white/95 backdrop-blur-xl rounded-lg xs:rounded-xl sm:rounded-2xl px-3 xs:px-3.5 py-2 xs:py-2.5 sm:px-4 sm:py-3 md:px-6 md:py-4 shadow-2xl relative"
                         style={{
                           minWidth: '100px',
                           width: '100%',
@@ -546,7 +546,7 @@ IMPORTANT RULES:
                           backgroundClip: 'padding-box, border-box',
                         }}
                       >
-                        <p className="text-gray-800 font-medium text-left whitespace-pre-wrap break-words text-sm sm:text-sm md:text-base leading-relaxed">
+                        <p className="text-gray-800 font-medium text-left whitespace-pre-wrap break-words text-xs xs:text-sm sm:text-sm md:text-base leading-relaxed">
                           {typingBubbleText || bubbleText}
                           {typingBubbleText && typingBubbleText !== bubbleText && (
                             <span className="animate-blink text-blue-500">|</span>
@@ -619,11 +619,11 @@ IMPORTANT RULES:
       
       {/* Chat Input - Fixed at bottom */}
       {showChatInput && (
-        <div className="fixed bottom-0 left-0 right-0 z-20 px-4 pb-6 sm:pb-8">
+        <div className="fixed bottom-0 left-0 right-0 z-20 px-3 xs:px-4 pb-4 xs:pb-5 sm:pb-6 md:pb-8" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 1rem))' }}>
           <div className={`max-w-2xl mx-auto transition-all duration-500 ${
             showChatInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
           }`}>
-            <div className="flex space-x-2 sm:space-x-3">
+            <div className="flex space-x-2 xs:space-x-2.5 sm:space-x-3">
               <div className="flex-1 relative">
                 <input
                   type="text"
@@ -632,26 +632,28 @@ IMPORTANT RULES:
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                   placeholder="Ask me anything..."
                   disabled={isLoading}
-                  className="w-full bg-white/90 backdrop-blur-xl border-2 border-gray-200 rounded-xl px-4 sm:px-5 py-2 sm:py-3 focus:outline-none focus:border-transparent focus:ring-2 focus:ring-purple-400 text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base shadow-lg transition-all duration-300 hover:shadow-xl"
+                  className="w-full bg-white/90 backdrop-blur-xl border-2 border-gray-200 rounded-lg xs:rounded-xl px-3 xs:px-4 sm:px-5 py-2 xs:py-2.5 sm:py-3 focus:outline-none focus:border-transparent focus:ring-2 focus:ring-purple-400 text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm xs:text-sm sm:text-base shadow-lg transition-all duration-300 hover:shadow-xl touch-manipulation"
                   style={{
                     backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899)',
                     backgroundOrigin: 'border-box',
                     backgroundClip: 'padding-box, border-box',
                     border: '2px solid transparent',
+                    fontSize: '16px', // Prevent iOS zoom
                   }}
                 />
               </div>
               <button
                 onClick={handleSendMessage}
                 disabled={isLoading || !inputMessage.trim()}
-                className="relative bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:shadow-xl hover:shadow-purple-300/50 hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg group overflow-hidden"
+                className="relative bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white px-3 xs:px-4 sm:px-6 py-2 xs:py-2.5 sm:py-3 rounded-lg xs:rounded-xl hover:shadow-xl hover:shadow-purple-300/50 hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg group overflow-hidden touch-manipulation"
+                style={{ minWidth: 'clamp(44px, 10vw, 56px)' }}
               >
                 <span className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <span className="relative">
+                <span className="relative flex items-center justify-center">
                   {isLoading ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 xs:w-5 xs:h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <Send size={20} />
+                    <Send size={18} className="xs:w-5 xs:h-5" />
                   )}
                 </span>
               </button>
@@ -703,10 +705,17 @@ IMPORTANT RULES:
         /* RESPONSIVE BREAKPOINTS - Mobile First       */
         /* ============================================ */
         
-          /* Spline title - Proportional scaling: 175px (small mobile) to 450px (desktop) */
+          /* Spline title - Proportional scaling: 150px (very small mobile) to 450px (desktop) */
           /* Formula: scales proportionally with viewport width from 320px to 1024px+ */
           .spline-container {
-            height: clamp(175px, calc(175px + (450 - 175) * ((100vw - 320px) / (1024 - 320))), 450px);
+            height: clamp(150px, calc(150px + (450 - 150) * ((100vw - 320px) / (1024 - 320))), 450px);
+          }
+          
+          /* Extra small devices (320px and below) */
+          @media (max-width: 360px) {
+            .spline-container {
+              height: clamp(120px, 40vh, 175px);
+            }
           }
           
           

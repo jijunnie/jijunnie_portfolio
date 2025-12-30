@@ -15,24 +15,24 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
   const isGlobePage = location.pathname === '/globe';
   
   return (
-    <nav className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-[95%] sm:w-[90%] md:w-[85%] lg:w-[80%] max-w-4xl" style={{ background: 'transparent' }}>
+    <nav className="fixed top-2 sm:top-3 md:top-4 left-1/2 transform -translate-x-1/2 z-50 w-[96%] xs:w-[95%] sm:w-[92%] md:w-[88%] lg:w-[85%] xl:w-[80%] max-w-4xl" style={{ background: 'transparent' }}>
       {/* Liquid Glass Background */}
       <div className={`liquid-glass-nav ${isGlobePage ? 'globe-page-nav' : ''}`}>
-        <div className="relative flex items-center justify-between h-14 md:h-16 px-4 md:px-6" style={{ alignItems: 'center' }}>
+        <div className="relative flex items-center justify-between h-12 xs:h-13 sm:h-14 md:h-16 px-3 xs:px-4 sm:px-4 md:px-6" style={{ alignItems: 'center' }}>
           {/* Desktop: Name on left, Icons centered, Globe centered */}
           <div className="hidden md:flex items-center w-full">
             {/* Name on left */}
             <Link
               to="/"
               onClick={closeMenus}
-              className="text-lg md:text-xl font-bold text-gray-800 mr-8 hover:text-gray-600 transition-colors"
+              className="text-base sm:text-lg md:text-xl font-bold text-gray-800 mr-4 sm:mr-6 md:mr-8 hover:text-gray-600 transition-colors"
               style={{ fontFamily: 'cursive', whiteSpace: 'nowrap' }}
             >
               Jijun Nie
             </Link>
             
             {/* Centered Icons (without globe) */}
-            <div className="flex items-center justify-center flex-1 space-x-2 md:space-x-3 lg:space-x-4">
+            <div className="flex items-center justify-center flex-1 space-x-1.5 sm:space-x-2 md:space-x-3 lg:space-x-4">
               {navItems.filter(item => item.path !== '/globe').map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
@@ -46,8 +46,8 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
                     title={item.label}
                   >
                     <Icon
-                      size={20}
-                      className={`transition-all duration-300 ${isActive ? 'scale-110' : ''}`}
+                      size={18}
+                      className={`sm:w-5 sm:h-5 md:w-5 md:h-5 transition-all duration-300 ${isActive ? 'scale-110' : ''}`}
                       strokeWidth={isActive ? 2.5 : 2}
                     />
                     {isActive && <span className="nav-active-indicator"></span>}
@@ -57,7 +57,7 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
             </div>
             
             {/* Globe Icon - Right Aligned, Center Point Aligned with Header Height */}
-            <div className="flex items-center justify-end ml-8" style={{ height: '100%', alignItems: 'center' }}>
+            <div className="flex items-center justify-end ml-4 sm:ml-6 md:ml-8" style={{ height: '100%', alignItems: 'center' }}>
               {navItems.filter(item => item.path === '/globe').map((item) => {
                 const isActive = location.pathname === item.path;
                 return (
@@ -68,16 +68,16 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
                     className={`nav-icon-link ${isActive ? 'active' : ''}`}
                     title={item.label}
                     style={{
-                      width: '80px',
-                      height: '80px',
+                      width: 'clamp(60px, 8vw, 80px)',
+                      height: 'clamp(60px, 8vw, 80px)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       margin: 0,
                       transform: 'none',
                       position: 'relative',
-                      marginLeft: '16px',
-                      left: '8px'
+                      marginLeft: 'clamp(8px, 1.5vw, 16px)',
+                      left: 'clamp(4px, 0.8vw, 8px)'
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.transform = 'none'}
                     onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
@@ -90,10 +90,10 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
                       height: '100%',
                       margin: 0,
                       position: 'relative',
-                      top: '8px',
-                      left: '8px'
+                      top: 'clamp(4px, 0.8vw, 8px)',
+                      left: 'clamp(4px, 0.8vw, 8px)'
                     }}>
-                      <WorldIcon size={110} className={`transition-all duration-300 ${isActive ? 'scale-110' : ''}`} />
+                      <WorldIcon size={110} className={`w-[clamp(80px,11vw,110px)] h-[clamp(80px,11vw,110px)] transition-all duration-300 ${isActive ? 'scale-110' : ''}`} />
                     </div>
                     {isActive && <span className="nav-active-indicator"></span>}
                   </Link>
@@ -133,7 +133,7 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
             <Link
               to="/"
               onClick={closeMenus}
-              className="absolute left-1/2 transform -translate-x-1/2 text-lg font-bold text-gray-800 hover:text-gray-600 transition-colors"
+              className="absolute left-1/2 transform -translate-x-1/2 text-base sm:text-lg font-bold text-gray-800 hover:text-gray-600 transition-colors"
               style={{ fontFamily: 'cursive' }}
             >
               Jijun Nie
@@ -151,16 +151,16 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
                     className={`nav-icon-link ${isActive ? 'active' : ''}`}
                     title={item.label}
                     style={{
-                      width: '70px',
-                      height: '70px',
+                      width: 'clamp(55px, 9vw, 70px)',
+                      height: 'clamp(55px, 9vw, 70px)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       margin: 0,
                       transform: 'none',
                       position: 'relative',
-                      marginLeft: '16px',
-                      left: '8px'
+                      marginLeft: 'clamp(8px, 2vw, 16px)',
+                      left: 'clamp(4px, 1vw, 8px)'
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.transform = 'none'}
                     onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
@@ -173,10 +173,10 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
                       height: '100%',
                       margin: 0,
                       position: 'relative',
-                      top: '8px',
-                      left: '8px'
+                      top: 'clamp(4px, 1vw, 8px)',
+                      left: 'clamp(4px, 1vw, 8px)'
                     }}>
-                      <WorldIcon size={100} className={`transition-all duration-300 ${isActive ? 'scale-110' : ''}`} />
+                      <WorldIcon size={100} className={`w-[clamp(75px,12vw,100px)] h-[clamp(75px,12vw,100px)] transition-all duration-300 ${isActive ? 'scale-110' : ''}`} />
                     </div>
                     {isActive && <span className="nav-active-indicator"></span>}
                   </Link>
@@ -187,8 +187,8 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
         </div>
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden border-t border-gray-200/50 px-4 py-4">
-            <div className="grid grid-cols-3 gap-3">
+          <div className="md:hidden border-t border-gray-200/50 px-3 xs:px-4 py-3 xs:py-4">
+            <div className="grid grid-cols-3 gap-2 xs:gap-3">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
@@ -199,18 +199,18 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
                     key={item.path}
                     to={item.path}
                     onClick={closeMenus}
-                    className={`flex flex-col items-center justify-center p-3 rounded-lg transition-all duration-300 ${
+                    className={`flex flex-col items-center justify-center p-2 xs:p-3 rounded-lg transition-all duration-300 ${
                       isActive
                         ? 'bg-white/40 text-blue-600'
-                        : 'text-gray-600 hover:bg-white/20 hover:text-gray-900'
+                        : 'text-gray-600 hover:bg-white/20 hover:text-gray-900 active:bg-white/30'
                     }`}
                   >
                     {isGlobe ? (
-                      <WorldIcon size={44} className={isActive ? 'scale-110' : ''} />
+                      <WorldIcon size={40} className={`xs:w-11 xs:h-11 ${isActive ? 'scale-110' : ''}`} />
                     ) : (
-                      <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                      <Icon size={20} className="xs:w-5 xs:h-5 sm:w-6 sm:h-6" strokeWidth={isActive ? 2.5 : 2} />
                     )}
-                    <span className="text-xs mt-1 font-medium">{item.label}</span>
+                    <span className="text-[10px] xs:text-xs mt-1 font-medium text-center leading-tight">{item.label}</span>
                   </Link>
                 );
               })}
@@ -276,11 +276,13 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 40px;
-          height: 40px;
-          border-radius: 12px;
+          width: clamp(32px, 4.5vw, 40px);
+          height: clamp(32px, 4.5vw, 40px);
+          border-radius: clamp(8px, 1.2vw, 12px);
           color: #6b7280;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          touch-action: manipulation;
+          -webkit-tap-highlight-color: transparent;
         }
         .nav-icon-link:hover {
           color: #3b82f6;
@@ -338,9 +340,31 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
         .hamburger-rotate-out {
           animation: rotate-out 0.3s ease forwards;
         }
-        @media (max-width: 768px) {
+        @media (max-width: 640px) {
+          .liquid-glass-nav {
+            border-radius: 14px;
+          }
+        }
+        @media (min-width: 641px) and (max-width: 768px) {
           .liquid-glass-nav {
             border-radius: 16px;
+          }
+        }
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+          .nav-icon-link:hover {
+            transform: none;
+          }
+          .nav-icon-link:active {
+            transform: scale(0.95);
+            background: rgba(59, 130, 246, 0.2);
+          }
+        }
+        /* High DPI displays */
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+          .liquid-glass-nav {
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
           }
         }
       `}</style>
