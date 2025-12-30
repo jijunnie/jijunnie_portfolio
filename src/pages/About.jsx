@@ -3009,16 +3009,17 @@ export default function About() {
           {learningIcons.map((icon, i) => {
             const isMobile = windowSize.width < 768;
             const isDesktop = windowSize.width >= 1024;
-            const animationStart = sectionTriggers[0] - sectionConfig.fadeOffset; // 0.03
+            // Start animation earlier by increasing fadeOffset
+            const animationStart = sectionTriggers[0] - (sectionConfig.fadeOffset + 0.02); // Start earlier
             
-            // Mobile: Animation completes at 75% of section, but with shorter duration (0.09)
-            // Desktop: Original faster animation, duration = 0.05
+            // Mobile: Animation completes earlier with shorter duration (0.07)
+            // Desktop: Animation completes earlier with shorter duration (0.04)
             let animationDuration;
             if (isMobile) {
-              // Shorter duration for mobile: 0.09
-              animationDuration = 0.09;
+              // Shorter duration for mobile: 0.07 (reduced from 0.09)
+              animationDuration = 0.07;
             } else {
-              animationDuration = 0.05; // Original desktop duration
+              animationDuration = 0.04; // Reduced from 0.05 for earlier completion
             }
             
             const sectionProgress = Math.max(0, Math.min(1, (scrollProgress - animationStart) / animationDuration));
