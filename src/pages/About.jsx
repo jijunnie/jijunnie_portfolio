@@ -569,16 +569,37 @@ export default function About() {
   const [currentAnimation, setCurrentAnimation] = useState('/animations/idle.fbx');
   const [windowSize, setWindowSize] = useState(() => {
     if (typeof window !== 'undefined') {
-      // Use the maximum height to account for address bar
-      const windowHeight = window.innerHeight;
-      const visualViewportHeight = window.visualViewport ? window.visualViewport.height : windowHeight;
-      const initialHeight = Math.max(windowHeight, visualViewportHeight);
-      // Set fixed height on initial load
-      fixedViewportHeight.current = initialHeight;
-      return { width: window.innerWidth, height: initialHeight };
+      try {
+        // Use the maximum height to account for address bar
+        const windowHeight = window.innerHeight || 800;
+        const visualViewportHeight = window.visualViewport ? window.visualViewport.height : windowHeight;
+        const initialHeight = Math.max(windowHeight, visualViewportHeight || windowHeight);
+        // Set fixed height on initial load
+        fixedViewportHeight.current = initialHeight;
+        return { width: window.innerWidth || 1920, height: initialHeight };
+      } catch (error) {
+        console.error('Error initializing window size:', error);
+        return { width: 1920, height: 1080 };
+      }
     }
     return { width: 1920, height: 1080 };
   });
+  
+  // Device type detection with error handling
+  const deviceType = useMemo(() => {
+    try {
+      const width = windowSize.width;
+      if (width < 640) return 'mobile';
+      if (width >= 640 && width < 1024) return 'tablet';
+      return 'desktop';
+    } catch (error) {
+      return 'desktop';
+    }
+  }, [windowSize.width]);
+  
+  const isMobile = deviceType === 'mobile';
+  const isTablet = deviceType === 'tablet';
+  const isDesktop = deviceType === 'desktop';
   const [modelCenterY, setModelCenterY] = useState(0);
   const [singingModelCenterY, setSingingModelCenterY] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -678,35 +699,35 @@ export default function About() {
   const carouselItemsCount = carouselImages.length;
   const angleStep = 360 / carouselItemsCount;
   
-  // Responsive values for interests carousel
+  // Responsive values for interests carousel - redesigned for tablet
   const responsiveCarousel = useMemo(() => {
-    const isMobile = windowSize.width < 640;
-    const isTablet = windowSize.width >= 640 && windowSize.width < 1024;
     return {
-      carouselRadius: isMobile ? 200 : isTablet ? 250 : 240,
-      cardWidth: isMobile ? 120 : isTablet ? 130 : 110,
-      cardHeight: isMobile ? 160 : isTablet ? 170 : 150,
-      carouselHeight: isMobile ? 200 : isTablet ? 220 : 200,
-      avatarScale: isMobile ? 2.4 : isTablet ? 3.0 : 3.6,
-      avatarPosition: isMobile ? [0, -2.5, 0] : isTablet ? [0, -2.6, 0] : [0, -2.7, 0],
-      cameraPosition: isMobile ? [0, 0.8, 3.5] : isTablet ? [0, 0.9, 4] : [0, 1, 4.5],
-      cameraFov: isMobile ? 55 : isTablet ? 52 : 50,
+      carouselRadius: isMobile ? 200 : isTablet ? 280 : 240,
+      cardWidth: isMobile ? 120 : isTablet ? 150 : 110,
+      cardHeight: isMobile ? 160 : isTablet ? 200 : 150,
+      carouselHeight: isMobile ? 200 : isTablet ? 250 : 200,
+      avatarScale: isMobile ? 2.4 : isTablet ? 3.2 : 3.6,
+      avatarPosition: isMobile ? [0, -2.5, 0] : isTablet ? [0, -2.8, 0] : [0, -2.7, 0],
+      cameraPosition: isMobile ? [0, 0.8, 3.5] : isTablet ? [0, 1.0, 4.2] : [0, 1, 4.5],
+      cameraFov: isMobile ? 55 : isTablet ? 50 : 50,
     };
-  }, [windowSize.width]);
+  }, [isMobile, isTablet]);
   
   useEffect(() => {
-    const isMobile = windowSize.width < 768;
-    
     // Set page ready immediately to prevent flash
     setPageReady(true);
     
-    // On mobile, use a simpler, faster initialization to avoid lag
-    if (isMobile) {
-      // Immediate opacity for mobile to prevent flash
+    // On mobile/tablet, use a simpler, faster initialization to avoid lag
+    if (isMobile || isTablet) {
+      // Immediate opacity for mobile/tablet to prevent flash
       setPageOpacity(1);
-      // Delay 3D models slightly on mobile to improve initial load
+      // Delay 3D models slightly on mobile/tablet to improve initial load
       setTimeout(() => {
-        setModelsVisible(true);
+        try {
+          setModelsVisible(true);
+        } catch (error) {
+          console.error('Error setting models visible:', error);
+        }
       }, 100);
     } else {
       // Desktop: use double RAF for smooth transition
@@ -775,8 +796,8 @@ export default function About() {
   
   useEffect(() => {
     // Disable mouse tracking on mobile to improve performance
-    if (windowSize.width < 768) {
-      return;
+    if (isMobile || isTablet) {
+      return; // Disable mouse tracking on mobile/tablet
     }
     
     const handleMouseMove = throttle((e) => {
@@ -792,7 +813,6 @@ export default function About() {
   }, [windowSize.width]);
   
   useEffect(() => {
-    const isMobile = windowSize.width < 768;
     const rafIdRef = { current: null };
     let ticking = false;
     let isMounted = true;
@@ -803,10 +823,10 @@ export default function About() {
         return;
       }
       
-      const scrollTop = window.scrollY;
+      const scrollTop = window.scrollY || 0;
       // Use fixed viewport height to prevent content shift
-      const fixedHeight = fixedViewportHeight.current || window.innerHeight;
-      const docHeight = document.documentElement.scrollHeight - fixedHeight;
+      const fixedHeight = fixedViewportHeight.current || window.innerHeight || 800;
+      const docHeight = Math.max(0, (document.documentElement.scrollHeight || 0) - fixedHeight);
       
       // Validate all calculations to prevent NaN
       if (!isFinite(scrollTop) || !isFinite(fixedHeight) || !isFinite(docHeight)) {
@@ -957,36 +977,62 @@ export default function About() {
       
       // Lock viewport height on first load - use the largest initial height
       const lockInitialViewportHeight = () => {
-        let initialHeight;
-        
-        // Get the maximum height to account for address bar
-        const windowHeight = window.innerHeight;
-        const visualViewportHeight = window.visualViewport ? window.visualViewport.height : windowHeight;
-        
-        // Use the larger value to ensure content is visible
-        initialHeight = Math.max(windowHeight, visualViewportHeight);
-        
-        // Only set once on initial load
-        if (fixedViewportHeight.current === null) {
-          fixedViewportHeight.current = initialHeight;
-          const vh = initialHeight * 0.01;
+        try {
+          let initialHeight;
           
-          // Set CSS variables
-          document.documentElement.style.setProperty('--vh', `${vh}px`);
-          document.documentElement.style.setProperty('--fixed-vh', `${vh}px`);
-          document.documentElement.style.setProperty('--fixed-vh-px', `${initialHeight}px`);
+          // Get the maximum height to account for address bar
+          const windowHeight = window.innerHeight || 800;
+          const visualViewportHeight = window.visualViewport ? (window.visualViewport.height || windowHeight) : windowHeight;
           
-          // Update window size state
-          setWindowSize({ width: window.innerWidth, height: initialHeight });
+          // Use the larger value to ensure content is visible
+          initialHeight = Math.max(windowHeight, visualViewportHeight || windowHeight);
           
-          // Only apply fixed body on iOS Safari (not other mobile browsers)
-          if (isIOS && !isIOSStandalone) {
-            // Use a wrapper approach instead of fixed body to prevent scroll issues
-            const root = document.getElementById('root');
-            if (root) {
-              root.style.height = `${initialHeight}px`;
-              root.style.overflowY = 'auto';
-              root.style.WebkitOverflowScrolling = 'touch';
+          // Only set once on initial load
+          if (fixedViewportHeight.current === null && initialHeight > 0) {
+            fixedViewportHeight.current = initialHeight;
+            const vh = initialHeight * 0.01;
+            
+            // Set CSS variables with error handling
+            try {
+              if (document && document.documentElement) {
+                document.documentElement.style.setProperty('--vh', `${vh}px`);
+                document.documentElement.style.setProperty('--fixed-vh', `${vh}px`);
+                document.documentElement.style.setProperty('--fixed-vh-px', `${initialHeight}px`);
+              }
+            } catch (cssError) {
+              console.error('Error setting CSS variables:', cssError);
+            }
+            
+            // Update window size state
+            try {
+              setWindowSize({ width: window.innerWidth || 1920, height: initialHeight });
+            } catch (stateError) {
+              console.error('Error updating window size:', stateError);
+            }
+            
+            // Only apply fixed body on iOS Safari (not other mobile browsers)
+            if (isIOS && !isIOSStandalone) {
+              try {
+                const root = document.getElementById('root');
+                if (root) {
+                  root.style.height = `${initialHeight}px`;
+                  root.style.overflowY = 'auto';
+                  root.style.WebkitOverflowScrolling = 'touch';
+                }
+              } catch (rootError) {
+                console.error('Error setting root styles:', rootError);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error in lockInitialViewportHeight:', error);
+          // Fallback to safe defaults
+          if (fixedViewportHeight.current === null) {
+            fixedViewportHeight.current = 800;
+            try {
+              setWindowSize({ width: window.innerWidth || 1920, height: 800 });
+            } catch (e) {
+              // Silently fail if state update fails
             }
           }
         }
@@ -1113,7 +1159,7 @@ export default function About() {
   // Set initial scroll position for gallery to show less of first box
   useEffect(() => {
     if (galleryRef.current) {
-      const boxWidth = windowSize.width >= 768 ? 340 : 250;
+      const boxWidth = isDesktop ? 340 : isTablet ? 300 : 250;
       const scrollAmount = boxWidth * 0.65; // Scroll more to show less of first box
       // Use setTimeout to ensure the gallery is fully rendered before scrolling
       setTimeout(() => {
@@ -1551,12 +1597,13 @@ export default function About() {
   // availableHeight uses fixed viewport height, so it won't change when address bar collapses
   const availableHeight = Math.max(windowSize.height - navBarTotalHeight, 100);
   
-  const isDesktop = windowSize.width >= 768;
   const desktopYOffset = isDesktop ? -0.5 : 0;
   // Adjust avatar position for mobile - shift down
-  const avatarPosition = windowSize.width < 768 
-    ? [0, -modelCenterY + desktopYOffset - 0.3, 0]  // Shift down 0.3 units on mobile (negative Y = down)
-    : [0, -modelCenterY + desktopYOffset, 0];
+  const avatarPosition = isMobile
+    ? [0, -modelCenterY + desktopYOffset - 0.3, 0]
+    : isTablet
+      ? [0, -modelCenterY + desktopYOffset - 0.1, 0]  // Tablet: slight adjustment
+      : [0, -modelCenterY + desktopYOffset, 0];
   
   const calculateSplineSize = () => {
     const screenWidth = windowSize.width;
@@ -1620,16 +1667,15 @@ export default function About() {
   );
   
   // Limit textTransform to prevent horizontal overflow - disable on mobile for performance
-  const isMobile = windowSize.width < 768;
   const textTransform = useMemo(() => {
-    if (isMobile) {
-      // Disable mouse tracking on mobile to improve performance
+    if (isMobile || isTablet) {
+      // Disable mouse tracking on mobile/tablet to improve performance
       return 'translateX(0px) translateY(0px)';
     }
     const maxTranslateX = 20; // Maximum horizontal translation in pixels
     const limitedX = Math.max(-maxTranslateX, Math.min(maxTranslateX, mousePosition.x * 10));
     return `translateX(${limitedX}px) translateY(${mousePosition.y * 10}px)`;
-  }, [isMobile, mousePosition.x, mousePosition.y]);
+  }, [isMobile, isTablet, mousePosition.x, mousePosition.y]);
 
   return (
     <div ref={containerRef} className="w-full" style={{ minHeight: 'calc(var(--vh, 1vh) * 800)', width: '100%', maxWidth: '100vw', position: 'relative', top: 0, left: 0, display: 'block', visibility: 'visible', opacity: 1, background: '#fafafa', overflowX: 'hidden', overflowY: 'visible' }}>
@@ -2052,8 +2098,8 @@ export default function About() {
         }
       `}</style>
       
-      {/* Disable decorative particles on mobile for better performance */}
-      {windowSize.width >= 768 && [...Array(6)].map((_, i) => (
+      {/* Disable decorative particles on mobile/tablet for better performance */}
+      {isDesktop && [...Array(6)].map((_, i) => (
         <div
           key={i}
           style={{
@@ -2077,20 +2123,26 @@ export default function About() {
           <div 
             className="fixed overflow-visible flex items-end justify-center"
             style={{
-              left: windowSize.width >= 768 ? '0' : '-20px',  // Shift left on mobile
-              top: windowSize.width >= 768 ? `${navBarTotalHeight}px` : `${navBarTotalHeight - 20}px`,  // Shift up on mobile
-              bottom: 'auto',  // Changed: Don't anchor to bottom
-              width: `${windowSize.width >= 768 ? Math.max(windowSize.width * 0.32, 200) : Math.max(windowSize.width * 0.375, 200)}px`,
+              left: isDesktop ? '0' : isTablet ? '5%' : '-20px',  // Tablet: slight offset
+              top: isDesktop ? `${navBarTotalHeight}px` : isTablet ? `${navBarTotalHeight + 10}px` : `${navBarTotalHeight - 20}px`,
+              bottom: 'auto',
+              width: isDesktop
+                ? `${Math.max(windowSize.width * 0.32, 200)}px`
+                : isTablet
+                  ? `${Math.max(windowSize.width * 0.35, 250)}px`  // Tablet: slightly larger
+                  : `${Math.max(windowSize.width * 0.375, 200)}px`,
               maxWidth: '100vw',
               height: `${availableHeight}px`,
-              minWidth: '200px',
+              minWidth: isTablet ? '250px' : '200px',
               minHeight: '100px',
-              paddingBottom: windowSize.width >= 768 ? '10%' : '5%',
+              paddingBottom: isDesktop ? '10%' : isTablet ? '8%' : '5%',
               zIndex: 5,
               filter: 'drop-shadow(0 10px 40px rgba(0, 0, 0, 0.08))',
-              transform: windowSize.width >= 768 
+              transform: isDesktop
                 ? avatarTransform 
-                : `${avatarTransform} translateY(-${windowSize.height * 0.15}px)`,
+                : isTablet
+                  ? `${avatarTransform} translateY(-${windowSize.height * 0.1}px)`  // Tablet: less offset
+                  : `${avatarTransform} translateY(-${windowSize.height * 0.15}px)`,
               opacity: avatarOpacity,
               transition: 'transform 0.3s ease-out, opacity 0.6s ease-out',
               pointerEvents: 'auto',
@@ -2149,55 +2201,69 @@ export default function About() {
             minHeight: `calc(calc(var(--vh, 1vh) * 100) - ${navBarTotalHeight}px)`,
             opacity: pageOpacity,
             transition: 'opacity 1.2s ease-in',
-            paddingLeft: windowSize.width >= 768 
+            paddingLeft: isDesktop
               ? 'clamp(0.5rem, 1.5vw, 1.5rem)' 
-              : windowSize.width < 480 
-                ? '0' 
-                : 'clamp(0.25rem, 1vw, 0.5rem)',
-            paddingTop: windowSize.width >= 768 
+              : isTablet
+                ? 'clamp(2rem, 4vw, 3rem)'  // Tablet: more padding
+                : windowSize.width < 480 
+                  ? '0' 
+                  : 'clamp(0.25rem, 1vw, 0.5rem)',
+            paddingTop: isDesktop
               ? 'clamp(4rem, 6vw, 8rem)' 
-              : windowSize.width < 480 
-                ? 'clamp(0.25rem, 1.5vw, 0.75rem)'  // Shift up on mobile
-                : 'clamp(0.5rem, 2.5vw, 1.5rem)',  // Shift up on mobile
-            paddingBottom: windowSize.width < 480 
+              : isTablet
+                ? 'clamp(3rem, 5vw, 5rem)'  // Tablet: balanced padding
+                : windowSize.width < 480 
+                  ? 'clamp(0.25rem, 1.5vw, 0.75rem)'
+                  : 'clamp(0.5rem, 2.5vw, 1.5rem)',
+            paddingBottom: isMobile && windowSize.width < 480 
               ? 'clamp(2rem, 4vw, 3rem)' 
-              : 'clamp(4rem, 8vw, 8rem)',
-            paddingRight: windowSize.width < 480 ? 'clamp(0.75rem, 2vw, 1rem)' : '0',
-            transform: windowSize.width >= 768 
+              : isTablet
+                ? 'clamp(3rem, 5vw, 5rem)'  // Tablet: balanced padding
+                : 'clamp(4rem, 8vw, 8rem)',
+            paddingRight: isMobile && windowSize.width < 480 ? 'clamp(0.75rem, 2vw, 1rem)' : isTablet ? 'clamp(2rem, 4vw, 3rem)' : '0',
+            transform: isDesktop
               ? `translateY(-5%) translateY(${scrollProgress * -30}px)`
-              : `translateY(-18%) translateY(${scrollProgress * -30}px) translateY(60px)`,  // Shift down on mobile
+              : isTablet
+                ? `translateY(-8%) translateY(${scrollProgress * -25}px)`  // Tablet: balanced transform
+                : `translateY(-18%) translateY(${scrollProgress * -30}px) translateY(60px)`,
             position: 'relative',
             zIndex: 10,
-            marginLeft: windowSize.width >= 768 
+            marginLeft: isDesktop
               ? '32%' 
-              : windowSize.width < 480 
-                ? `${Math.max(windowSize.width * 0.375, 200) - 40}px`  // Shift left more on mobile
-                : `${Math.max(windowSize.width * 0.375, 200) - 36}px`,  // Shift left more on mobile
-            maxWidth: windowSize.width >= 768 
+              : isTablet
+                ? '15%'  // Tablet: centered with margin
+                : windowSize.width < 480 
+                  ? `${Math.max(windowSize.width * 0.375, 200) - 40}px`
+                  : `${Math.max(windowSize.width * 0.375, 200) - 36}px`,
+            maxWidth: isDesktop
               ? '50%' 
-              : windowSize.width < 480 
-                ? `${Math.max(windowSize.width - Math.max(windowSize.width * 0.375, 200) - 8, windowSize.width * 0.9)}px` 
-                : `${windowSize.width - Math.max(windowSize.width * 0.375, 200) - 16}px`,
+              : isTablet
+                ? '70%'  // Tablet: wider content area
+                : windowSize.width < 480 
+                  ? `${Math.max(windowSize.width - Math.max(windowSize.width * 0.375, 200) - 8, windowSize.width * 0.9)}px` 
+                  : `${windowSize.width - Math.max(windowSize.width * 0.375, 200) - 16}px`,
             width: '100%',
             boxSizing: 'border-box'
           }}
         >
           <h1
             style={{
-              fontSize: windowSize.width < 768 
-                ? `clamp(22px, 5.2vw, 80px)`  // Slightly smaller text on mobile
-                : calculateFontSize(80, 28, 100),
+              fontSize: isMobile
+                ? `clamp(22px, 5.2vw, 80px)`
+                : isTablet
+                  ? `clamp(32px, 6vw, 72px)`  // Tablet: medium size
+                  : calculateFontSize(80, 28, 100),
               fontWeight: 500,
               lineHeight: 1.1,
               letterSpacing: '-0.03em',
               color: '#0a0a0a',
-              opacity: mainTitleVisible ? (windowSize.width >= 768 
+              opacity: mainTitleVisible ? (isDesktop
                 ? (1 - scrollProgress * 0.4) 
-                : Math.max(0, 1 - scrollProgress * 0.6)) : 0,  // Faster fade out on mobile
+                : Math.max(0, 1 - scrollProgress * 0.6)) : 0,
               transform: `${mainTitleVisible ? 'translateY(0)' : 'translateY(8px)'} ${textTransform}`,
               transition: 'opacity 0.6s ease-out, transform 0.6s ease-out, fontSize 0.3s ease-out',
               marginBottom: `${calculateSpacing(16)}px`,
-              whiteSpace: 'nowrap',
+              whiteSpace: isMobile ? 'normal' : 'nowrap',
               overflow: 'hidden'
             }}
           >
@@ -2213,24 +2279,26 @@ export default function About() {
           
           <div
             style={{
-              fontSize: windowSize.width < 768 
-                ? `clamp(13px, 2.8vw, 28px)`  // Slightly smaller subtitle on mobile
-                : calculateFontSize(28, 12, 36),
+              fontSize: isMobile
+                ? `clamp(13px, 2.8vw, 28px)`
+                : isTablet
+                  ? `clamp(16px, 3.2vw, 32px)`  // Tablet: medium size
+                  : calculateFontSize(28, 12, 36),
               fontWeight: 400,
               lineHeight: 1.4,
               color: '#525252',
               minHeight: '1.4em',
               transform: textTransform,
               transition: 'transform 0.6s ease-out, fontSize 0.3s ease-out',
-              whiteSpace: 'nowrap',
+              whiteSpace: isMobile ? 'normal' : 'nowrap',
               overflow: 'hidden'
             }}
           >
             <span
               style={{
-                opacity: subtitlePrefixVisible ? (windowSize.width >= 768 
-                  ? (1 - scrollProgress * 0.4) 
-                  : Math.max(0, 1 - scrollProgress * 0.6)) : 0,  // Faster fade out on mobile
+              opacity: subtitlePrefixVisible ? (isDesktop
+                ? (1 - scrollProgress * 0.4) 
+                : Math.max(0, 1 - scrollProgress * 0.6)) : 0,
                 transition: 'opacity 0.6s ease-out'
               }}
             >
@@ -2239,32 +2307,36 @@ export default function About() {
             <span style={{ 
               fontWeight: 500, 
               color: '#171717',
-              opacity: windowSize.width >= 768 
+              opacity: isDesktop
                 ? (1 - scrollProgress * 0.4) 
-                : Math.max(0, 1 - scrollProgress * 0.6)  // Faster fade out on mobile
+                : Math.max(0, 1 - scrollProgress * 0.6)
             }}>{typingText}</span>
           </div>
           
           <div
             style={{
               marginTop: `${calculateSpacing(40)}px`,
-              maxWidth: windowSize.width < 480 
+              maxWidth: isMobile && windowSize.width < 480 
                 ? `${Math.min(calculateSpacing(600), windowSize.width * 0.9)}px` 
-                : windowSize.width < 640 
-                  ? `${Math.min(calculateSpacing(600), windowSize.width * 0.85)}px` 
-                  : `${calculateSpacing(600)}px`,
-              fontSize: windowSize.width < 768 
-                ? calculateFontSize(20, 11, 24)  // Slightly smaller description text on mobile
-                : calculateFontSize(20, 12, 24),
+                : isMobile && windowSize.width < 640 
+                  ? `${Math.min(calculateSpacing(600), windowSize.width * 0.85)}px`
+                  : isTablet
+                    ? `${Math.min(calculateSpacing(700), windowSize.width * 0.8)}px`
+                    : `${calculateSpacing(600)}px`,
+              fontSize: isMobile
+                ? calculateFontSize(20, 11, 24)
+                : isTablet
+                  ? calculateFontSize(20, 14, 26)
+                  : calculateFontSize(20, 12, 24),
               fontWeight: 400,
               lineHeight: 1.7,
               color: '#525252',
-              opacity: scriptVisible ? (windowSize.width >= 768 
+              opacity: scriptVisible ? (isDesktop
                 ? (1 - scrollProgress * 0.4) 
-                : Math.max(0, 1 - scrollProgress * 0.6)) : 0,  // Faster fade out on mobile
+                : Math.max(0, 1 - scrollProgress * 0.6)) : 0,
               transform: `${scriptVisible ? 'translateY(0)' : 'translateY(8px)'} ${textTransform}`,
               transition: 'opacity 0.6s ease-out, transform 0.6s ease-out, fontSize 0.3s ease-out',
-              paddingLeft: windowSize.width < 480 ? `${calculateSpacing(16)}px` : `${calculateSpacing(24)}px`,
+              paddingLeft: isMobile && windowSize.width < 480 ? `${calculateSpacing(16)}px` : isTablet ? `${calculateSpacing(32)}px` : `${calculateSpacing(24)}px`,
               borderLeft: `${calculateSpacing(2)}px solid #e5e5e5`
             }}
           >
@@ -2283,21 +2355,27 @@ export default function About() {
           <div 
             className="absolute pointer-events-auto"
             style={{
-              right: windowSize.width >= 768 ? '2%' : 'auto',
-              left: windowSize.width >= 768 ? 'auto' : '50%',
-              bottom: windowSize.width >= 768 ? '0%' : '15%',  // Shift up on mobile
-              top: windowSize.width >= 768 ? 'auto' : 'auto',
-              width: windowSize.width >= 768 
+              right: isDesktop ? '2%' : isTablet ? '5%' : 'auto',
+              left: isDesktop ? 'auto' : isTablet ? 'auto' : '50%',
+              bottom: isDesktop ? '0%' : isTablet ? '5%' : '15%',
+              top: isDesktop ? 'auto' : 'auto',
+              width: isDesktop
                 ? `${splineSize.containerWidth}px`
-                : `${Math.max(splineSize.containerWidth, windowSize.width * 0.9)}px`,
-              height: windowSize.width >= 768 
+                : isTablet
+                  ? `${Math.max(splineSize.containerWidth * 0.9, windowSize.width * 0.4)}px`
+                  : `${Math.max(splineSize.containerWidth, windowSize.width * 0.9)}px`,
+              height: isDesktop
                 ? `${splineSize.containerHeight}px`
-                : `${Math.max(splineSize.containerHeight, windowSize.width * 0.9)}px`,
-              minWidth: windowSize.width < 768 ? `${windowSize.width * 0.8}px` : 'auto',
-              minHeight: windowSize.width < 768 ? `${windowSize.width * 0.8}px` : 'auto',
-              transform: windowSize.width >= 768 
+                : isTablet
+                  ? `${Math.max(splineSize.containerHeight * 0.9, windowSize.width * 0.4)}px`
+                  : `${Math.max(splineSize.containerHeight, windowSize.width * 0.9)}px`,
+              minWidth: isMobile ? `${windowSize.width * 0.8}px` : isTablet ? `${windowSize.width * 0.35}px` : 'auto',
+              minHeight: isMobile ? `${windowSize.width * 0.8}px` : isTablet ? `${windowSize.width * 0.35}px` : 'auto',
+              transform: isDesktop
                 ? `${avatarTransform} translateY(40px)`
-                : `translateX(-50%) translateY(180px) ${avatarTransform}`,  // Shift down more on mobile
+                : isTablet
+                  ? `${avatarTransform} translateY(60px)`
+                  : `translateX(-50%) translateY(180px) ${avatarTransform}`,
               opacity: avatarOpacity,
               zIndex: 0,
               pointerEvents: 'auto',
@@ -2318,9 +2396,11 @@ export default function About() {
             >
               <Suspense fallback={null}>
                 <Spline 
-                  scene={windowSize.width >= 768 
+                  scene={isDesktop
                     ? "https://prod.spline.design/RiI1HgjSIb8MFplx/scene.splinecode"
-                    : "https://prod.spline.design/LYnE7DUy1dfNnCfp/scene.splinecode"}
+                    : isTablet
+                      ? "https://prod.spline.design/RiI1HgjSIb8MFplx/scene.splinecode"  // Tablet: use desktop scene
+                      : "https://prod.spline.design/LYnE7DUy1dfNnCfp/scene.splinecode"}
                   style={{
                     width: '100%',
                     height: '100%',
@@ -2377,9 +2457,11 @@ export default function About() {
         >
           <h2
             style={{
-              fontSize: windowSize.width < 768 
+              fontSize: isMobile
                 ? `clamp(20px, 5vw, 80px)`
-                : calculateFontSize(64, 32, 80),
+                : isTablet
+                  ? `clamp(28px, 5.5vw, 72px)`  // Tablet: medium size
+                  : calculateFontSize(64, 32, 80),
               fontWeight: 600,
               lineHeight: 1.1,
               letterSpacing: '-0.03em',
@@ -2393,13 +2475,15 @@ export default function About() {
           
           <p
             style={{
-              fontSize: windowSize.width < 768 
+              fontSize: isMobile
                 ? calculateFontSize(20, 12, 26)
-                : calculateFontSize(22, 16, 28),
+                : isTablet
+                  ? calculateFontSize(22, 14, 26)
+                  : calculateFontSize(22, 16, 28),
               fontWeight: 400,
               lineHeight: 1.5,
               color: '#525252',
-              maxWidth: '700px',
+              maxWidth: isTablet ? '750px' : '700px',
               textAlign: 'center',
               marginBottom: 0,
               marginLeft: 'auto',
@@ -2463,9 +2547,9 @@ export default function About() {
             ];
             
             const config = orbitConfigs[orbitIndex];
-            const baseRadius = windowSize.width < 640 ? config.radius * 0.5 : 
-                              windowSize.width < 768 ? config.radius * 0.65 :
-                              windowSize.width < 1024 ? config.radius * 0.8 : config.radius;
+            const baseRadius = isMobile && windowSize.width < 640 ? config.radius * 0.5 : 
+                              isMobile ? config.radius * 0.65 :
+                              isTablet ? config.radius * 0.8 : config.radius;
             
             // Spiral outward as items increase - made smaller at final state
             const spiralRadius = (baseRadius + (itemInOrbit * 40)) * 0.75;
