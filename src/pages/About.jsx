@@ -274,9 +274,21 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
     }
   }, [animationPath, fbx.animations, clonedAvatar]);
   
+  const lastUpdateRef = useRef(0);
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  
   useFrame((state, delta) => {
     if (!mixer.current) return;
     if (typeof delta !== 'number' || !isFinite(delta)) return;
+    
+    // Throttle updates on mobile to prevent crashes
+    if (isMobile) {
+      const now = Date.now();
+      if (now - lastUpdateRef.current < 33) { // ~30fps on mobile instead of 60fps
+        return;
+      }
+      lastUpdateRef.current = now;
+    }
     
     try {
       mixer.current.update(delta);
@@ -306,7 +318,19 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
 useGLTF.preload('/models/avatar.glb');
 
 function CameraDrift() {
+  const lastUpdateRef = useRef(0);
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  
   useFrame(({ camera }) => {
+    // Throttle updates on mobile to prevent crashes
+    if (isMobile) {
+      const now = Date.now();
+      if (now - lastUpdateRef.current < 50) { // ~20fps on mobile
+        return;
+      }
+      lastUpdateRef.current = now;
+    }
+    
     const time = Date.now() * 0.0001;
     camera.rotation.y = Math.sin(time * 0.1) * 0.008;
     camera.rotation.x = Math.cos(time * 0.15) * 0.005;
@@ -778,8 +802,9 @@ export default function About() {
     if (galleryPreloadRef.current) return; // Already started
     galleryPreloadRef.current = true;
     
-    // Increase concurrent loads for faster preloading (still safe)
-    const CONCURRENT_LOADS = 6; // Load 6 images at a time for faster preloading
+    // Reduce concurrent loads on mobile to prevent crashes and refresh
+    const isMobile = windowSize.width < 768;
+    const CONCURRENT_LOADS = isMobile ? 2 : 6; // Load fewer images on mobile
     let currentIndex = 0;
     const loadedImages = new Set();
     const failedImages = new Set();
@@ -835,35 +860,45 @@ export default function About() {
       currentIndex = endIndex;
       
       if (currentIndex < galleryImages.length) {
-        // Reduce delay between batches for faster loading
-        setTimeout(loadBatch, 50);
+        // Longer delay on mobile to prevent crashes
+        const delay = isMobile ? 300 : 50;
+        setTimeout(loadBatch, delay);
       } else {
         setGalleryImagesPreloaded(true);
       }
     };
     
-    // Start loading immediately with minimal delay
-    requestAnimationFrame(() => {
-      loadBatch();
-    });
-  }, [galleryImages]);
+    // Delay preloading on mobile to prevent initial crash
+    if (isMobile) {
+      setTimeout(() => {
+        requestAnimationFrame(() => {
+          loadBatch();
+        });
+      }, 2000); // Delay 2 seconds on mobile
+    } else {
+      // Start loading immediately on desktop
+      requestAnimationFrame(() => {
+        loadBatch();
+      });
+    }
+  }, [galleryImages, windowSize.width]);
   
   useEffect(() => {
     // Set page ready immediately to prevent flash
     setPageReady(true);
     
-    // On mobile/tablet, use a simpler, faster initialization to avoid lag
+    // On mobile/tablet, use a simpler, faster initialization to avoid lag and crashes
     if (isMobile || isTablet) {
       // Immediate opacity for mobile/tablet to prevent flash
       setPageOpacity(1);
-      // Delay 3D models slightly on mobile/tablet to improve initial load
+      // Delay 3D models longer on mobile to prevent crashes and refresh
       setTimeout(() => {
         try {
           setModelsVisible(true);
         } catch (error) {
           console.error('Error setting models visible:', error);
         }
-      }, 100);
+      }, isMobile ? 500 : 200); // Longer delay on mobile
     } else {
       // Desktop: optimize initialization to reduce lag
       // Set opacity immediately for faster perceived load
@@ -955,17 +990,25 @@ export default function About() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [windowSize.width]);
   
-  // Start preloading gallery images immediately on page load
+  // Start preloading gallery images with delay on mobile to prevent crashes
   // This ensures images are ready when user reaches the "Capture the Beauty" section
   useEffect(() => {
-    // Start preloading immediately after component mounts
-    // Use requestAnimationFrame to ensure it doesn't block initial render
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
+    const isMobile = windowSize.width < 768;
+    if (isMobile) {
+      // Delay preloading on mobile to prevent initial crash
+      const timeoutId = setTimeout(() => {
         preloadGalleryImages();
+      }, 3000); // Delay 3 seconds on mobile
+      return () => clearTimeout(timeoutId);
+    } else {
+      // Start preloading immediately on desktop
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          preloadGalleryImages();
+        });
       });
-    });
-  }, [preloadGalleryImages]);
+    }
+  }, [preloadGalleryImages, windowSize.width]);
   
   // Preload sport background images
   useEffect(() => {
@@ -998,9 +1041,9 @@ export default function About() {
           return;
         }
         
-        // Throttle updates on mobile to prevent excessive re-renders
+        // Throttle updates on mobile more aggressively to prevent crashes
         const now = Date.now();
-        if (isMobile && now - lastUpdateTime < 50) {
+        if (isMobile && now - lastUpdateTime < 100) {
           ticking = false;
           return;
         }
@@ -1027,8 +1070,8 @@ export default function About() {
         }
         
         // Only update if progress changed significantly to prevent unnecessary re-renders
-        // Use larger threshold on mobile for better performance
-        const progressThreshold = isMobile ? 0.005 : 0.001;
+        // Use much larger threshold on mobile to prevent crashes and refresh
+        const progressThreshold = isMobile ? 0.015 : 0.001;
         const progressDiff = Math.abs(progress - previousScrollProgress.current);
         if (progressDiff < progressThreshold) {
           ticking = false;
@@ -1079,9 +1122,9 @@ export default function About() {
       }
     };
     
-    // Throttle scroll event listener more aggressively on mobile
-    // Use longer throttle on mobile to prevent lag and crashes
-    const throttleTime = isMobile ? 150 : 16;
+    // Throttle scroll event listener more aggressively on mobile to prevent crashes
+    // Use much longer throttle on mobile to prevent refresh and crashes
+    const throttleTime = isMobile ? 200 : 16;
     const throttledHandleScroll = throttle(handleScroll, throttleTime);
     
     try {
@@ -1408,8 +1451,9 @@ export default function About() {
     
     let loadingQueue = [];
     let currentlyLoading = 0;
-    const maxConcurrentLoads = 3; // Limit concurrent image loads
-    const loadDelay = 100; // Delay between loads in ms
+    // Reduce concurrent loads on mobile to prevent crashes
+    const maxConcurrentLoads = windowSize.width < 768 ? 1 : 3;
+    const loadDelay = windowSize.width < 768 ? 200 : 100; // Longer delay on mobile
     
     const processQueue = () => {
       if (currentlyLoading >= maxConcurrentLoads || loadingQueue.length === 0) {
@@ -1456,7 +1500,8 @@ export default function About() {
         });
       },
       { 
-        rootMargin: windowSize.width < 768 ? '100px' : '150px', // Reduced margin to prevent loading too many at once
+        // Reduce rootMargin on mobile to prevent loading too many images at once
+        rootMargin: windowSize.width < 768 ? '50px' : '150px',
         threshold: 0.01 
       }
     );
@@ -1507,8 +1552,8 @@ export default function About() {
     
     let timeoutId = null;
     if (isMobile) {
-      // Delay video preload on mobile to improve initial page load
-      timeoutId = setTimeout(preloadVideo, 2000);
+      // Delay video preload significantly on mobile to prevent crashes and refresh
+      timeoutId = setTimeout(preloadVideo, 5000); // Increased delay to 5 seconds
     } else {
       preloadVideo();
     }
