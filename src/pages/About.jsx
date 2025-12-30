@@ -1261,8 +1261,6 @@ export default function About() {
   // Auto-rotation for Sing Out Voices carousel - continuous rotation when not dragging
   useEffect(() => {
     const isMobile = windowSize.width < 768;
-    // Disable auto-rotation on mobile to improve performance
-    if (isMobile) return;
     
     if (!isDragging && hasAnimated && !isAnimating) {
       const animate = (timestamp) => {
@@ -1272,9 +1270,13 @@ export default function About() {
         
         const elapsed = timestamp - lastRotationTime.current;
         
-        // Update every ~33ms (30fps) instead of 20ms for smoother mobile performance
-        if (elapsed >= 33) {
-          setCarouselRotation(prev => prev + 0.3); // Slightly faster to compensate
+        // Use slower update frequency on mobile for better performance
+        // Mobile: ~50ms (20fps), Desktop: ~33ms (30fps)
+        const updateInterval = isMobile ? 50 : 33;
+        const rotationSpeed = isMobile ? 0.2 : 0.3; // Slower rotation on mobile
+        
+        if (elapsed >= updateInterval) {
+          setCarouselRotation(prev => prev + rotationSpeed);
           lastRotationTime.current = timestamp;
         }
         
@@ -1286,6 +1288,7 @@ export default function About() {
       return () => {
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = null;
         }
         lastRotationTime.current = 0;
       };
@@ -1473,7 +1476,10 @@ export default function About() {
   
   const isDesktop = windowSize.width >= 768;
   const desktopYOffset = isDesktop ? -0.5 : 0;
-  const avatarPosition = [0, -modelCenterY + desktopYOffset, 0];
+  // Adjust avatar position for mobile - shift down
+  const avatarPosition = windowSize.width < 768 
+    ? [0, -modelCenterY + desktopYOffset - 0.3, 0]  // Shift down 0.3 units on mobile (negative Y = down)
+    : [0, -modelCenterY + desktopYOffset, 0];
   
   const calculateSplineSize = () => {
     const screenWidth = windowSize.width;
@@ -1594,7 +1600,7 @@ export default function About() {
         }
         @keyframes bounceDown {
           0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(8px); }
+          50% { transform: translateY(4px); }
         }
         @keyframes float-0 {
           0%, 100% { transform: translate(-50%, -50%) translateY(0px); }
@@ -2015,7 +2021,7 @@ export default function About() {
             paddingRight: windowSize.width < 480 ? 'clamp(0.75rem, 2vw, 1rem)' : '0',
             transform: windowSize.width >= 768 
               ? `translateY(-5%) translateY(${scrollProgress * -30}px)`
-              : `translateY(-18%) translateY(${scrollProgress * -30}px)`,  // Shift up more on mobile
+              : `translateY(-18%) translateY(${scrollProgress * -30}px) translateY(60px)`,  // Shift down on mobile
             position: 'relative',
             zIndex: 10,
             marginLeft: windowSize.width >= 768 
@@ -2147,7 +2153,7 @@ export default function About() {
               minHeight: windowSize.width < 768 ? `${windowSize.width * 0.8}px` : 'auto',
               transform: windowSize.width >= 768 
                 ? `${avatarTransform} translateY(40px)`
-                : `translateX(-50%) translateY(40px) ${avatarTransform}`,
+                : `translateX(-50%) translateY(180px) ${avatarTransform}`,  // Shift down more on mobile
               opacity: avatarOpacity,
               zIndex: 0,
               pointerEvents: 'auto',
@@ -2244,7 +2250,7 @@ export default function About() {
           <p
             style={{
               fontSize: windowSize.width < 768 
-                ? calculateFontSize(20, 10, 24)
+                ? calculateFontSize(20, 12, 26)
                 : calculateFontSize(22, 16, 28),
               fontWeight: 400,
               lineHeight: 1.5,
@@ -2274,7 +2280,20 @@ export default function About() {
           }}
         >
           {learningIcons.map((icon, i) => {
-            const sectionProgress = Math.max(0, Math.min(1, (scrollProgress - (sectionTriggers[0] - sectionConfig.fadeOffset)) / 0.05));
+            const isMobile = windowSize.width < 768;
+            const animationStart = sectionTriggers[0] - sectionConfig.fadeOffset; // 0.03
+            
+            // Mobile: Animation completes at 75% of section, but with shorter duration (0.09)
+            // Desktop: Original faster animation, duration = 0.05
+            let animationDuration;
+            if (isMobile) {
+              // Shorter duration for mobile: 0.09
+              animationDuration = 0.09;
+            } else {
+              animationDuration = 0.05; // Original desktop duration
+            }
+            
+            const sectionProgress = Math.max(0, Math.min(1, (scrollProgress - animationStart) / animationDuration));
             const fadeOutProgress = Math.max(0, Math.min(1, (scrollProgress - (sectionTriggers[1] - 0.08)) / 0.07));
             
             const iconOpacity = sectionProgress * (1 - fadeOutProgress);
@@ -2315,12 +2334,16 @@ export default function About() {
             const centerX = (windowSize.width * config.x) / 100;
             const centerY = (windowSize.height * config.y) / 100;
             
-            const finalX = centerX + Math.cos(angle) * spiralRadius * sectionProgress;
+            let finalX = centerX + Math.cos(angle) * spiralRadius * sectionProgress;
             let finalY = centerY + Math.sin(angle) * spiralRadius * sectionProgress;
             
             // Special adjustment for Meitu icon to shift it up
             if (icon.name === 'Meitu') {
               finalY -= 50;
+              // On mobile, shift Meitu to the right
+              if (windowSize.width < 768) {
+                finalX += 85;
+              }
             }
             
             // Special adjustment for Blender icon to shift it down
@@ -2544,7 +2567,7 @@ export default function About() {
                 </h3>
                 <p style={{
                   fontSize: windowSize.width < 768 
-                    ? calculateFontSize(14, 11, 16)
+                    ? calculateFontSize(14, 13, 18)
                     : calculateFontSize(16, 13, 18),
                   fontWeight: 400,
                   lineHeight: 1.6,
@@ -2708,7 +2731,7 @@ export default function About() {
             <p
               style={{
                 fontSize: windowSize.width < 768 
-                  ? calculateFontSize(20, 10, 24)
+                  ? calculateFontSize(20, 12, 26)
                   : calculateFontSize(20, 14, 24),
                 fontWeight: 400,
                 lineHeight: 1.6,
@@ -2857,7 +2880,7 @@ export default function About() {
               <Avatar
                 animationPath="/animations/Singing.fbx"
                 scale={windowSize.width >= 1024 ? 1.6 : windowSize.width >= 640 ? 1.45 : 1.3}
-                position={[0, -1.5, 0]}
+                position={windowSize.width < 768 ? [0, -1.8, 0] : [0, -1.5, 0]}  // Shift down on mobile (more negative Y = down)
               />
             </Canvas>
           </Suspense>
@@ -2898,7 +2921,7 @@ export default function About() {
           <p
             style={{
               fontSize: windowSize.width < 768 
-                ? calculateFontSize(20, 10, 24)
+                ? calculateFontSize(20, 12, 26)
                 : calculateFontSize(20, 14, 24),
               fontWeight: 400,
               lineHeight: 1.6,
@@ -3009,7 +3032,9 @@ export default function About() {
             marginLeft: 'auto',
             marginRight: 0,
             textAlign: 'right',
-            transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[3]) * -sectionConfig.translateYAmplitude)}px)`,
+            transform: windowSize.width < 768
+              ? `translateY(${Math.max(0, (scrollProgress - sectionTriggers[3]) * -sectionConfig.translateYAmplitude)}px) translateY(-40px)`
+              : `translateY(${Math.max(0, (scrollProgress - sectionTriggers[3]) * -sectionConfig.translateYAmplitude)}px)`,
             opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[3] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
             transition: 'transform 0.8s ease-out, opacity 0.8s ease-out',
             position: 'relative',
@@ -3034,7 +3059,7 @@ export default function About() {
           <p
             style={{
               fontSize: windowSize.width < 768 
-                ? calculateFontSize(20, 10, 24)
+                ? calculateFontSize(20, 12, 26)
                 : calculateFontSize(20, 14, 24),
               fontWeight: 400,
               lineHeight: 1.6,
@@ -3571,7 +3596,7 @@ export default function About() {
           <p
             style={{
               fontSize: windowSize.width < 768 
-                ? calculateFontSize(20, 10, 24)
+                ? calculateFontSize(20, 12, 26)
                 : calculateFontSize(20, 14, 24),
               fontWeight: 400,
               lineHeight: 1.6,
@@ -3635,7 +3660,7 @@ export default function About() {
           <p
             style={{
               fontSize: windowSize.width < 768 
-                ? calculateFontSize(20, 10, 24)
+                ? calculateFontSize(20, 12, 26)
                 : calculateFontSize(20, 14, 24),
               fontWeight: 400,
               lineHeight: 1.6,
@@ -3655,13 +3680,13 @@ export default function About() {
       <div
         style={{
           position: 'fixed',
-          bottom: '2rem',
+          bottom: '1.2rem',
           left: '50%',
           transform: 'translateX(-50%)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '0.5rem',
+          gap: '0.1rem',
           zIndex: 100,
           opacity: scrollProgress > 0.05 ? 0 : 1,
           transition: 'opacity 0.8s ease-out',
@@ -3681,7 +3706,7 @@ export default function About() {
             style={{
               animation: 'bounceDown 1.5s ease-in-out infinite',
               color: '#525252',
-              marginBottom: '-8px'
+              marginBottom: '-14px'
             }}
           >
             <path d="M6 9l6 6 6-6" />
