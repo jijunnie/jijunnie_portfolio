@@ -630,6 +630,8 @@ export default function About() {
   
   const [modelsVisible, setModelsVisible] = useState(false);
   const [mainTitleVisible, setMainTitleVisible] = useState(false);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const [hasEnteredMusicSection, setHasEnteredMusicSection] = useState(false);
   const [titleTypingText, setTitleTypingText] = useState('');
   const [titleComplete, setTitleComplete] = useState(false);
   const [subtitlePrefixVisible, setSubtitlePrefixVisible] = useState(false);
@@ -640,6 +642,8 @@ export default function About() {
   const [scriptVisible, setScriptVisible] = useState(false);
   const [galleryScroll, setGalleryScroll] = useState(0);
   const [hoveredGalleryItem, setHoveredGalleryItem] = useState(null);
+  const [galleryImagesPreloaded, setGalleryImagesPreloaded] = useState(false);
+  const galleryPreloadRef = useRef(false);
   
   // Interests carousel state
   const [carouselRotation, setCarouselRotation] = useState(0);
@@ -660,6 +664,8 @@ export default function About() {
   const travelVideoRef = useRef(null);
   const developVideoRef = useRef(null);
   const competeVideoRef = useRef(null);
+  const musicVideoRef = useRef(null);
+  const musicAudioRef = useRef(null);
   const galleryScrollThrottleRef = useRef(0);
   
   const titleText = 'Hi, I am Jijun Nie';
@@ -718,6 +724,38 @@ export default function About() {
     '/images/sing7.jpg'
   ], []);
   
+  // Capture the Beauty gallery images - all 28 images
+  const galleryImages = useMemo(() => [
+    '/aboutImage/1.jpg',
+    '/aboutImage/2.jpg',
+    '/aboutImage/3.JPG',
+    '/aboutImage/4.jpg',
+    '/aboutImage/5.JPG',
+    '/aboutImage/6.JPG',
+    '/aboutImage/7.jpg.JPG',
+    '/aboutImage/8.jpg',
+    '/aboutImage/9.jpg',
+    '/aboutImage/10.jpg',
+    '/aboutImage/11.jpg',
+    '/aboutImage/12.JPG',
+    '/aboutImage/13.JPG',
+    '/aboutImage/14.jpg',
+    '/aboutImage/15.JPG',
+    '/aboutImage/16.jpg',
+    '/aboutImage/17.jpg',
+    '/aboutImage/18.JPG',
+    '/aboutImage/19.JPG',
+    '/aboutImage/20.JPG',
+    '/aboutImage/21.JPG',
+    '/aboutImage/22.jpg',
+    '/aboutImage/23.JPG',
+    '/aboutImage/24.JPG',
+    '/aboutImage/25.JPG',
+    '/aboutImage/26.JPG',
+    '/aboutImage/27.png',
+    '/aboutImage/28.JPG',
+  ], []);
+  
   const carouselItemsCount = carouselImages.length;
   const angleStep = 360 / carouselItemsCount;
   
@@ -734,6 +772,81 @@ export default function About() {
       cameraFov: isMobile ? 55 : isTablet ? 50 : 50,
     };
   }, [isMobile, isTablet]);
+  
+  // Preload gallery images with concurrency control to prevent crashes
+  const preloadGalleryImages = useCallback(() => {
+    if (galleryPreloadRef.current) return; // Already started
+    galleryPreloadRef.current = true;
+    
+    // Increase concurrent loads for faster preloading (still safe)
+    const CONCURRENT_LOADS = 6; // Load 6 images at a time for faster preloading
+    let currentIndex = 0;
+    const loadedImages = new Set();
+    const failedImages = new Set();
+    
+    const loadImage = (src) => {
+      return new Promise((resolve) => {
+        // Skip if already loaded or failed
+        if (loadedImages.has(src) || failedImages.has(src)) {
+          resolve();
+          return;
+        }
+        
+        const img = new Image();
+        
+        // Set timeout to prevent hanging
+        const timeout = setTimeout(() => {
+          failedImages.add(src);
+          resolve();
+        }, 10000); // 10 second timeout per image
+        
+        img.onload = () => {
+          clearTimeout(timeout);
+          loadedImages.add(src);
+          resolve();
+        };
+        
+        img.onerror = () => {
+          clearTimeout(timeout);
+          failedImages.add(src);
+          // Silently handle errors to prevent crashes
+          resolve();
+        };
+        
+        try {
+          img.src = src;
+        } catch (error) {
+          clearTimeout(timeout);
+          failedImages.add(src);
+          resolve();
+        }
+      });
+    };
+    
+    const loadBatch = async () => {
+      const batch = [];
+      const endIndex = Math.min(currentIndex + CONCURRENT_LOADS, galleryImages.length);
+      
+      for (let i = currentIndex; i < endIndex; i++) {
+        batch.push(loadImage(galleryImages[i]));
+      }
+      
+      await Promise.all(batch);
+      currentIndex = endIndex;
+      
+      if (currentIndex < galleryImages.length) {
+        // Reduce delay between batches for faster loading
+        setTimeout(loadBatch, 50);
+      } else {
+        setGalleryImagesPreloaded(true);
+      }
+    };
+    
+    // Start loading immediately with minimal delay
+    requestAnimationFrame(() => {
+      loadBatch();
+    });
+  }, [galleryImages]);
   
   useEffect(() => {
     // Set page ready immediately to prevent flash
@@ -833,6 +946,35 @@ export default function About() {
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [windowSize.width]);
+  
+  // Start preloading gallery images immediately on page load
+  // This ensures images are ready when user reaches the "Capture the Beauty" section
+  useEffect(() => {
+    // Start preloading immediately after component mounts
+    // Use requestAnimationFrame to ensure it doesn't block initial render
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        preloadGalleryImages();
+      });
+    });
+  }, [preloadGalleryImages]);
+  
+  // Preload sport background images
+  useEffect(() => {
+    const preloadSportImages = () => {
+      const horizontalImg = new Image();
+      const verticalImg = new Image();
+      horizontalImg.src = '/images/sport horizontal.jpg';
+      verticalImg.src = '/images/sport vertical.jpg';
+      
+      // Handle load errors
+      horizontalImg.onerror = () => console.warn('Failed to load sport horizontal.jpg');
+      verticalImg.onerror = () => console.warn('Failed to load sport vertical.jpg');
+    };
+    
+    // Preload after a short delay to not interfere with initial page load
+    setTimeout(preloadSportImages, 1000);
+  }, []);
   
   useEffect(() => {
     const rafIdRef = { current: null };
@@ -1491,6 +1633,92 @@ export default function About() {
       }
     };
   }, []);
+
+  // Unlock audio context on first user interaction (required by browser autoplay policy)
+  useEffect(() => {
+    const unlockAudio = () => {
+      if (musicAudioRef.current) {
+        // Try to play and immediately pause to unlock audio context
+        const playPromise = musicAudioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              musicAudioRef.current.pause();
+              musicAudioRef.current.currentTime = 0;
+              console.log('Audio context unlocked');
+            })
+            .catch(() => {
+              // Ignore errors during unlock
+            });
+        }
+      }
+    };
+
+    // Try to unlock on various user interactions
+    const events = ['click', 'touchstart', 'keydown', 'scroll'];
+    events.forEach(event => {
+      document.addEventListener(event, unlockAudio, { once: true, passive: true });
+    });
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, unlockAudio);
+      });
+    };
+  }, []);
+
+  // Control background music for Music section - play when entering, don't stop until page exit
+  useEffect(() => {
+    if (!musicAudioRef.current) return;
+    
+    const audio = musicAudioRef.current;
+    const musicSectionStart = sectionTriggers[5]; // 0.68
+    // Add a small offset to ensure we're truly in the Music section, not just at the boundary
+    const musicSectionTrigger = musicSectionStart + 0.02; // 0.70
+    
+    // Set volume (0.0 to 1.0)
+    audio.volume = 0.5;
+    
+    // Check if we've entered the music section (with offset to prevent early triggering)
+    const hasEntered = scrollProgress >= musicSectionTrigger;
+    
+    if (hasEntered && !hasEnteredMusicSection) {
+      // First time entering the section - automatically start playing
+      setHasEnteredMusicSection(true);
+      setIsMusicPlaying(true);
+    }
+  }, [scrollProgress, hasEnteredMusicSection]);
+
+  // Control music playback based on isMusicPlaying state
+  useEffect(() => {
+    if (!musicAudioRef.current) return;
+    
+    const audio = musicAudioRef.current;
+    
+    if (isMusicPlaying && hasEnteredMusicSection) {
+      if (audio.paused) {
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              console.log('Music started playing');
+            })
+            .catch(error => {
+              console.warn('Failed to play audio:', error);
+            });
+        }
+      }
+    } else {
+      if (!audio.paused) {
+        audio.pause();
+      }
+    }
+  }, [isMusicPlaying, hasEnteredMusicSection]);
+
+  // Toggle music playback
+  const toggleMusic = useCallback(() => {
+    setIsMusicPlaying(prev => !prev);
+  }, []);
   
   // Fallback: If user scrolls past section without triggering, still enable auto-rotation
   useEffect(() => {
@@ -1783,6 +2011,15 @@ export default function About() {
   
   const sectionTriggers = [0.08, 0.20, 0.32, 0.38, 0.56, 0.68, 0.76, 0.84];
   
+  // Sport section background image based on screen orientation
+  const sportBackgroundImage = useMemo(() => {
+    // Use encodeURI to handle spaces in filename
+    const imagePath = windowSize.width > windowSize.height 
+      ? '/images/sport horizontal.jpg' 
+      : '/images/sport vertical.jpg';
+    return encodeURI(imagePath);
+  }, [windowSize.width, windowSize.height]);
+  
   // Memoize expensive calculations to prevent unnecessary re-renders
   const avatarTransform = useMemo(() => 
     `translateY(${scrollProgress * 15}%) scale(${1 - scrollProgress * 0.15})`,
@@ -1936,6 +2173,14 @@ export default function About() {
         @keyframes float-3 {
           0%, 100% { transform: translate(-50%, -50%) translateY(0px); }
           50% { transform: translate(-50%, -50%) translateY(-13px); }
+        }
+        @keyframes rotate {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
         }
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(10px); }
@@ -2321,6 +2566,79 @@ export default function About() {
               />
             </Suspense>
           </Canvas>
+          
+          {/* Open to Internship / Part time jobs - Above Avatar */}
+          <div
+            style={{
+              position: 'absolute',
+              top: isDesktop ? '8%' : isTablet ? '6%' : isMobile ? '30%' : '3%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              whiteSpace: isMobile ? 'normal' : 'nowrap',
+              fontSize: isDesktop 
+                ? calculateFontSize(14, 10, 16)
+                : isTablet
+                  ? calculateFontSize(13, 9, 15)
+                  : calculateFontSize(11, 8, 13),
+              fontWeight: 500,
+              color: '#525252',
+              opacity: avatarOpacity,
+              transition: 'opacity 0.6s ease-out',
+              zIndex: 10,
+              padding: isMobile ? '5px 10px' : '6px 12px',
+              background: 'rgba(255, 255, 255, 0.9)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '20px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+              textAlign: 'center',
+              maxWidth: isMobile ? '90%' : 'none'
+            }}
+          >
+            Open to Internship / Part time jobs
+          </div>
+          
+          {/* Tags Below Avatar */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: isDesktop ? '12%' : isTablet ? '10%' : '8%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: isDesktop ? '8px' : isTablet ? '6px' : '6px',
+              justifyContent: 'center',
+              alignItems: 'center',
+              opacity: avatarOpacity,
+              transition: 'opacity 0.6s ease-out',
+              zIndex: 10,
+              maxWidth: isDesktop ? '300px' : isMobile ? '150px' : '100%',
+              width: isDesktop ? '300px' : isMobile ? '150px' : 'auto'
+            }}
+          >
+            {['Scorpio', 'ENFJ', 'Christian', 'Mandarin', 'Cantonese', 'English'].map((tag, index) => (
+              <div
+                key={index}
+                style={{
+                  fontSize: isDesktop 
+                    ? calculateFontSize(12, 9, 14)
+                    : isTablet
+                      ? calculateFontSize(11, 8, 13)
+                      : calculateFontSize(10, 7, 12),
+                  fontWeight: 500,
+                  color: '#171717',
+                  padding: isDesktop ? '6px 14px' : isTablet ? '5px 12px' : '4px 10px',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '16px',
+                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {tag}
+              </div>
+            ))}
+          </div>
           </div>
         )}
         
@@ -2576,12 +2894,14 @@ export default function About() {
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
-          overflow: 'visible',  // Changed to visible to allow icons to show
-          overflowX: 'hidden',  // Keep horizontal overflow hidden
-          overflowY: 'visible',  // Allow vertical overflow for icons
+          overflow: 'visible',  // Allow icons to overflow and show
+          overflowX: 'visible',
+          overflowY: 'visible',
           width: '100%',
           maxWidth: '100vw',
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          transform: 'none',  // Explicitly disable any transform to prevent sliding
+          willChange: 'auto'  // Disable will-change to prevent GPU acceleration that might cause sliding
         }}
       >
         <div 
@@ -2591,7 +2911,7 @@ export default function About() {
             paddingBottom: 'clamp(3rem, 6vw, 6rem)',
             paddingLeft: 'clamp(1.5rem, 4vw, 4rem)',
             paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
-            transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[0]) * -sectionConfig.translateYAmplitude)}px)`,
+            transform: 'none',
             opacity: (() => {
               // Use faster fade speed when scrolling up, but slower overall
               const fadeSpeed = scrollDirection.current === 'up' ? sectionConfig.fadeInSpeed * 2.0 : sectionConfig.fadeInSpeed * 1.2;
@@ -2605,7 +2925,7 @@ export default function About() {
               const fadeOut = Math.max(0, Math.min(1, (scrollProgress - fadeOutStart) / fadeOutDuration));
               return fadeIn * (1 - fadeOut);
             })(),
-            transition: 'transform 0.8s ease-out, opacity 0.5s ease-out',  // Same transition for mobile and desktop
+            transition: 'opacity 0.5s ease-out',  // Removed transform transition to prevent sliding
             maxWidth: '900px',
             marginLeft: 'auto',
             marginRight: 'auto',
@@ -2625,6 +2945,7 @@ export default function About() {
               lineHeight: 1.1,
               letterSpacing: '-0.03em',
               color: '#0a0a0a',
+              textShadow: '1px 1px 2px rgba(255, 255, 255, 0.8)',
               marginBottom: `${calculateSpacing(20)}px`,
               textAlign: 'center'
             }}
@@ -2642,6 +2963,7 @@ export default function About() {
               fontWeight: 400,
               lineHeight: 1.5,
               color: '#525252',
+              textShadow: '1px 1px 2px rgba(255, 255, 255, 0.6)',
               maxWidth: isTablet ? '750px' : '700px',
               textAlign: 'center',
               marginBottom: 0,
@@ -2664,7 +2986,8 @@ export default function About() {
             pointerEvents: 'none',
             zIndex: isDesktop ? 25 : 15,  // Higher z-index for desktop to ensure icons appear above previous section's gradient
             overflow: 'visible',  // Allow icons to overflow and show in other sections
-            clipPath: 'none'  // Ensure no clipping so overflowing icons can show
+            clipPath: 'none',  // Ensure no clipping so overflowing icons can show
+            transform: 'none'  // Disable transform to prevent sliding
           }}
         >
           {learningIcons.map((icon, i) => {
@@ -2803,9 +3126,9 @@ export default function About() {
                   transform: `translate(-50%, -50%) scale(${scale}) rotate(${-angle * (180 / Math.PI)}deg)`,
                   opacity: iconOpacity,
                   transition: 'opacity 0.3s ease-out, transform 0.3s ease-out',
-                  pointerEvents: iconOpacity > 0.3 ? 'auto' : 'none',
-                  cursor: isMobile ? 'default' : 'pointer',
-                  touchAction: 'manipulation', // Improve touch responsiveness on mobile
+                  pointerEvents: 'none',
+                  cursor: 'default',
+                  touchAction: 'none',
                   filter: `blur(${(1 - sectionProgress) * 8}px) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))`,
                   animationName: iconOpacity > 0 ? `float-${orbitIndex}` : 'none',
                   animationDuration: iconOpacity > 0 ? '3s' : 'none',
@@ -2824,13 +3147,6 @@ export default function About() {
                     width: '100%',
                     height: '100%',
                     objectFit: 'contain',
-                    transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.2) rotate(5deg)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
                   }}
                 />
               </div>
@@ -2885,8 +3201,8 @@ export default function About() {
             objectFit: 'cover',
             objectPosition: 'center',
             zIndex: 0,
-            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[1] - sectionConfig.fadeOffset - 0.03)) * (sectionConfig.fadeInSpeed * 0.8))),
-            transition: 'opacity 1.5s ease-out'
+            opacity: scrollProgress >= sectionTriggers[1] - sectionConfig.fadeOffset ? 1 : 0,
+            transition: 'opacity 0.3s ease-out'
           }}
           onError={(e) => {
             try {
@@ -2940,8 +3256,8 @@ export default function About() {
               : windowSize.width >= 1024
               ? `translateY(${-120 + Math.max(0, (scrollProgress - sectionTriggers[1]) * -sectionConfig.translateYAmplitude)}px)`  // Shift up a bit for desktop
               : `translateY(${-100 + Math.max(0, (scrollProgress - sectionTriggers[1]) * -sectionConfig.translateYAmplitude)}px)`,
-            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[1] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
-            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out',
+            opacity: scrollProgress >= sectionTriggers[1] - sectionConfig.fadeOffset ? 1 : 0,
+            transition: 'transform 0.8s ease-out, opacity 0.3s ease-out',
             position: 'relative',
             zIndex: 2
           }}
@@ -3130,7 +3446,8 @@ export default function About() {
             const sectionStart = 0.32; // sectionTriggers[2]
             const fadeOffset = sectionConfig.fadeOffset; // Use unified fadeOffset
             const fadeInStart = sectionStart - fadeOffset;
-            const fadeInEnd = sectionStart + 0.03;
+            // Faster fade in for mobile
+            const fadeInEnd = sectionStart + (windowSize.width < 768 ? 0.015 : 0.03);
             
             if (scrollProgress < fadeInStart) return 0;
             if (scrollProgress >= fadeInStart && scrollProgress <= fadeInEnd) {
@@ -3172,8 +3489,8 @@ export default function About() {
               paddingRight: '1rem',
               zIndex: 20,
               transform: `translateX(-50%) translateY(${Math.max(0, (scrollProgress - sectionTriggers[2]) * -sectionConfig.translateYAmplitude)}px)`,
-              opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[2] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
-              transition: 'transform 0.8s ease-out, opacity 0.8s ease-out'
+              opacity: 1,
+              transition: 'transform 0.8s ease-out'
             }}
           >
             <h2
@@ -3220,8 +3537,8 @@ export default function About() {
               : `${interpolateValue(24, 38)}%`,  // Interpolate between tablet mobile equivalent and desktop
             left: '50%',
             transform: `translate(-50%, -50%) translateY(${Math.max(0, (scrollProgress - sectionTriggers[2]) * -sectionConfig.translateYAmplitude)}px) ${windowSize.width < 640 ? 'scale(0.75)' : windowSize.width >= 1024 ? 'scale(1)' : `scale(${interpolateValue(0.75, 1)})`}`,  // Proportional scale for tablet
-            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[2] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
-            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out',
+            opacity: 1,
+            transition: 'transform 0.8s ease-out',
             width: '100%',
             pointerEvents: 'auto',
             overflow: 'visible',
@@ -3307,8 +3624,8 @@ export default function About() {
               ? 'calc(50% - 20px)' 
               : `calc(50% - ${interpolateValue(25, 30)}px)`,  // Interpolate between tablet and desktop
             transform: `translateX(-50%) translateY(${Math.max(0, (scrollProgress - sectionTriggers[2]) * -sectionConfig.translateYAmplitude)}px)`,
-            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[2] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
-            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out',
+            opacity: 1,
+            transition: 'transform 0.8s ease-out',
             width: windowSize.width >= 1024 
               ? '680px' 
               : windowSize.width < 640 
@@ -3352,29 +3669,29 @@ export default function About() {
               {windowSize.width >= 1024 ? (
                 // Desktop lighting
                 <>
-                  <ambientLight intensity={1.2} />
-                  <directionalLight position={[10, 10, 5]} intensity={2.4} />
-                  <directionalLight position={[-5, 5, -3]} intensity={1.0} />
-                  <pointLight position={[-10, -10, -5]} intensity={1.5} />
-                  <pointLight position={[5, 8, 3]} intensity={0.8} />
+                  <ambientLight intensity={1.8} />
+                  <directionalLight position={[10, 10, 5]} intensity={3.5} />
+                  <directionalLight position={[-5, 5, -3]} intensity={1.8} />
+                  <pointLight position={[-10, -10, -5]} intensity={2.2} />
+                  <pointLight position={[5, 8, 3]} intensity={1.5} />
                 </>
               ) : windowSize.width >= 640 ? (
                 // Tablet lighting
                 <>
-                  <ambientLight intensity={1.3} />
-                  <directionalLight position={[8, 8, 4]} intensity={2.2} />
-                  <directionalLight position={[-4, 4, -2]} intensity={1.1} />
-                  <pointLight position={[-8, -8, -4]} intensity={1.6} />
-                  <pointLight position={[4, 6, 2]} intensity={0.9} />
+                  <ambientLight intensity={1.9} />
+                  <directionalLight position={[8, 8, 4]} intensity={3.2} />
+                  <directionalLight position={[-4, 4, -2]} intensity={1.7} />
+                  <pointLight position={[-8, -8, -4]} intensity={2.3} />
+                  <pointLight position={[4, 6, 2]} intensity={1.6} />
                 </>
               ) : (
                 // Mobile lighting
                 <>
-                  <ambientLight intensity={1.4} />
-                  <directionalLight position={[6, 6, 3]} intensity={2.0} />
-                  <directionalLight position={[-3, 3, -2]} intensity={1.2} />
-                  <pointLight position={[-6, -6, -3]} intensity={1.7} />
-                  <pointLight position={[3, 5, 2]} intensity={1.0} />
+                  <ambientLight intensity={2.0} />
+                  <directionalLight position={[6, 6, 3]} intensity={3.0} />
+                  <directionalLight position={[-3, 3, -2]} intensity={1.8} />
+                  <pointLight position={[-6, -6, -3]} intensity={2.4} />
+                  <pointLight position={[3, 5, 2]} intensity={1.7} />
                 </>
               )}
               <Avatar
@@ -3408,8 +3725,8 @@ export default function About() {
               paddingRight: '1rem',
               zIndex: 20,
               transform: `translate(-50%, -50%) translateY(${Math.max(0, (scrollProgress - sectionTriggers[2]) * -sectionConfig.translateYAmplitude)}px)`,
-              opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[2] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
-              transition: 'transform 0.8s ease-out, opacity 0.8s ease-out'
+              opacity: 1,
+              transition: 'transform 0.8s ease-out'
             }}
           >
           <h2
@@ -3845,8 +4162,7 @@ export default function About() {
                     willChange: windowSize.width < 768 ? 'auto' : 'transform'
                   }}>
                     <img 
-                      data-src={item.image}
-                      src={i < 2 ? item.image : undefined}
+                      src={item.image}
                       alt={item.title}
                       style={{
                         width: '100%',
@@ -3861,7 +4177,7 @@ export default function About() {
                         willChange: windowSize.width < 768 ? 'auto' : 'transform',
                         opacity: 1
                       }}
-                      loading={i < 2 ? "eager" : "lazy"}
+                      loading="eager"
                       decoding="async"
                       onError={(e) => {
                         try {
@@ -4104,6 +4420,19 @@ export default function About() {
             }
           }}
         />
+        {/* Overlay for better text readability - darker overlay for all breakpoints */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.2)',
+            zIndex: 1,
+            pointerEvents: 'none'
+          }}
+        />
         {/* Gradient fade at top for blending with previous section */}
         <div
           style={{
@@ -4111,9 +4440,9 @@ export default function About() {
             top: 0,
             left: 0,
             right: 0,
-            height: '400px',
+            height: '200px',
             background: 'linear-gradient(to bottom, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.85) 20%, rgba(255, 255, 255, 0.6) 40%, rgba(255, 255, 255, 0.3) 60%, rgba(255, 255, 255, 0.1) 80%, transparent 100%)',
-            zIndex: 1,
+            zIndex: 2,
             pointerEvents: 'none'
           }}
         />
@@ -4126,7 +4455,7 @@ export default function About() {
             right: 0,
             height: '400px',
             background: 'linear-gradient(to top, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.85) 20%, rgba(255, 255, 255, 0.6) 40%, rgba(255, 255, 255, 0.3) 60%, rgba(255, 255, 255, 0.1) 80%, transparent 100%)',
-            zIndex: 1,
+            zIndex: 2,
             pointerEvents: 'none'
           }}
         />
@@ -4145,7 +4474,7 @@ export default function About() {
             position: 'absolute',
             bottom: windowSize.width < 768 ? 'clamp(2rem, 5vw, 4rem)' : 0,
             left: 0,
-            zIndex: 2
+            zIndex: 3
           }}
         >
           <h2
@@ -4156,7 +4485,8 @@ export default function About() {
               fontWeight: 600,
               lineHeight: 1.1,
               letterSpacing: '-0.03em',
-              color: '#0a0a0a',
+              color: '#ffffff',
+              textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)',
               marginBottom: `${calculateSpacing(16)}px`
             }}
           >
@@ -4169,13 +4499,12 @@ export default function About() {
                 : calculateFontSize(20, 14, 24),
               fontWeight: 400,
               lineHeight: 1.6,
-              color: '#525252',
+              color: '#ffffff',
+              textShadow: '1px 1px 2px rgba(0, 0, 0, 0.3)',
               maxWidth: '800px'
             }}
           >
-            Competitive gaming taught me focus, resilience, and strategic thinking. It shaped my never-give-up
-            mentality—every match is a lesson in adaptation, teamwork, and the relentless pursuit of excellence.
-            The discipline and concentration from gaming translate directly into how I approach challenges in life.
+            Competitive gaming taught me focus and resilience. It sharpened my ability to make immediate decisions and determine the best solutions under pressure. To me, it's far more than the entertainment many adults define it as—every match is a lesson, every battle log a data point for growth. It taught me teamwork and a relentless pursuit of excellence. The discipline and concentration gaming demands translate directly into how I approach challenges in life.
           </p>
         </div>
       </div>
@@ -4183,10 +4512,11 @@ export default function About() {
       <div 
         className="relative w-full"
         style={{ 
-          minHeight: 'calc(var(--vh, 1vh) * 80)',
+          minHeight: 'calc(var(--vh, 1vh) * 100)',
           background: '#fafafa',
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'center',
           overflow: 'hidden',
           overflowX: 'hidden',
           width: '100%',
@@ -4194,31 +4524,136 @@ export default function About() {
           boxSizing: 'border-box'
         }}
       >
+        {/* Background Music - Ariana Grande Twilight Zone (Instrumental) */}
+        <audio
+          ref={musicAudioRef}
+          src="/images/music.m4a"
+          loop
+          preload="auto"
+          volume={0.5}
+          style={{ display: 'none' }}
+          onError={(e) => {
+            console.error('Audio loading error:', e);
+          }}
+          onLoadedData={() => {
+            console.log('Audio loaded successfully');
+            if (musicAudioRef.current) {
+              musicAudioRef.current.volume = 0.5;
+            }
+          }}
+        />
+        {/* Gradient fade at top for blending with previous section */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '400px',
+            background: 'linear-gradient(to bottom, rgba(250, 250, 250, 1) 0%, rgba(250, 250, 250, 0.85) 20%, rgba(250, 250, 250, 0.6) 40%, rgba(250, 250, 250, 0.3) 60%, rgba(250, 250, 250, 0.1) 80%, transparent 100%)',
+            zIndex: 1,
+            pointerEvents: 'none'
+          }}
+        />
+        {/* Video Background */}
+        <video
+          ref={musicVideoRef}
+          src="/images/music.MP4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center',
+            zIndex: 0,
+            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[5] - sectionConfig.fadeOffset - 0.03)) * (sectionConfig.fadeInSpeed * 0.8))),
+            transition: 'opacity 1.5s ease-out'
+          }}
+          onError={(e) => {
+            try {
+              if (e && e.target && !e.target.dataset.errorLogged) {
+                e.target.dataset.errorLogged = 'true';
+                console.warn('Music video failed to load, using fallback background');
+                if (e.target) {
+                  e.target.style.display = 'none';
+                }
+              }
+            } catch (error) {
+              // Silently handle error handler errors
+            }
+          }}
+          onLoadStart={() => {
+            if (musicVideoRef.current) {
+              musicVideoRef.current.dataset.errorLogged = 'false';
+            }
+          }}
+          onLoadedMetadata={() => {
+            if (musicVideoRef.current) {
+              musicVideoRef.current.playbackRate = 0.7;
+            }
+          }}
+        />
+        <img
+          src="/images/music.png"
+          alt="Music"
+          style={{
+            position: 'absolute',
+            width: 'calc(min(100vw, 100vh) * 0.85)',
+            height: 'calc(min(100vw, 100vh) * 0.85)',
+            maxWidth: 'calc(min(100vw, 100vh) * 0.85)',
+            maxHeight: 'calc(min(100vw, 100vh) * 0.85)',
+            objectFit: 'contain',
+            top: windowSize.width < 768 ? 'auto' : (windowSize.width > windowSize.height ? '55%' : 'auto'),
+            bottom: windowSize.width < 768 ? 'clamp(6rem, 12vw, 10rem)' : (windowSize.width > windowSize.height ? 'auto' : 'clamp(2rem, 5vw, 4rem)'),
+            left: windowSize.width > windowSize.height ? '72%' : '50%',
+            transform: windowSize.width > windowSize.height ? 'translate(-50%, -50%)' : 'translateX(-50%)',
+            zIndex: 1,
+            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[5] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
+            transition: 'opacity 0.8s ease-out'
+          }}
+        />
         <div 
           className="w-full"
           style={{
-            paddingTop: 'clamp(3rem, 6vw, 6rem)',
-            paddingBottom: 'clamp(3rem, 6vw, 6rem)',
+            paddingTop: windowSize.width > windowSize.height ? 'clamp(1.5rem, 3vw, 3rem)' : 'clamp(3rem, 6vw, 6rem)',
+            paddingBottom: windowSize.width > windowSize.height ? 'clamp(1.5rem, 3vw, 3rem)' : 'clamp(3rem, 6vw, 6rem)',
             paddingLeft: 'clamp(1.5rem, 4vw, 4rem)',
             paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
-            maxWidth: '1200px',
-            marginLeft: 'auto',
-            marginRight: 'auto',
-            textAlign: 'center',
-            transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[5]) * -sectionConfig.translateYAmplitude)}px)`,
+            maxWidth: windowSize.width > windowSize.height ? '600px' : '1200px',
+            textAlign: windowSize.width > windowSize.height ? 'left' : 'center',
+            transform: windowSize.width < 768 
+              ? `translate(-50%, calc(40px + ${Math.max(0, (scrollProgress - sectionTriggers[5]) * -sectionConfig.translateYAmplitude)}px))`
+              : windowSize.width > windowSize.height 
+                ? `translateY(calc(-50% - 20px + ${Math.max(0, (scrollProgress - sectionTriggers[5]) * -sectionConfig.translateYAmplitude)}px))`
+                : `translate(-50%, calc(0px + ${Math.max(0, (scrollProgress - sectionTriggers[5]) * -sectionConfig.translateYAmplitude)}px))`,
             opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[5] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
-            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out'
+            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out',
+            position: 'absolute',
+            top: windowSize.width > windowSize.height ? '50%' : 'clamp(2rem, 5vw, 4rem)',
+            left: windowSize.width > windowSize.height ? '5%' : '50%',
+            zIndex: 3,
+            maxHeight: windowSize.width > windowSize.height ? 'none' : '40%'
           }}
         >
           <h2
             style={{
-              fontSize: windowSize.width < 768 
+              fontSize: windowSize.width <= windowSize.height 
                 ? `clamp(20px, 5vw, 80px)`
                 : calculateFontSize(56, 28, 72),
               fontWeight: 600,
               lineHeight: 1.1,
               letterSpacing: '-0.03em',
-              color: '#0a0a0a',
+              background: 'linear-gradient(135deg, #ff6b6b 0%, #ffd93d 25%, #6bcf7f 50%, #4d96ff 75%, #9b59b6 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
               marginBottom: `${calculateSpacing(16)}px`
             }}
           >
@@ -4226,28 +4661,98 @@ export default function About() {
           </h2>
           <p
             style={{
-              fontSize: windowSize.width < 768 
-                ? calculateFontSize(20, 12, 26)
+              fontSize: windowSize.width <= windowSize.height 
+                ? calculateFontSize(20, 14, 28)
                 : calculateFontSize(20, 14, 24),
               fontWeight: 400,
               lineHeight: 1.6,
-              color: '#525252',
+              background: 'linear-gradient(135deg, #ff6b6b 0%, #ffd93d 25%, #6bcf7f 50%, #4d96ff 75%, #9b59b6 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
               maxWidth: '800px',
-              marginLeft: 'auto',
-              marginRight: 'auto'
+              marginLeft: windowSize.width > windowSize.height ? 0 : 'auto',
+              marginRight: windowSize.width > windowSize.height ? 0 : 'auto'
             }}
           >
-            Music is the soundtrack to my journey—fueling creativity, providing comfort, and energizing my pursuits.
-            From indie melodies to powerful anthems, every genre adds color to my life's narrative.
+            Music plays a central role in my life. I primarily listen to pop, Christian, sometimes country and a little rap. I value rhythm and beat as key indicators of a great song. Music both reflects and shapes my mood, bringing balance, energy, and joy to my daily life.
           </p>
         </div>
+        {/* Music Control Button - Small rotating icon */}
+        <button
+          onClick={toggleMusic}
+          style={{
+            position: 'absolute',
+            top: windowSize.width > windowSize.height ? '20px' : '20px',
+            right: windowSize.width > windowSize.height ? '20px' : '20px',
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            border: 'none',
+            background: 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(10px)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+            transition: 'transform 0.2s ease, background 0.2s ease',
+            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[5] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.1)';
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)';
+          }}
+          title={isMusicPlaying ? 'Pause music' : 'Play music'}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            style={{
+              animation: isMusicPlaying ? 'rotate 3s linear infinite' : 'none',
+              color: '#0a0a0a',
+            }}
+          >
+            {isMusicPlaying ? (
+              // Pause icon
+              <>
+                <rect x="6" y="4" width="4" height="16" fill="currentColor" />
+                <rect x="14" y="4" width="4" height="16" fill="currentColor" />
+              </>
+            ) : (
+              // Play icon
+              <path d="M8 5v14l11-7z" fill="currentColor" />
+            )}
+          </svg>
+        </button>
+        {/* Gradient fade at bottom for blending with next section */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '400px',
+            background: 'linear-gradient(to top, rgba(250, 250, 250, 1) 0%, rgba(250, 250, 250, 0.85) 20%, rgba(250, 250, 250, 0.6) 40%, rgba(250, 250, 250, 0.3) 60%, rgba(250, 250, 250, 0.1) 80%, transparent 100%)',
+            zIndex: 1,
+            pointerEvents: 'none'
+          }}
+        />
       </div>
 
 
       <div 
         className="relative w-full"
         style={{ 
-          minHeight: 'calc(var(--vh, 1vh) * 80)',
+          minHeight: 'calc(var(--vh, 1vh) * 100)',
           background: '#fafafa',
           display: 'flex',
           alignItems: 'center',
@@ -4255,13 +4760,48 @@ export default function About() {
           overflowX: 'hidden',
           width: '100%',
           maxWidth: '100vw',
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          position: 'relative'
         }}
       >
+        {/* Background Image - always visible when section is visible */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100%',
+            height: '100%',
+            backgroundImage: `url("${sportBackgroundImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            zIndex: 0,
+            opacity: scrollProgress >= sectionTriggers[7] - sectionConfig.fadeOffset ? 1 : 0,
+            transition: 'opacity 0.3s ease-out'
+          }}
+        />
+        
+        {/* Overlay for better text readability - darker overlay for all breakpoints */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.2)',
+            zIndex: 1,
+            pointerEvents: 'none'
+          }}
+        />
+        
         <div 
           className="w-full"
           style={{
-            paddingTop: 'clamp(3rem, 6vw, 6rem)',
+            paddingTop: windowSize.width >= 1024 ? 'clamp(2rem, 4vw, 4rem)' : 'clamp(3rem, 6vw, 6rem)',
             paddingBottom: 'clamp(4rem, 8vw, 8rem)',
             paddingLeft: 'clamp(1.5rem, 4vw, 4rem)',
             paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
@@ -4270,8 +4810,10 @@ export default function About() {
             marginRight: 'auto',
             textAlign: 'center',
             transform: `translateY(${Math.max(0, (scrollProgress - sectionTriggers[7]) * -sectionConfig.translateYAmplitude)}px)`,
-            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[7] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
-            transition: 'transform 0.8s ease-out, opacity 0.8s ease-out'
+            opacity: scrollProgress >= sectionTriggers[7] - sectionConfig.fadeOffset ? 1 : 0,
+            transition: 'transform 0.8s ease-out, opacity 0.3s ease-out',
+            position: 'relative',
+            zIndex: 2
           }}
         >
           <h2
@@ -4282,7 +4824,8 @@ export default function About() {
               fontWeight: 600,
               lineHeight: 1.1,
               letterSpacing: '-0.03em',
-              color: '#0a0a0a',
+              color: '#ffffff',
+              textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)',
               marginBottom: `${calculateSpacing(16)}px`
             }}
           >
@@ -4295,7 +4838,8 @@ export default function About() {
                 : calculateFontSize(20, 14, 24),
               fontWeight: 400,
               lineHeight: 1.6,
-              color: '#525252',
+              color: '#ffffff',
+              textShadow: '1px 1px 2px rgba(0, 0, 0, 0.3)',
               maxWidth: '800px',
               marginLeft: 'auto',
               marginRight: 'auto'
