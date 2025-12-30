@@ -865,11 +865,18 @@ export default function About() {
         }
       }, 100);
     } else {
-      // Desktop: use double RAF for smooth transition
+      // Desktop: optimize initialization to reduce lag
+      // Set opacity immediately for faster perceived load
+      setPageOpacity(1);
+      // Use triple RAF to ensure smooth rendering after browser paint
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          setPageOpacity(1);
-          setModelsVisible(true);
+          requestAnimationFrame(() => {
+            // Delay models slightly to allow page to render first
+            setTimeout(() => {
+              setModelsVisible(true);
+            }, 50);
+          });
         });
       });
     }
@@ -908,9 +915,10 @@ export default function About() {
   }, [mainTitleVisible]);
   
   useEffect(() => {
+    // Reduce delay for faster initial render
     const timer = setTimeout(() => {
       setMainTitleVisible(true);
-    }, 300);
+    }, 100);
     return () => clearTimeout(timer);
   }, []);
   
@@ -1290,6 +1298,8 @@ export default function About() {
     }
   }, []);
   
+  const resizeHandlerRef = useRef(null);
+  
   useEffect(() => {
     if (typeof window !== 'undefined') {
       // Use fixed height, only update width on resize
@@ -1319,13 +1329,19 @@ export default function About() {
       }
     }, 150); // Debounce resize to avoid excessive updates
     
+    // Store handler in ref for cleanup
+    resizeHandlerRef.current = handleResize;
+    
     if (typeof window !== 'undefined') {
       window.addEventListener('resize', handleResize, { passive: true });
       return () => {
-        window.removeEventListener('resize', handleResize);
-        // Clean up debounce function
-        if (handleResize.cancel) {
-          handleResize.cancel();
+        if (resizeHandlerRef.current) {
+          window.removeEventListener('resize', resizeHandlerRef.current);
+          // Clean up debounce function
+          if (resizeHandlerRef.current.cancel) {
+            resizeHandlerRef.current.cancel();
+          }
+          resizeHandlerRef.current = null;
         }
       };
     }
