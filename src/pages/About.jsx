@@ -342,10 +342,12 @@ function NeonWaveBackground({ scrollProgress, sectionTrigger, fadeOffset, fadeIn
     const isMobile = window.innerWidth < 768;
     const initParticles = () => {
       particlesRef.current = [];
-      // Reduce particle count on mobile: divide by 30000 instead of 15000
-      const divisor = isMobile ? 30000 : 15000;
+      // Reduce particle count on mobile: divide by 50000 instead of 30000 for better performance
+      const divisor = isMobile ? 50000 : 15000;
       const particleCount = Math.floor((width * height) / divisor);
-      for (let i = 0; i < particleCount; i++) {
+      // Cap maximum particles on mobile to prevent performance issues
+      const maxParticles = isMobile ? 30 : Infinity;
+      for (let i = 0; i < Math.min(particleCount, maxParticles); i++) {
         particlesRef.current.push({
           x: Math.random() * width,
           y: Math.random() * height,
@@ -431,8 +433,8 @@ function NeonWaveBackground({ scrollProgress, sectionTrigger, fadeOffset, fadeIn
       
       ctx.clearRect(0, 0, width, height);
       
-      // Slower animation on mobile for better performance
-      timeRef.current += isMobile ? 0.015 : 0.02;
+      // Much slower animation on mobile for better performance and battery life
+      timeRef.current += isMobile ? 0.008 : 0.02;
 
       // Calculate opacity based on scroll - use ref to avoid dependency
       const currentScrollProgress = scrollProgressRef.current;
@@ -450,9 +452,9 @@ function NeonWaveBackground({ scrollProgress, sectionTrigger, fadeOffset, fadeIn
         ];
 
         // Draw waves at different Y positions - reduce wave count on mobile
-        const waveCount = isMobile ? 2 : 3;
+        const waveCount = isMobile ? 1 : 3;
         const wavePositions = isMobile 
-          ? [height * 0.4, height * 0.6]
+          ? [height * 0.5]
           : [height * 0.3, height * 0.5, height * 0.7];
         wavePositions.forEach((yPos, i) => {
           const amplitude = 30 + i * 10;
@@ -470,8 +472,8 @@ function NeonWaveBackground({ scrollProgress, sectionTrigger, fadeOffset, fadeIn
           );
         });
 
-        // Draw additional flowing waves - reduce count on mobile
-        const additionalWaveCount = isMobile ? 2 : 3;
+        // Draw additional flowing waves - disable on mobile for better performance
+        const additionalWaveCount = isMobile ? 0 : 3;
         for (let i = 0; i < additionalWaveCount; i++) {
           const yPos = height * 0.4 + Math.sin(timeRef.current * 0.5 + i) * 50;
           const amplitude = 25 + Math.sin(timeRef.current + i) * 10;
@@ -639,6 +641,7 @@ export default function About() {
   const galleryRef = useRef(null);
   const travelVideoRef = useRef(null);
   const developVideoRef = useRef(null);
+  const galleryScrollThrottleRef = useRef(0);
   
   const titleText = 'Hi, I am Jijun Nie';
   
@@ -817,96 +820,130 @@ export default function About() {
     let ticking = false;
     let isMounted = true;
     
+    let lastUpdateTime = 0;
+    
     const updateScrollProgress = () => {
-      if (!isMounted || !containerRef.current) {
-        ticking = false;
-        return;
-      }
-      
-      const scrollTop = window.scrollY || 0;
-      // Use fixed viewport height to prevent content shift
-      const fixedHeight = fixedViewportHeight.current || window.innerHeight || 800;
-      const docHeight = Math.max(0, (document.documentElement.scrollHeight || 0) - fixedHeight);
-      
-      // Validate all calculations to prevent NaN
-      if (!isFinite(scrollTop) || !isFinite(fixedHeight) || !isFinite(docHeight)) {
-        ticking = false;
-        return;
-      }
-      
-      // Prevent division by zero and NaN
-      const progress = docHeight > 0 ? Math.min(Math.max(0, scrollTop / docHeight), 1) : 0;
-      
-      // Extra safety check for NaN
-      if (!isFinite(progress) || isNaN(progress)) {
-        ticking = false;
-        return;
-      }
-      
-      // Only update if progress changed significantly to prevent unnecessary re-renders
-      const progressDiff = Math.abs(progress - previousScrollProgress.current);
-      if (progressDiff < 0.001) {
-        ticking = false;
-        return;
-      }
-      
-      // Determine scroll direction
-      if (progress < previousScrollProgress.current) {
-        scrollDirection.current = 'up';
-      } else if (progress > previousScrollProgress.current) {
-        scrollDirection.current = 'down';
-      }
-      
-      previousScrollProgress.current = progress;
-      
-      // Use requestAnimationFrame to batch state updates
       try {
-        setScrollProgress(progress);
+        if (!isMounted || !containerRef.current) {
+          ticking = false;
+          return;
+        }
+        
+        // Throttle updates on mobile to prevent excessive re-renders
+        const now = Date.now();
+        if (isMobile && now - lastUpdateTime < 50) {
+          ticking = false;
+          return;
+        }
+        lastUpdateTime = now;
+        
+        const scrollTop = window.scrollY || 0;
+        // Use fixed viewport height to prevent content shift
+        const fixedHeight = fixedViewportHeight.current || window.innerHeight || 800;
+        const docHeight = Math.max(0, (document.documentElement.scrollHeight || 0) - fixedHeight);
+        
+        // Validate all calculations to prevent NaN
+        if (!isFinite(scrollTop) || !isFinite(fixedHeight) || !isFinite(docHeight)) {
+          ticking = false;
+          return;
+        }
+        
+        // Prevent division by zero and NaN
+        const progress = docHeight > 0 ? Math.min(Math.max(0, scrollTop / docHeight), 1) : 0;
+        
+        // Extra safety check for NaN
+        if (!isFinite(progress) || isNaN(progress)) {
+          ticking = false;
+          return;
+        }
+        
+        // Only update if progress changed significantly to prevent unnecessary re-renders
+        // Use larger threshold on mobile for better performance
+        const progressThreshold = isMobile ? 0.005 : 0.001;
+        const progressDiff = Math.abs(progress - previousScrollProgress.current);
+        if (progressDiff < progressThreshold) {
+          ticking = false;
+          return;
+        }
+        
+        // Determine scroll direction
+        if (progress < previousScrollProgress.current) {
+          scrollDirection.current = 'up';
+        } else if (progress > previousScrollProgress.current) {
+          scrollDirection.current = 'down';
+        }
+        
+        previousScrollProgress.current = progress;
+        
+        // Use requestAnimationFrame to batch state updates
+        try {
+          setScrollProgress(progress);
+        } catch (error) {
+          console.error('Error updating scroll progress:', error);
+          ticking = false;
+          return;
+        }
+        
+        ticking = false;
+        rafIdRef.current = null;
       } catch (error) {
-        console.error('Error updating scroll progress:', error);
+        console.error('Error in updateScrollProgress:', error);
+        ticking = false;
+        rafIdRef.current = null;
       }
-      
-      ticking = false;
-      rafIdRef.current = null;
     };
     
     const handleScroll = () => {
-      if (!isMounted || ticking) return;
-      
-      ticking = true;
-      // Cancel any pending animation frame
-      if (rafIdRef.current) {
-        cancelAnimationFrame(rafIdRef.current);
+      try {
+        if (!isMounted || ticking) return;
+        
+        ticking = true;
+        // Cancel any pending animation frame
+        if (rafIdRef.current) {
+          cancelAnimationFrame(rafIdRef.current);
+        }
+        // Use requestAnimationFrame for smooth updates
+        rafIdRef.current = requestAnimationFrame(updateScrollProgress);
+      } catch (error) {
+        console.error('Error in handleScroll:', error);
+        ticking = false;
       }
-      // Use requestAnimationFrame for smooth updates
-      rafIdRef.current = requestAnimationFrame(updateScrollProgress);
     };
     
     // Throttle scroll event listener more aggressively on mobile
-    const throttleTime = isMobile ? 100 : 16;
+    // Use longer throttle on mobile to prevent lag and crashes
+    const throttleTime = isMobile ? 150 : 16;
     const throttledHandleScroll = throttle(handleScroll, throttleTime);
     
-    window.addEventListener('scroll', throttledHandleScroll, { passive: true });
-    // Initial call with delay to avoid blocking
-    setTimeout(() => {
-      if (isMounted) {
-        handleScroll();
-      }
-    }, 0);
+    try {
+      window.addEventListener('scroll', throttledHandleScroll, { passive: true });
+      // Initial call with delay to avoid blocking
+      setTimeout(() => {
+        if (isMounted) {
+          handleScroll();
+        }
+      }, 0);
+    } catch (error) {
+      console.error('Error setting up scroll listener:', error);
+    }
     
     return () => {
-      isMounted = false;
-      window.removeEventListener('scroll', throttledHandleScroll);
-      if (rafIdRef.current) {
-        cancelAnimationFrame(rafIdRef.current);
-        rafIdRef.current = null;
+      try {
+        isMounted = false;
+        window.removeEventListener('scroll', throttledHandleScroll);
+        if (rafIdRef.current) {
+          cancelAnimationFrame(rafIdRef.current);
+          rafIdRef.current = null;
+        }
+        if (throttledHandleScroll && throttledHandleScroll.cancel) {
+          throttledHandleScroll.cancel();
+        }
+        ticking = false;
+      } catch (error) {
+        console.warn('Error cleaning up scroll listener:', error);
       }
-      if (throttledHandleScroll.cancel) {
-        throttledHandleScroll.cancel();
-      }
-      ticking = false;
     };
-  }, [windowSize.width]);
+  }, [windowSize.width, isMobile]);
   
   const typingStateRef = useRef({
     currentCharIndex: 0,
@@ -1042,22 +1079,32 @@ export default function About() {
       lockInitialViewportHeight();
       
       // Set again after short delay for better browser compatibility
-      const timeoutId = setTimeout(lockInitialViewportHeight, 100);
-      const timeoutId2 = setTimeout(lockInitialViewportHeight, 300);
+      // Reduced timeout frequency on mobile to prevent excessive updates
+      const timeoutId = setTimeout(lockInitialViewportHeight, isIOS ? 200 : 100);
+      const timeoutId2 = setTimeout(lockInitialViewportHeight, isIOS ? 500 : 300);
       
       // On iOS, listen to scroll end to restore touch targets
       let scrollEndTimer = null;
+      let isScrolling = false;
       const handleScrollEnd = () => {
+        if (isScrolling) return; // Prevent multiple simultaneous calls
+        isScrolling = true;
         clearTimeout(scrollEndTimer);
         scrollEndTimer = setTimeout(() => {
-          // Force reflow to restore touch targets after address bar movement
-          if (isIOS && document.body) {
-            document.body.style.transform = 'translate3d(0,0,0)';
-            // Trigger reflow
-            void document.body.offsetHeight;
-            document.body.style.transform = '';
+          try {
+            // Force reflow to restore touch targets after address bar movement
+            if (isIOS && document.body) {
+              document.body.style.transform = 'translate3d(0,0,0)';
+              // Trigger reflow
+              void document.body.offsetHeight;
+              document.body.style.transform = '';
+            }
+          } catch (error) {
+            console.error('Error in handleScrollEnd:', error);
+          } finally {
+            isScrolling = false;
           }
-        }, 150);
+        }, 200); // Increased from 150 to 200 for better stability
       };
       
       if (isIOS) {
@@ -1162,13 +1209,21 @@ export default function About() {
       const boxWidth = isDesktop ? 340 : isTablet ? 300 : 250;
       const scrollAmount = boxWidth * 0.65; // Scroll more to show less of first box
       // Use setTimeout to ensure the gallery is fully rendered before scrolling
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         if (galleryRef.current) {
-          galleryRef.current.scrollLeft = scrollAmount;
+          try {
+            galleryRef.current.scrollLeft = scrollAmount;
+          } catch (error) {
+            console.warn('Gallery scroll error:', error);
+          }
         }
       }, 100);
+      
+      return () => {
+        clearTimeout(timeoutId);
+      };
     }
-  }, [windowSize.width]);
+  }, [windowSize.width, isDesktop, isTablet]);
 
   // Intersection Observer for optimized image lazy loading with queue management
   useEffect(() => {
@@ -1234,9 +1289,14 @@ export default function About() {
     images.forEach(img => observer.observe(img));
     
     return () => {
-      observer.disconnect();
-      loadingQueue = [];
-      currentlyLoading = 0;
+      try {
+        observer.disconnect();
+        loadingQueue = [];
+        currentlyLoading = 0;
+      } catch (error) {
+        // Silently handle cleanup errors
+        console.warn('Observer cleanup error:', error);
+      }
     };
   }, [galleryRef.current, windowSize.width]);
 
@@ -1255,17 +1315,26 @@ export default function About() {
       video.load();
     };
     
+    let timeoutId = null;
     if (isMobile) {
       // Delay video preload on mobile to improve initial page load
-      setTimeout(preloadVideo, 2000);
+      timeoutId = setTimeout(preloadVideo, 2000);
     } else {
       preloadVideo();
     }
+    
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [windowSize.width]);
 
   // Control video playback based on scroll position - throttled to prevent crashes
   useEffect(() => {
-    const checkInterval = 0.02; // Only check every 2% scroll progress change
+    const isMobile = windowSize.width < 768;
+    // Use larger check interval on mobile to reduce video operations
+    const checkInterval = isMobile ? 0.05 : 0.02; // Only check every 5% on mobile, 2% on desktop
     
     // Skip if change is too small to reduce unnecessary video operations
     if (Math.abs(scrollProgress - lastVideoCheckProgress.current) < checkInterval) {
@@ -1281,40 +1350,56 @@ export default function About() {
     const shouldPlayDevelop = scrollProgress >= developSectionTrigger - 0.05 && scrollProgress <= developSectionTrigger + 0.15;
     
     // Use requestAnimationFrame to batch video operations and prevent blocking
-    const rafId = requestAnimationFrame(() => {
-      try {
-        if (travelVideoRef.current) {
-          if (shouldPlayTravel && travelVideoRef.current.paused) {
-            // Add user interaction requirement check for autoplay
-            travelVideoRef.current.play().catch(err => {
-              console.warn('Video autoplay prevented:', err);
-              // Fallback: could show play button overlay here
-            });
-          } else if (!shouldPlayTravel && !travelVideoRef.current.paused) {
-            travelVideoRef.current.pause();
+    // Add delay on mobile to reduce battery drain
+    const delay = isMobile ? 100 : 0;
+    const timeoutId = setTimeout(() => {
+      const rafId = requestAnimationFrame(() => {
+        try {
+          if (travelVideoRef.current) {
+            if (shouldPlayTravel && travelVideoRef.current.paused) {
+              // Add user interaction requirement check for autoplay
+              travelVideoRef.current.play().catch(err => {
+                // Silently handle autoplay errors on mobile
+                if (!isMobile) {
+                  console.warn('Video autoplay prevented:', err);
+                }
+              });
+            } else if (!shouldPlayTravel && !travelVideoRef.current.paused) {
+              travelVideoRef.current.pause();
+            }
+          }
+          
+          if (developVideoRef.current) {
+            if (shouldPlayDevelop && developVideoRef.current.paused) {
+              developVideoRef.current.play().catch(err => {
+                // Silently handle autoplay errors on mobile
+                if (!isMobile) {
+                  console.warn('Develop video autoplay prevented:', err);
+                }
+              });
+            } else if (!shouldPlayDevelop && !developVideoRef.current.paused) {
+              developVideoRef.current.pause();
+            }
+          }
+        } catch (error) {
+          // Silently handle errors on mobile to prevent console spam
+          if (!isMobile) {
+            console.error('Error controlling video playback:', error);
           }
         }
-        
-        if (developVideoRef.current) {
-          if (shouldPlayDevelop && developVideoRef.current.paused) {
-            developVideoRef.current.play().catch(err => {
-              console.warn('Develop video autoplay prevented:', err);
-            });
-          } else if (!shouldPlayDevelop && !developVideoRef.current.paused) {
-            developVideoRef.current.pause();
-          }
+      });
+      
+      return () => {
+        if (rafId) {
+          cancelAnimationFrame(rafId);
         }
-      } catch (error) {
-        console.error('Error controlling video playback:', error);
-      }
-    });
+      };
+    }, delay);
     
     return () => {
-      if (rafId) {
-        cancelAnimationFrame(rafId);
-      }
+      clearTimeout(timeoutId);
     };
-  }, [scrollProgress]);
+  }, [scrollProgress, windowSize.width]);
   
   // Sing Out Voices carousel initialization - trigger animation when section starts appearing, then auto-rotate
   useEffect(() => {
@@ -2379,8 +2464,8 @@ export default function About() {
               opacity: avatarOpacity,
               zIndex: 0,
               pointerEvents: 'auto',
-              willChange: 'transform',
-              transition: 'transform 0.6s ease-out, opacity 0.6s ease-out',
+              willChange: isMobile ? 'auto' : 'transform',
+              transition: isMobile ? 'opacity 0.6s ease-out' : 'transform 0.6s ease-out, opacity 0.6s ease-out',
               overflow: 'visible'
             }}
           >
@@ -2394,7 +2479,18 @@ export default function About() {
                 position: 'relative'
               }}
             >
-              <Suspense fallback={null}>
+              <Suspense fallback={
+                <div style={{
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: '#f0f0f0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <div style={{ color: '#999', fontSize: '14px' }}>Loading...</div>
+                </div>
+              }>
                 <Spline 
                   scene={isDesktop
                     ? "https://prod.spline.design/RiI1HgjSIb8MFplx/scene.splinecode"
@@ -2406,8 +2502,20 @@ export default function About() {
                     height: '100%',
                     overflow: 'visible'
                   }}
-                  onLoad={() => console.log('Spline scene loaded')}
-                  onError={(error) => console.error('Spline error:', error)}
+                  onLoad={() => {
+                    try {
+                      console.log('Spline scene loaded');
+                    } catch (error) {
+                      console.warn('Spline load callback error:', error);
+                    }
+                  }}
+                  onError={(error) => {
+                    try {
+                      console.error('Spline error:', error);
+                    } catch (err) {
+                      console.warn('Spline error handler failed:', err);
+                    }
+                  }}
                 />
               </Suspense>
             </div>
@@ -2609,7 +2717,8 @@ export default function About() {
                   opacity: iconOpacity,
                   transition: 'opacity 0.3s ease-out, transform 0.3s ease-out',
                   pointerEvents: iconOpacity > 0.3 ? 'auto' : 'none',
-                  cursor: 'pointer',
+                  cursor: isMobile ? 'default' : 'pointer',
+                  touchAction: 'manipulation', // Improve touch responsiveness on mobile
                   filter: `blur(${(1 - sectionProgress) * 8}px) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))`,
                   animationName: iconOpacity > 0 ? `float-${orbitIndex}` : 'none',
                   animationDuration: iconOpacity > 0 ? '3s' : 'none',
@@ -3071,10 +3180,28 @@ export default function About() {
             clipPath: 'none'
           }}
         >
-          <Suspense fallback={null}>
+          <Suspense fallback={
+            <div style={{
+              width: '100%',
+              height: '100%',
+              backgroundColor: '#f0f0f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <div style={{ color: '#999', fontSize: '14px' }}>Loading 3D model...</div>
+            </div>
+          }>
             <Canvas
               camera={{ position: [0, 0, 5], fov: 50 }}
               style={{ width: '100%', height: '100%', overflow: 'visible' }}
+              gl={{ 
+                antialias: windowSize.width >= 768,
+                powerPreference: windowSize.width >= 768 ? "high-performance" : "low-power",
+                stencil: false,
+                depth: true
+              }}
+              dpr={windowSize.width < 768 ? Math.min(window.devicePixelRatio, 1.5) : window.devicePixelRatio}
             >
               {/* Responsive lighting based on breakpoints */}
               {windowSize.width >= 1024 ? (
@@ -3442,13 +3569,18 @@ export default function About() {
               }}
               onScroll={(e) => {
                 try {
-                  const scrollLeft = e.target.scrollLeft;
-                  const scrollWidth = e.target.scrollWidth - e.target.clientWidth;
+                  if (!e || !e.target) return;
+                  const scrollLeft = e.target.scrollLeft || 0;
+                  const scrollWidth = (e.target.scrollWidth || 0) - (e.target.clientWidth || 0);
                   // Prevent division by zero and NaN
                   const newScroll = scrollWidth > 0 && !isNaN(scrollLeft) && !isNaN(scrollWidth) 
                     ? Math.min(Math.max(0, scrollLeft / scrollWidth), 1) 
                     : 0;
-                  setGalleryScroll(newScroll);
+                  // Throttle updates on mobile
+                  if (!isMobile || Date.now() - (galleryScrollThrottleRef.current || 0) > 100) {
+                    galleryScrollThrottleRef.current = Date.now();
+                    setGalleryScroll(newScroll);
+                  }
                 } catch (error) {
                   // Silently handle any errors to prevent crashes
                   console.error('Gallery scroll error:', error);
@@ -3591,7 +3723,7 @@ export default function About() {
                         }
                       }}
                     />
-                    {/* Location overlay on hover */}
+                    {/* Location overlay on hover/touch */}
                     {isHovered && item.location && (
                       <div style={{
                         position: 'absolute',
@@ -3599,12 +3731,15 @@ export default function About() {
                         left: 0,
                         right: 0,
                         background: 'linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.5), transparent)',
-                        padding: '24px 20px 20px 20px',
+                        padding: windowSize.width < 768 ? '16px 16px 16px 16px' : '24px 20px 20px 20px',
                         color: '#ffffff',
-                        fontSize: calculateFontSize(18, 16, 20),
+                        fontSize: windowSize.width < 768 ? calculateFontSize(16, 14, 18) : calculateFontSize(18, 16, 20),
                         fontWeight: 600,
                         transition: 'opacity 0.3s ease',
-                        animation: 'fadeIn 0.3s ease'
+                        animation: 'fadeIn 0.3s ease',
+                        zIndex: 10,
+                        pointerEvents: 'none',
+                        touchAction: 'none'
                       }}>
                         📍 {item.location}
                       </div>
@@ -3627,15 +3762,16 @@ export default function About() {
                 onClick={() => {
                   try {
                     if (galleryRef.current) {
-                      galleryRef.current.scrollBy({ left: -400, behavior: 'smooth' });
+                      const scrollAmount = windowSize.width < 768 ? -250 : -400;
+                      galleryRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
                     }
                   } catch (error) {
                     console.error('Gallery scroll error:', error);
                   }
                 }}
                 style={{
-                  width: '40px',
-                  height: '40px',
+                  width: windowSize.width < 768 ? '44px' : '40px',
+                  height: windowSize.width < 768 ? '44px' : '40px',
                   borderRadius: '50%',
                   border: '1px solid #e5e5e5',
                   background: '#ffffff',
@@ -3643,15 +3779,37 @@ export default function About() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  transition: 'all 0.3s ease'
+                  transition: 'all 0.3s ease',
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#0a0a0a';
-                  e.currentTarget.style.background = '#fafafa';
+                  if (windowSize.width >= 768) {
+                    e.currentTarget.style.borderColor = '#0a0a0a';
+                    e.currentTarget.style.background = '#fafafa';
+                  }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#e5e5e5';
-                  e.currentTarget.style.background = '#ffffff';
+                  if (windowSize.width >= 768) {
+                    e.currentTarget.style.borderColor = '#e5e5e5';
+                    e.currentTarget.style.background = '#ffffff';
+                  }
+                }}
+                onTouchStart={(e) => {
+                  if (windowSize.width < 768) {
+                    e.currentTarget.style.borderColor = '#0a0a0a';
+                    e.currentTarget.style.background = '#fafafa';
+                  }
+                }}
+                onTouchEnd={(e) => {
+                  if (windowSize.width < 768) {
+                    setTimeout(() => {
+                      if (e.currentTarget) {
+                        e.currentTarget.style.borderColor = '#e5e5e5';
+                        e.currentTarget.style.background = '#ffffff';
+                      }
+                    }, 150);
+                  }
                 }}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -3679,15 +3837,16 @@ export default function About() {
                 onClick={() => {
                   try {
                     if (galleryRef.current) {
-                      galleryRef.current.scrollBy({ left: 400, behavior: 'smooth' });
+                      const scrollAmount = windowSize.width < 768 ? 250 : 400;
+                      galleryRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
                     }
                   } catch (error) {
                     console.error('Gallery scroll error:', error);
                   }
                 }}
                 style={{
-                  width: '40px',
-                  height: '40px',
+                  width: windowSize.width < 768 ? '44px' : '40px',
+                  height: windowSize.width < 768 ? '44px' : '40px',
                   borderRadius: '50%',
                   border: '1px solid #e5e5e5',
                   background: '#ffffff',
@@ -3695,15 +3854,37 @@ export default function About() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  transition: 'all 0.3s ease'
+                  transition: 'all 0.3s ease',
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#0a0a0a';
-                  e.currentTarget.style.background = '#fafafa';
+                  if (windowSize.width >= 768) {
+                    e.currentTarget.style.borderColor = '#0a0a0a';
+                    e.currentTarget.style.background = '#fafafa';
+                  }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#e5e5e5';
-                  e.currentTarget.style.background = '#ffffff';
+                  if (windowSize.width >= 768) {
+                    e.currentTarget.style.borderColor = '#e5e5e5';
+                    e.currentTarget.style.background = '#ffffff';
+                  }
+                }}
+                onTouchStart={(e) => {
+                  if (windowSize.width < 768) {
+                    e.currentTarget.style.borderColor = '#0a0a0a';
+                    e.currentTarget.style.background = '#fafafa';
+                  }
+                }}
+                onTouchEnd={(e) => {
+                  if (windowSize.width < 768) {
+                    setTimeout(() => {
+                      if (e.currentTarget) {
+                        e.currentTarget.style.borderColor = '#e5e5e5';
+                        e.currentTarget.style.background = '#ffffff';
+                      }
+                    }, 150);
+                  }
                 }}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
