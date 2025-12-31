@@ -29,10 +29,8 @@ const getRemoteModelUrl = (localPath) => {
 };
 import Borders from '../components/globe/Borders';
 import FilledRegions from '../components/globe/FilledRegions';
-import Marker from '../components/globe/Marker';
 import InfoPanel from '../components/globe/InfoPanel';
 import RotatingBackground from '../components/globe/RotatingBackground';
-import { markers } from '../data/visitedRegions';
 
 // Preload 3D background model at module level (runs immediately when file loads)
 const backgroundModelUrl = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/cozy_living_room_baked.glb';
@@ -2795,12 +2793,6 @@ function JourneysPanel({ isMobile }) {
     setInfoPanelOpen(true);
   };
 
-  const handleMarkerClick = (markerData) => {
-    setSelectedMarker(markerData);
-    setSelectedRegion(null);
-    setInfoPanelOpen(true);
-  };
-
   const handleClosePanel = () => {
     setInfoPanelOpen(false);
     setSelectedRegion(null);
@@ -2865,23 +2857,6 @@ function JourneysPanel({ isMobile }) {
           />
         </Suspense>
 
-        {/* Markers */}
-        <Suspense fallback={null}>
-          {markers.map((marker) => (
-            <Marker
-              key={marker.id}
-              lat={marker.lat}
-              lon={marker.lon}
-              name={marker.name}
-              description={marker.description}
-              visited={marker.visited}
-              onClick={handleMarkerClick}
-              globeRotationRef={globeRotationRef}
-              isGlobeHovered={isGlobeHovered}
-            />
-          ))}
-        </Suspense>
-
         {/* Camera Controls */}
         <OrbitControls
           enableZoom={true}
@@ -2909,7 +2884,7 @@ function JourneysPanel({ isMobile }) {
       <div className={`absolute ${isMobile ? 'bottom-4' : 'bottom-6'} left-1/2 transform -translate-x-1/2 z-30`}>
         <div className="bg-black/60 backdrop-blur-md text-white px-4 py-2 rounded-full text-xs">
           <p className="text-center whitespace-nowrap">
-            🖱️ Click countries or markers • 🎯 Drag to rotate • 🔍 Scroll to zoom
+            🖱️ Click countries • 🎯 Drag to rotate • 🔍 Scroll to zoom
           </p>
         </div>
       </div>
