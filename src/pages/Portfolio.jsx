@@ -2873,22 +2873,35 @@ function ProjectsPanel({ isMobile }) {
 
   // Preload all project images when component mounts
   useEffect(() => {
+    if (!Array.isArray(projects)) return;
+    
+    let isMounted = true;
+    
     projects.forEach((project) => {
-      if (project.image) {
-        const img = new window.Image();
-        img.src = project.image;
-        img.onload = () => {
-          // Only log successful preloads in development
-          if (process.env.NODE_ENV === 'development') {
-            console.log('✅ Preloaded project image:', project.image);
-          }
-        };
-        img.onerror = () => {
-          // Silently handle missing images - don't spam console with warnings
-          // These images may not exist yet (e.g., project-mobile.jpg, project-api.jpg)
-        };
+      if (!isMounted) return;
+      
+      try {
+        if (project && project.image && typeof project.image === 'string') {
+          const img = new window.Image();
+          img.src = project.image;
+          img.onload = () => {
+            if (isMounted && process.env.NODE_ENV === 'development') {
+              console.log('✅ Preloaded project image:', project.image);
+            }
+          };
+          img.onerror = () => {
+            // Silently handle missing images - don't spam console with warnings
+            // These images may not exist yet (e.g., project-mobile.jpg, project-api.jpg)
+          };
+        }
+      } catch (error) {
+        console.warn('Image preload error:', error);
       }
     });
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {

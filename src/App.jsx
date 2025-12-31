@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, Component } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Menu, X, User, FileText, FolderKanban, Heart, Mail, Globe as GlobeIcon } from 'lucide-react';
 import Home from './pages/Home';
@@ -9,6 +9,67 @@ import Interests from './pages/Interests';
 import Contact from './pages/Contact';
 import Globe from './pages/Globe';
 import WorldIcon from './components/globe/WorldIcon';
+
+// Error Boundary Component to catch React errors and prevent crashes
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    // Log to error reporting service if needed
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100vh',
+          padding: '20px',
+          textAlign: 'center',
+          backgroundColor: '#f9fafb'
+        }}>
+          <h1 style={{ fontSize: '24px', marginBottom: '16px', color: '#1f2937' }}>
+            Something went wrong
+          </h1>
+          <p style={{ color: '#6b7280', marginBottom: '24px' }}>
+            We're sorry, but something unexpected happened. Please try refreshing the page.
+          </p>
+          <button
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              window.location.reload();
+            }}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: '500'
+            }}
+          >
+            Refresh Page
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 // Navigation Bar Component with Liquid Glass Design
 function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
   const location = useLocation();
@@ -451,15 +512,17 @@ function MainApp({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
       {/* Main Content */}
       <Layout>
         <ContentWrapper>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/resume" element={<Resume />} />
-            <Route path="/projects" element={<Portfolio />} />
-            <Route path="/interests" element={<Interests />} />
-            <Route path="/globe" element={<Globe />} />
-            <Route path="/contact" element={<Contact />} />
-          </Routes>
+          <ErrorBoundary>
+            <Routes>
+              <Route path="/" element={<ErrorBoundary><Home /></ErrorBoundary>} />
+              <Route path="/about" element={<ErrorBoundary><About /></ErrorBoundary>} />
+              <Route path="/resume" element={<ErrorBoundary><Resume /></ErrorBoundary>} />
+              <Route path="/projects" element={<ErrorBoundary><Portfolio /></ErrorBoundary>} />
+              <Route path="/interests" element={<ErrorBoundary><Interests /></ErrorBoundary>} />
+              <Route path="/globe" element={<ErrorBoundary><Globe /></ErrorBoundary>} />
+              <Route path="/contact" element={<ErrorBoundary><Contact /></ErrorBoundary>} />
+            </Routes>
+          </ErrorBoundary>
         </ContentWrapper>
       </Layout>
     </div>

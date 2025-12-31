@@ -112,6 +112,34 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
+// Global error handlers to prevent crashes
+if (typeof window !== 'undefined') {
+  // Catch unhandled promise rejections
+  window.addEventListener('unhandledrejection', (event) => {
+    console.error('Unhandled promise rejection:', event.reason);
+    event.preventDefault(); // Prevent default browser error handling
+  });
+
+  // Catch uncaught errors
+  window.addEventListener('error', (event) => {
+    console.error('Uncaught error:', event.error);
+    // Don't prevent default to allow error boundary to catch it
+  });
+
+  // Prevent infinite loops in console
+  let errorCount = 0;
+  const maxErrors = 10;
+  const originalConsoleError = console.error;
+  console.error = function(...args) {
+    errorCount++;
+    if (errorCount > maxErrors) {
+      console.warn('Too many errors, suppressing further console.error calls');
+      return;
+    }
+    originalConsoleError.apply(console, args);
+  };
+}
+
 // Error boundary for rendering errors
 try {
   const rootElement = document.getElementById('root')
@@ -127,11 +155,18 @@ try {
   )
 } catch (error) {
   console.error('Failed to render app:', error)
-  document.body.innerHTML = `
-    <div style="padding: 20px; font-family: sans-serif;">
-      <h1>Error Loading Application</h1>
-      <p>${error.message}</p>
-      <pre>${error.stack}</pre>
-    </div>
-  `
+  try {
+    document.body.innerHTML = `
+      <div style="padding: 20px; font-family: sans-serif;">
+        <h1>Error Loading Application</h1>
+        <p>${error.message || 'Unknown error'}</p>
+        <pre>${error.stack || 'No stack trace available'}</pre>
+        <button onclick="window.location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 5px; cursor: pointer;">
+          Reload Page
+        </button>
+      </div>
+    `
+  } catch (innerError) {
+    console.error('Failed to display error message:', innerError);
+  }
 }

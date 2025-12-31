@@ -92,25 +92,39 @@ const fixTexturePaths = (scene) => {
       const materials = Array.isArray(child.material) ? child.material : [child.material];
       
       materials.forEach((material) => {
-        const textureProperties = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap'];
+        if (!material || typeof material !== 'object') return;
         
-        textureProperties.forEach((prop) => {
-          if (material[prop]) {
-            const texture = material[prop];
-            const currentSrc = texture.image?.src || texture.image?.currentSrc || texture.source?.data?.src;
-            
-            // 检查是否是错误的远程路径（包含mixamo-mini或r2.dev/home）
-            if (currentSrc && (
-              currentSrc.includes('mixamo-mini') ||
-              currentSrc.includes('r2.dev/home') ||
-              currentSrc.includes('.fbm/')
-            )) {
-              // 直接移除无效纹理，使用默认材质（避免异步加载导致的问题）
-              material[prop] = null;
-              material.needsUpdate = true;
+        try {
+          const textureProperties = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap'];
+          
+          textureProperties.forEach((prop) => {
+            try {
+              if (material[prop]) {
+                const texture = material[prop];
+                if (!texture) return;
+                
+                const currentSrc = texture.image?.src || texture.image?.currentSrc || texture.source?.data?.src;
+                
+                // 检查是否是错误的远程路径（包含mixamo-mini或r2.dev/home）
+                if (currentSrc && typeof currentSrc === 'string' && (
+                  currentSrc.includes('mixamo-mini') ||
+                  currentSrc.includes('r2.dev/home') ||
+                  currentSrc.includes('.fbm/')
+                )) {
+                  // 直接移除无效纹理，使用默认材质（避免异步加载导致的问题）
+                  material[prop] = null;
+                  if (material.needsUpdate !== undefined) {
+                    material.needsUpdate = true;
+                  }
+                }
+              }
+            } catch (propError) {
+              console.warn('Texture property error:', propError);
             }
-          }
-        });
+          });
+        } catch (materialError) {
+          console.warn('Material processing error:', materialError);
+        }
       });
     }
   });
@@ -149,31 +163,58 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
     // 修复克隆场景中的纹理路径（在useMemo中执行，只执行一次）
     fixTexturePaths(cloned);
     
-    cloned.traverse((child) => {
-      if (child.isMesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-        child.frustumCulled = false;
-        
-        if (child.material) {
-          child.material = child.material.clone();
-          child.material.needsUpdate = true;
-          if (child.material.transparent) {
-            child.material.opacity = 1;
+    try {
+      if (cloned && typeof cloned.traverse === 'function') {
+        cloned.traverse((child) => {
+          try {
+            if (child && child.isMesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+              child.frustumCulled = false;
+              
+              if (child.material) {
+                try {
+                  child.material = child.material.clone();
+                  if (child.material) {
+                    child.material.needsUpdate = true;
+                    if (child.material.transparent) {
+                      child.material.opacity = 1;
+                    }
+                  }
+                } catch (materialError) {
+                  console.warn('Material clone error:', materialError);
+                }
+              }
+            }
+            
+            if (child && child.isSkinnedMesh && child.skeleton && typeof child.skeleton.pose === 'function') {
+              try {
+                child.skeleton.pose();
+              } catch (poseError) {
+                console.warn('Skeleton pose error:', poseError);
+              }
+            }
+          } catch (childError) {
+            console.warn('Child processing error:', childError);
+          }
+        });
+      }
+    } catch (traverseError) {
+      console.warn('Traverse error:', traverseError);
+    }
+    
+    try {
+      if (cloned && THREE.Box3) {
+        const box = new THREE.Box3().setFromObject(cloned);
+        if (box && typeof box.getCenter === 'function') {
+          const center = box.getCenter(new THREE.Vector3());
+          if (center && typeof center.y === 'number' && isFinite(center.y) && onBoundingBoxCalculated) {
+            onBoundingBoxCalculated(center.y);
           }
         }
       }
-      
-      if (child.isSkinnedMesh && child.skeleton) {
-        child.skeleton.pose();
-      }
-    });
-    
-    const box = new THREE.Box3().setFromObject(cloned);
-    const center = box.getCenter(new THREE.Vector3());
-    
-    if (onBoundingBoxCalculated) {
-      onBoundingBoxCalculated(center.y);
+    } catch (boxError) {
+      console.warn('Bounding box calculation error:', boxError);
     }
     
     return cloned;
@@ -205,20 +246,40 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
               child.geometry.dispose();
             }
             if (child.material) {
-              if (Array.isArray(child.material)) {
-                child.material.forEach(m => {
-                  if (m) {
-                    if (m.map) m.map.dispose();
-                    if (m.normalMap) m.normalMap.dispose();
-                    if (m.emissiveMap) m.emissiveMap.dispose();
-                    m.dispose();
+              try {
+                if (Array.isArray(child.material)) {
+                  child.material.forEach(m => {
+                    try {
+                      if (m && typeof m === 'object') {
+                        if (m.map && typeof m.map.dispose === 'function') m.map.dispose();
+                        if (m.normalMap && typeof m.normalMap.dispose === 'function') m.normalMap.dispose();
+                        if (m.emissiveMap && typeof m.emissiveMap.dispose === 'function') m.emissiveMap.dispose();
+                        if (typeof m.dispose === 'function') m.dispose();
+                      }
+                    } catch (matError) {
+                      console.warn('Material dispose error:', matError);
+                    }
+                  });
+                } else if (typeof child.material === 'object') {
+                  try {
+                    if (child.material.map && typeof child.material.map.dispose === 'function') {
+                      child.material.map.dispose();
+                    }
+                    if (child.material.normalMap && typeof child.material.normalMap.dispose === 'function') {
+                      child.material.normalMap.dispose();
+                    }
+                    if (child.material.emissiveMap && typeof child.material.emissiveMap.dispose === 'function') {
+                      child.material.emissiveMap.dispose();
+                    }
+                    if (typeof child.material.dispose === 'function') {
+                      child.material.dispose();
+                    }
+                  } catch (singleMatError) {
+                    console.warn('Single material dispose error:', singleMatError);
                   }
-                });
-              } else {
-                if (child.material.map) child.material.map.dispose();
-                if (child.material.normalMap) child.material.normalMap.dispose();
-                if (child.material.emissiveMap) child.material.emissiveMap.dispose();
-                child.material.dispose();
+                }
+              } catch (materialDisposeError) {
+                console.warn('Material disposal error:', materialDisposeError);
               }
             }
           }
@@ -249,43 +310,77 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
     }
     
     const boneMap = new Map();
-    clonedAvatar.traverse((object) => {
-      if (object.isBone) {
-        boneMap.set(object.name.toLowerCase(), object);
+    try {
+      if (clonedAvatar && typeof clonedAvatar.traverse === 'function') {
+        clonedAvatar.traverse((object) => {
+          try {
+            if (object && object.isBone && object.name) {
+              boneMap.set(object.name.toLowerCase(), object);
+            }
+          } catch (traverseError) {
+            console.warn('Traverse error:', traverseError);
+          }
+        });
       }
-    });
+    } catch (traverseError) {
+      console.warn('Avatar traverse error:', traverseError);
+    }
     
     try {
+      if (!newAnimation || !newAnimation.clone) {
+        return;
+      }
+      
       const retargetedClip = newAnimation.clone();
       
+      if (!retargetedClip || !retargetedClip.tracks || !Array.isArray(retargetedClip.tracks)) {
+        return;
+      }
+      
       retargetedClip.tracks = retargetedClip.tracks.map((track) => {
-        const trackName = track.name;
+        if (!track || !track.name) return track;
         
-        const boneNameMatch = trackName.match(/\.bones\[(.+?)\]\.(.+)/);
-        if (!boneNameMatch) return track;
-        
-        const originalBoneName = boneNameMatch[1];
-        const property = boneNameMatch[2];
-        
-        const cleanBoneName = originalBoneName.replace(/^mixamorig/i, '');
-        
-        const targetBone = boneMap.get(cleanBoneName.toLowerCase());
-        
-        if (targetBone) {
-          const newTrack = track.clone();
-          newTrack.name = `.bones[${targetBone.name}].${property}`;
-          return newTrack;
-        } else {
-          const exactBone = boneMap.get(originalBoneName.toLowerCase());
-          if (exactBone) {
+        try {
+          const trackName = track.name;
+          
+          const boneNameMatch = trackName.match(/\.bones\[(.+?)\]\.(.+)/);
+          if (!boneNameMatch) return track;
+          
+          const originalBoneName = boneNameMatch[1];
+          const property = boneNameMatch[2];
+          
+          if (!originalBoneName || !property) return track;
+          
+          const cleanBoneName = originalBoneName.replace(/^mixamorig/i, '');
+          
+          const targetBone = boneMap.get(cleanBoneName.toLowerCase());
+          
+          if (targetBone && targetBone.name) {
             const newTrack = track.clone();
-            newTrack.name = `.bones[${exactBone.name}].${property}`;
-            return newTrack;
+            if (newTrack) {
+              newTrack.name = `.bones[${targetBone.name}].${property}`;
+              return newTrack;
+            }
+          } else {
+            const exactBone = boneMap.get(originalBoneName.toLowerCase());
+            if (exactBone && exactBone.name) {
+              const newTrack = track.clone();
+              if (newTrack) {
+                newTrack.name = `.bones[${exactBone.name}].${property}`;
+                return newTrack;
+              }
+            }
           }
+        } catch (trackError) {
+          console.warn('Track processing error:', trackError);
         }
         
         return track;
-      });
+      }).filter(track => track !== null && track !== undefined);
+      
+      if (!mixer.current || !retargetedClip) {
+        return;
+      }
       
       const newAction = mixer.current.clipAction(retargetedClip);
       
@@ -293,34 +388,54 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
         return;
       }
       
-      newAction.setLoop(THREE.LoopRepeat);
-      newAction.clampWhenFinished = false;
-      newAction.enabled = true;
-      
-      if (currentActionRef.current && currentActionRef.current !== newAction) {
-        const fadeDuration = 0.5;
+      try {
+        newAction.setLoop(THREE.LoopRepeat);
+        newAction.clampWhenFinished = false;
+        newAction.enabled = true;
         
-        if (currentActionRef.current) {
-          currentActionRef.current.fadeOut(fadeDuration);
+        if (currentActionRef.current && currentActionRef.current !== newAction) {
+          const fadeDuration = 0.5;
+          
+          try {
+            if (currentActionRef.current) {
+              currentActionRef.current.fadeOut(fadeDuration);
+            }
+          } catch (fadeError) {
+            console.warn('Fade out error:', fadeError);
+          }
+          
+          try {
+            newAction.reset()
+              .setEffectiveTimeScale(1)
+              .setEffectiveWeight(1)
+              .fadeIn(fadeDuration)
+              .play();
+          } catch (playError) {
+            console.warn('Animation play error:', playError);
+          }
+        } else {
+          try {
+            newAction.reset()
+              .setEffectiveTimeScale(1)
+              .setEffectiveWeight(1)
+              .play();
+          } catch (playError) {
+            console.warn('Animation play error:', playError);
+          }
         }
         
-        newAction.reset()
-          .setEffectiveTimeScale(1)
-          .setEffectiveWeight(1)
-          .fadeIn(fadeDuration)
-          .play();
-      } else {
-        newAction.reset()
-          .setEffectiveTimeScale(1)
-          .setEffectiveWeight(1)
-          .play();
+        currentActionRef.current = newAction;
+      } catch (actionError) {
+        console.warn('Action setup error:', actionError);
       }
       
-      currentActionRef.current = newAction;
-      
       return () => {
-        if (newAction) {
-          newAction.fadeOut(0.3);
+        try {
+          if (newAction) {
+            newAction.fadeOut(0.3);
+          }
+        } catch (cleanupError) {
+          console.warn('Cleanup error:', cleanupError);
         }
       };
     } catch (error) {
@@ -332,21 +447,25 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   
   useFrame((state, delta) => {
-    if (!mixer.current) return;
-    if (typeof delta !== 'number' || !isFinite(delta)) return;
-    
-    // Throttle updates on mobile to prevent crashes
-    if (isMobile) {
-      const now = Date.now();
-      if (now - lastUpdateRef.current < 33) { // ~30fps on mobile instead of 60fps
-        return;
-      }
-      lastUpdateRef.current = now;
-    }
-    
     try {
-      mixer.current.update(delta);
+      if (!mixer.current) return;
+      if (typeof delta !== 'number' || !isFinite(delta) || delta <= 0) return;
+      
+      // Throttle updates on mobile to prevent crashes
+      if (isMobile) {
+        const now = Date.now();
+        if (now - lastUpdateRef.current < 33) { // ~30fps on mobile instead of 60fps
+          return;
+        }
+        lastUpdateRef.current = now;
+      }
+      
+      // Additional safety check
+      if (mixer.current && typeof mixer.current.update === 'function') {
+        mixer.current.update(Math.min(delta, 0.1)); // Cap delta to prevent large jumps
+      }
     } catch (error) {
+      console.warn('Frame update error:', error);
     }
   });
   
@@ -956,7 +1075,18 @@ export default function About() {
   ], []);
   
   // Extract just the image URLs for preloading
-  const galleryImages = useMemo(() => galleryItems.map(item => item.image), [galleryItems]);
+  const galleryImages = useMemo(() => {
+    if (!Array.isArray(galleryItems)) return [];
+    try {
+      return galleryItems
+        .filter(item => item && item.image)
+        .map(item => item.image)
+        .filter(image => image && typeof image === 'string');
+    } catch (error) {
+      console.warn('Gallery images processing error:', error);
+      return [];
+    }
+  }, [galleryItems]);
   
   const carouselItemsCount = carouselImages.length;
   const angleStep = 360 / carouselItemsCount;
