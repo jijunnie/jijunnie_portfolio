@@ -1187,9 +1187,16 @@ export default function About() {
         }
         previousScrollProgress.current = progress;
         try {
-          setScrollProgress(progress);
+          // Validate progress value before setting state
+          if (typeof progress === 'number' && isFinite(progress) && !isNaN(progress)) {
+            setScrollProgress(progress);
+          } else {
+            ticking = false;
+            return;
+          }
         } catch (error) {
           ticking = false;
+          console.debug('setScrollProgress error:', error);
           return;
         }
         
@@ -1205,25 +1212,55 @@ export default function About() {
     const handleScroll = () => {
       try {
         if (!isMounted || ticking) return;
+        
+        // Additional safety check for mobile
+        const isMobile = windowSize.width < 768;
+        if (isMobile) {
+          // On mobile, add extra validation to prevent crashes
+          if (typeof window === 'undefined' || !window.document) return;
+        }
+        
         ticking = true;
         if (rafIdRef.current) {
-          cancelAnimationFrame(rafIdRef.current);
+          try {
+            cancelAnimationFrame(rafIdRef.current);
+          } catch (error) {
+            console.debug('Cancel animation frame error:', error);
+          }
         }
-        rafIdRef.current = requestAnimationFrame(updateScrollProgress);
+        
+        try {
+          rafIdRef.current = requestAnimationFrame(updateScrollProgress);
+        } catch (error) {
+          console.debug('Request animation frame error:', error);
+          ticking = false;
+        }
       } catch (error) {
         ticking = false;
+        console.debug('Scroll handler error:', error);
       }
     };
     const throttleTime = deviceInfo.scrollThrottle;
     const throttledHandleScroll = throttle(handleScroll, throttleTime);
     try {
-      window.addEventListener('scroll', throttledHandleScroll, { passive: true });
-      setTimeout(() => {
-        if (isMounted) {
-          handleScroll();
-        }
-      }, 0);
-    } catch (error) {}
+      if (typeof window !== 'undefined' && window.addEventListener) {
+        window.addEventListener('scroll', throttledHandleScroll, { passive: true });
+        // Use longer delay on mobile to prevent crashes
+        const isMobile = windowSize.width < 768;
+        const initialDelay = isMobile ? 100 : 0;
+        setTimeout(() => {
+          try {
+            if (isMounted) {
+              handleScroll();
+            }
+          } catch (error) {
+            console.debug('Initial scroll handler error:', error);
+          }
+        }, initialDelay);
+      }
+    } catch (error) {
+      console.debug('Scroll listener setup error:', error);
+    }
     
     return () => {
       try {
@@ -1952,16 +1989,29 @@ export default function About() {
 
   const musicSectionTriggerRef = useRef(false);
   useEffect(() => {
-    if (!musicAudioRef.current || musicSectionTriggerRef.current) return;
-    const audio = musicAudioRef.current;
-    const musicSectionStart = sectionTriggers[5];
-    const musicSectionTrigger = musicSectionStart + 0.02;
-    const hasEntered = scrollProgress >= musicSectionTrigger;
-    if (hasEntered && !hasEnteredMusicSection) {
-      musicSectionTriggerRef.current = true;
-      audio.volume = 0.5;
-      setHasEnteredMusicSection(true);
-      setIsMusicPlaying(true);
+    try {
+      if (!musicAudioRef.current || musicSectionTriggerRef.current) return;
+      const audio = musicAudioRef.current;
+      if (!audio || !sectionTriggers || !sectionTriggers[5]) return;
+      
+      const musicSectionStart = sectionTriggers[5];
+      const musicSectionTrigger = musicSectionStart + 0.02;
+      const hasEntered = scrollProgress >= musicSectionTrigger;
+      
+      if (hasEntered && !hasEnteredMusicSection) {
+        musicSectionTriggerRef.current = true;
+        try {
+          if (audio && typeof audio.volume !== 'undefined') {
+            audio.volume = 0.5;
+          }
+        } catch (error) {
+          console.debug('Audio volume error:', error);
+        }
+        setHasEnteredMusicSection(true);
+        setIsMusicPlaying(true);
+      }
+    } catch (error) {
+      console.debug('Music section trigger error:', error);
     }
   }, [scrollProgress, hasEnteredMusicSection]);
 
@@ -1969,41 +2019,169 @@ export default function About() {
   useEffect(() => {
     if (!musicAudioRef.current) return;
     const audio = musicAudioRef.current;
+    if (!audio) return;
+    
     if (audioPlaybackRef.current) {
       clearTimeout(audioPlaybackRef.current);
+      audioPlaybackRef.current = null;
     }
+    
+    // Use longer delay on mobile to prevent crashes
+    const isMobile = windowSize.width < 768;
+    const delay = isMobile ? 100 : 50;
+    
     audioPlaybackRef.current = setTimeout(() => {
       try {
+        if (!audio || !audio.readyState) return;
+        
         if (isMusicPlaying && hasEnteredMusicSection) {
+          // On mobile, only play if user has interacted (autoplay restrictions)
           if (audio && audio.paused && audio.readyState >= 2) {
-            const playPromise = audio.play();
-            if (playPromise !== undefined) {
-              playPromise.catch((error) => {
-                // Silently handle play errors to prevent crashes
-                console.debug('Audio play error:', error);
-              });
+            // Check if we're on mobile and haven't had user interaction
+            if (isMobile) {
+              // On mobile, be more conservative with autoplay
+              const playPromise = audio.play();
+              if (playPromise !== undefined) {
+                playPromise.catch((error) => {
+                  // Silently handle play errors to prevent crashes
+                  console.debug('Audio play error (mobile):', error);
+                  // Don't set playing state if autoplay fails on mobile
+                  setIsMusicPlaying(false);
+                });
+              }
+            } else {
+              // Desktop: normal play
+              const playPromise = audio.play();
+              if (playPromise !== undefined) {
+                playPromise.catch((error) => {
+                  console.debug('Audio play error:', error);
+                });
+              }
             }
           }
         } else {
           if (audio && !audio.paused) {
-            audio.pause().catch(() => {});
+            try {
+              audio.pause();
+            } catch (error) {
+              console.debug('Audio pause error:', error);
+            }
           }
         }
       } catch (error) {
         // Silently handle any errors to prevent crashes
         console.debug('Audio playback error:', error);
       }
-    }, 50);
+    }, delay);
+    
     return () => {
       if (audioPlaybackRef.current) {
         clearTimeout(audioPlaybackRef.current);
+        audioPlaybackRef.current = null;
       }
     };
-  }, [isMusicPlaying, hasEnteredMusicSection]);
+  }, [isMusicPlaying, hasEnteredMusicSection, windowSize.width]);
 
   const toggleMusic = useCallback(() => {
-    setIsMusicPlaying(prev => !prev);
-  }, []);
+    try {
+      if (!musicAudioRef.current) {
+        setIsMusicPlaying(false);
+        return;
+      }
+      
+      const audio = musicAudioRef.current;
+      const isMobile = windowSize.width < 768;
+      
+      setIsMusicPlaying(prev => {
+        const newState = !prev;
+        
+        // Immediately update audio state
+        try {
+          if (!audio || typeof audio.readyState === 'undefined') {
+            return prev; // Can't play if audio not ready
+          }
+          
+          if (newState && audio.readyState >= 2) {
+            // On mobile, check if page is visible before playing
+            if (isMobile && typeof document !== 'undefined' && document.hidden) {
+              console.debug('Page hidden on mobile, not playing audio');
+              return prev; // Don't play if page is hidden on mobile
+            }
+            
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+              playPromise.catch((error) => {
+                console.debug('Toggle play error:', error);
+                setIsMusicPlaying(false);
+              });
+            }
+          } else if (!newState && !audio.paused) {
+            try {
+              audio.pause();
+            } catch (error) {
+              console.debug('Pause error:', error);
+            }
+          }
+        } catch (error) {
+          console.debug('Toggle music error:', error);
+          return prev; // Revert on error
+        }
+        
+        return newState;
+      });
+    } catch (error) {
+      console.debug('Toggle music callback error:', error);
+      setIsMusicPlaying(false);
+    }
+  }, [windowSize.width]);
+  
+  // Handle page visibility changes on mobile to prevent crashes
+  useEffect(() => {
+    const isMobile = windowSize.width < 768;
+    if (!isMobile) return;
+    
+    const handleVisibilityChange = () => {
+      try {
+        if (typeof document !== 'undefined' && document.hidden) {
+          // Page is hidden - pause audio to prevent crashes
+          if (musicAudioRef.current && !musicAudioRef.current.paused) {
+            musicAudioRef.current.pause();
+          }
+          if (musicVideoRef.current && !musicVideoRef.current.paused) {
+            musicVideoRef.current.pause();
+          }
+        }
+      } catch (error) {
+        console.debug('Visibility change handler error:', error);
+      }
+    };
+    
+    const handlePageHide = () => {
+      try {
+        // Pause all media when page is being hidden
+        if (musicAudioRef.current && !musicAudioRef.current.paused) {
+          musicAudioRef.current.pause();
+        }
+        if (musicVideoRef.current && !musicVideoRef.current.paused) {
+          musicVideoRef.current.pause();
+        }
+      } catch (error) {
+        console.debug('Page hide handler error:', error);
+      }
+    };
+    
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange, { passive: true });
+      window.addEventListener('pagehide', handlePageHide, { passive: true });
+    }
+    
+    return () => {
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        window.removeEventListener('pagehide', handlePageHide);
+      }
+    };
+  }, [windowSize.width]);
   
   useEffect(() => {
     if (hasAnimated) return;
@@ -4804,15 +4982,34 @@ export default function About() {
           style={{ display: 'none' }}
           onError={(e) => {
             // Silently handle audio load errors
-            console.debug('Audio load error:', e);
+            try {
+              console.debug('Audio load error:', e);
+              // On mobile, don't try to recover - just disable audio
+              if (windowSize.width < 768) {
+                setIsMusicPlaying(false);
+                setHasEnteredMusicSection(false);
+              }
+            } catch (error) {
+              console.debug('Audio error handler error:', error);
+            }
           }}
           onLoadedData={() => {
             try {
-              if (musicAudioRef.current) {
+              if (musicAudioRef.current && typeof musicAudioRef.current.volume !== 'undefined') {
                 musicAudioRef.current.volume = 0.5;
               }
             } catch (error) {
               console.debug('Audio loadedData error:', error);
+            }
+          }}
+          onAbort={() => {
+            // Handle audio abort on mobile (e.g., when page is backgrounded)
+            try {
+              if (windowSize.width < 768) {
+                setIsMusicPlaying(false);
+              }
+            } catch (error) {
+              console.debug('Audio abort handler error:', error);
             }
           }}
         />
@@ -4847,7 +5044,9 @@ export default function About() {
               objectFit: 'cover',
               objectPosition: 'center',
               zIndex: 0,
-              opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[5] - sectionConfig.fadeOffset - 0.03)) * (sectionConfig.fadeInSpeed * 0.8))),
+              opacity: sectionTriggers && sectionTriggers[5] 
+                ? Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[5] - sectionConfig.fadeOffset - 0.03)) * (sectionConfig.fadeInSpeed * 0.8)))
+                : 0,
               transition: 'opacity 1.5s ease-out'
             }}
             onError={(e) => {
@@ -4858,29 +5057,52 @@ export default function About() {
                     e.target.style.display = 'none';
                   }
                 }
-              } catch (error) {}
+              } catch (error) {
+                console.debug('Video error handler error:', error);
+              }
             }}
             onLoadStart={() => {
-              if (musicVideoRef.current) {
-                musicVideoRef.current.dataset.errorLogged = 'false';
+              try {
+                if (musicVideoRef.current) {
+                  musicVideoRef.current.dataset.errorLogged = 'false';
+                }
+              } catch (error) {
+                console.debug('Video loadStart error:', error);
               }
             }}
             onLoadedMetadata={() => {
               try {
-                if (musicVideoRef.current) {
-                  musicVideoRef.current.playbackRate = 0.7;
-                  if (scrollProgress >= sectionTriggers[5] - 0.05) {
-                    const playPromise = musicVideoRef.current.play();
+                if (!musicVideoRef.current || !sectionTriggers || !sectionTriggers[5]) return;
+                
+                const video = musicVideoRef.current;
+                if (video && typeof video.playbackRate !== 'undefined') {
+                  video.playbackRate = 0.7;
+                }
+                
+                // On mobile, be more conservative with autoplay
+                const isMobile = windowSize.width < 768;
+                if (scrollProgress >= sectionTriggers[5] - 0.05) {
+                  if (isMobile) {
+                    // On mobile, only try to play if user has interacted
+                    // Don't force autoplay to prevent crashes
+                    const playPromise = video.play();
                     if (playPromise !== undefined) {
                       playPromise.catch((error) => {
-                        // Silently handle video play errors
+                        console.debug('Video play error (mobile):', error);
+                        // Silently fail on mobile
+                      });
+                    }
+                  } else {
+                    // Desktop: normal play
+                    const playPromise = video.play();
+                    if (playPromise !== undefined) {
+                      playPromise.catch((error) => {
                         console.debug('Video play error:', error);
                       });
                     }
                   }
                 }
               } catch (error) {
-                // Silently handle any errors to prevent crashes
                 console.debug('Video metadata error:', error);
               }
             }}
@@ -4889,6 +5111,15 @@ export default function About() {
         <img
           src="/images/music.png"
           alt="Music"
+          onError={(e) => {
+            try {
+              if (e && e.target) {
+                e.target.style.display = 'none';
+              }
+            } catch (error) {
+              console.debug('Image error handler error:', error);
+            }
+          }}
           style={{
             position: 'absolute',
             width: 'calc(min(100vw, 100vh) * 0.85)',
@@ -4901,7 +5132,9 @@ export default function About() {
             left: windowSize.width > windowSize.height ? '72%' : '50%',
             transform: windowSize.width > windowSize.height ? 'translate(-50%, -50%)' : 'translateX(-50%)',
             zIndex: 1,
-            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[5] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
+            opacity: sectionTriggers && sectionTriggers[5]
+              ? Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[5] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed))
+              : 0,
             transition: 'opacity 0.8s ease-out'
           }}
         />
@@ -4914,12 +5147,16 @@ export default function About() {
             paddingRight: 'clamp(1.5rem, 4vw, 4rem)',
             maxWidth: windowSize.width > windowSize.height ? '600px' : '1200px',
             textAlign: windowSize.width > windowSize.height ? 'left' : 'center',
-            transform: windowSize.width < 768 
-              ? `translate(-50%, calc(40px + ${Math.max(0, (scrollProgress - sectionTriggers[5]) * -sectionConfig.translateYAmplitude)}px))`
-              : windowSize.width > windowSize.height 
-                ? `translateY(calc(-50% - 20px + ${Math.max(0, (scrollProgress - sectionTriggers[5]) * -sectionConfig.translateYAmplitude)}px))`
-                : `translate(-50%, calc(0px + ${Math.max(0, (scrollProgress - sectionTriggers[5]) * -sectionConfig.translateYAmplitude)}px))`,
-            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[5] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
+            transform: sectionTriggers && sectionTriggers[5]
+              ? (windowSize.width < 768 
+                  ? `translate(-50%, calc(40px + ${Math.max(0, (scrollProgress - sectionTriggers[5]) * -sectionConfig.translateYAmplitude)}px))`
+                  : windowSize.width > windowSize.height 
+                    ? `translateY(calc(-50% - 20px + ${Math.max(0, (scrollProgress - sectionTriggers[5]) * -sectionConfig.translateYAmplitude)}px))`
+                    : `translate(-50%, calc(0px + ${Math.max(0, (scrollProgress - sectionTriggers[5]) * -sectionConfig.translateYAmplitude)}px))`)
+              : 'translate(-50%, 0)',
+            opacity: sectionTriggers && sectionTriggers[5]
+              ? Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[5] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed))
+              : 0,
             transition: 'transform 0.8s ease-out, opacity 0.8s ease-out',
             position: 'absolute',
             top: windowSize.width > windowSize.height ? '50%' : 'clamp(2rem, 5vw, 4rem)',
@@ -4983,15 +5220,48 @@ export default function About() {
             zIndex: 100,
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
             transition: 'transform 0.2s ease, background 0.2s ease',
-            opacity: Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[5] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed)),
+            opacity: sectionTriggers && sectionTriggers[5]
+              ? Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[5] - sectionConfig.fadeOffset)) * sectionConfig.fadeInSpeed))
+              : 0,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'scale(1.1)';
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 1)';
+            try {
+              if (e && e.currentTarget) {
+                e.currentTarget.style.transform = 'scale(1.1)';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 1)';
+              }
+            } catch (error) {
+              console.debug('Mouse enter error:', error);
+            }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'scale(1)';
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)';
+            try {
+              if (e && e.currentTarget) {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)';
+              }
+            } catch (error) {
+              console.debug('Mouse leave error:', error);
+            }
+          }}
+          onTouchStart={(e) => {
+            // Mobile touch feedback
+            try {
+              if (e && e.currentTarget) {
+                e.currentTarget.style.transform = 'scale(0.95)';
+              }
+            } catch (error) {
+              console.debug('Touch start error:', error);
+            }
+          }}
+          onTouchEnd={(e) => {
+            try {
+              if (e && e.currentTarget) {
+                e.currentTarget.style.transform = 'scale(1)';
+              }
+            } catch (error) {
+              console.debug('Touch end error:', error);
+            }
           }}
           title={isMusicPlaying ? 'Pause music' : 'Play music'}
         >
