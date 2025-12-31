@@ -9,15 +9,23 @@ import LivingRoomBackgroundWithMouseTracking from '../components/3d/LivingRoomBa
 import Globe from '../components/globe/Globe';
 import { createSafeImageErrorHandler } from '../utils/safeImageLoader';
 
-// 远程图片基础 URL
-const REMOTE_IMAGE_BASE_URL = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/';
+// 远程资源基础 URL
+const REMOTE_BASE_URL = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/';
 
 // 辅助函数：将本地图片路径转换为远程 URL
 const getRemoteImageUrl = (localPath) => {
   if (!localPath) return localPath;
   // 提取文件名（去除前导斜杠和目录）
   const fileName = localPath.replace(/^\/[^\/]+\//, '').replace(/^\//, '');
-  return `${REMOTE_IMAGE_BASE_URL}${fileName}`;
+  return `${REMOTE_BASE_URL}${fileName}`;
+};
+
+// 辅助函数：将本地模型/动画路径转换为远程 URL
+const getRemoteModelUrl = (localPath) => {
+  if (!localPath) return localPath;
+  // 提取文件名（去除前导斜杠和目录）
+  const fileName = localPath.replace(/^\/[^\/]+\//, '').replace(/^\//, '');
+  return `${REMOTE_BASE_URL}${fileName}`;
 };
 import Borders from '../components/globe/Borders';
 import FilledRegions from '../components/globe/FilledRegions';
@@ -32,9 +40,12 @@ const backgroundModelUrl = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/
 // Preload immediately when module loads (before any component renders)
 try {
   useGLTF.preload(backgroundModelUrl);
-  console.log('✅ Preloaded 3D background at module level:', backgroundModelUrl);
+  // Only log in development mode
+  if (process.env.NODE_ENV === 'development') {
+    console.log('✅ Preloaded 3D background at module level:', backgroundModelUrl);
+  }
 } catch (error) {
-  console.warn('⚠️ Failed to preload 3D background at module level:', error);
+  // Silently handle preload errors at module level
 }
 
 // Also preload in browser cache using fetch for maximum reliability
@@ -53,24 +64,28 @@ if (typeof window !== 'undefined') {
 
 // Preload all icon GLB files at module level
 const iconFiles = [
-  '/icons/weather.glb',
-  '/icons/message.glb',
-  '/icons/clock.glb',
-  '/icons/file.glb',
-  '/icons/music.glb',
-  '/icons/photo.glb',
-  '/icons/video.glb',
-  '/icons/safari.glb',
-  '/icons/setting.glb',
-  '/icons/findmy.glb'
+  getRemoteModelUrl('/icons/weather.glb'),
+  getRemoteModelUrl('/icons/message.glb'),
+  getRemoteModelUrl('/icons/clock.glb'),
+  getRemoteModelUrl('/icons/file.glb'),
+  getRemoteModelUrl('/icons/music.glb'),
+  getRemoteModelUrl('/icons/photo.glb'),
+  getRemoteModelUrl('/icons/video.glb'),
+  getRemoteModelUrl('/icons/safari.glb'),
+  getRemoteModelUrl('/icons/setting.glb'),
+  getRemoteModelUrl('/icons/findmy.glb')
 ];
 
 iconFiles.forEach((url) => {
   try {
     useGLTF.preload(url);
-    console.log('✅ Preloaded icon at module level:', url);
+    // Only log in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ Preloaded icon at module level:', url);
+    }
   } catch (error) {
-    console.warn('⚠️ Failed to preload icon at module level:', url, error);
+    // Silently handle preload errors at module level
+    // Some GLB files may not exist or fail to load, which is expected
   }
 });
 
@@ -2777,7 +2792,7 @@ function ProjectsPanel({ isMobile }) {
       title: 'Personal Portfolio',
       description: 'A modern, AI-driven 3D portfolio experience engineered with React, Three.js, and Vite. The platform delivers an immersive, user-interactive environment featuring real-time, mouse-responsive 3D models; a VisionOS-inspired spatial interface with floating panels and depth-aware motion; and a fully interactive 3D living-room scene as the core visual canvas. Integrated AI intelligence via the Claude API powers a contextual chat assistant, while dynamic modules include live weather visualization, an interactive 3D globe with visited locations, rich photo and video galleries, an embedded music player, and customizable user settings. Built with performance and scalability in mind, the experience supports responsive layouts, mobile device-orientation controls, and fluid, cinematic animations throughout.',
       technologies: ['React', 'Three.js', 'Vite', 'Spline', 'Blender', 'Cursor', 'EmailJS', 'Mixamo', 'Ready Player Me', 'Cloudflare'],
-      image: '/images/project-portfolio.jpg',
+      image: getRemoteImageUrl('/images/portfolio.png'),
       link: 'https://jijunnie.com',
       category: 'Web Development'
     },
@@ -2786,7 +2801,7 @@ function ProjectsPanel({ isMobile }) {
       title: 'Variantz Company Website',
       description: 'I led a website transformation for Variantz, a Singapore-based e-commerce company summer 2025. I redesigned the site\'s UI and UX to create a cleaner, more modern experience that made navigation more intuitive which improved overall user engagement. I refreshed over 50+ SKUs with new images, clearer descriptions, and product videos, ensuring all content was optimized for SEO and conversion. I also built an intern management page that organizes and filters records from the past 10 years, giving the company a clear and structured way to track and showcase its internship program. In addition to the website work, I supported growth initiatives by managing email marketing campaigns, implementing SEO improvements, and contributing to digital marketing efforts to increase traffic and visibility.',
       technologies: ['Wix', 'Adobe Photoshop', 'Canva', 'Nano Banana', 'Google Workspace', 'Microsoft Office Suite', 'JimengAI', '蝉镜'],
-      image: '/images/project-ecommerce.jpg',
+      image: getRemoteImageUrl('/images/VariantzWeb.png'),
       link: 'https://variantz.com',
       category: 'Web Development'
     },
@@ -2795,7 +2810,7 @@ function ProjectsPanel({ isMobile }) {
       title: 'APLG Company Website',
       description: 'I launched and created the complete website for APLG, APAWLOGY, a pet sub brand. From concept to launch, I designed and developed everything on the website including all content creation, visual design, and brand storytelling. I set up the entire website system, integrated product pages with customer reviews, created a functional contact page, and developed the "Our Story" section that tells the brand creation journey. This project involved building a brand identity from the ground up, establishing the technical foundation, and creating a cohesive digital presence for the new sub-brand.',
       technologies: ['Wix', 'Canva', '蝉镜', 'Adobe Photoshop', 'Google Workspace', 'Microsoft Office Suite', 'Nano Banana', 'JimengAI'],
-      image: '/images/project-analytics.jpg',
+      image: getRemoteImageUrl('/images/APLG.png'),
       link: 'https://apawlogy.com',
       category: 'Web Development'
     },
@@ -2804,7 +2819,7 @@ function ProjectsPanel({ isMobile }) {
       title: 'AI-powered Game',
       description: 'An intelligent Tic Tac Toe game powered by machine learning algorithms that has learned from thousands of strategic moves. Features adaptive AI opponents with multiple difficulty levels, from beginner-friendly to unbeatable expert mode. The AI continuously improves its gameplay through reinforcement learning, analyzing patterns and optimizing strategies. Built with a modern tech stack, the game offers a seamless user experience with real-time move analysis, game statistics tracking, and an intuitive interface that makes every match engaging and challenging.',
       technologies: ['Python', 'TensorFlow', 'Reinforcement Learning', 'React', 'Machine Learning', 'Neural Networks'],
-      image: '/images/project-mobile.jpg',
+      image: getRemoteImageUrl('/images/project-mobile.jpg'),
       link: 'https://github.com/jijunnie/ai-tic-tac-toe',
       category: 'AI/ML Development'
     },
@@ -2813,11 +2828,31 @@ function ProjectsPanel({ isMobile }) {
       title: 'E-commerce Platform',
       description: 'Coming Soon...',
       technologies: ['Node.js', 'Express', 'JWT', 'Swagger'],
-      image: '/images/project-api.jpg',
+      image: getRemoteImageUrl('/images/project-api.jpg'),
       link: 'https://github.com/jijunnie/api-service',
       category: 'E-commerce'
     }
   ];
+
+  // Preload all project images when component mounts
+  useEffect(() => {
+    projects.forEach((project) => {
+      if (project.image) {
+        const img = new window.Image();
+        img.src = project.image;
+        img.onload = () => {
+          // Only log successful preloads in development
+          if (process.env.NODE_ENV === 'development') {
+            console.log('✅ Preloaded project image:', project.image);
+          }
+        };
+        img.onerror = () => {
+          // Silently handle missing images - don't spam console with warnings
+          // These images may not exist yet (e.g., project-mobile.jpg, project-api.jpg)
+        };
+      }
+    });
+  }, []);
 
   useEffect(() => {
     const updateScrollInfo = () => {
@@ -2870,8 +2905,22 @@ function ProjectsPanel({ isMobile }) {
         <div className="flex-1 overflow-y-auto min-h-0 pr-2">
           <div className="space-y-6 pb-4">
             {/* Project Image */}
-            <div className="w-full h-64 bg-gradient-to-br from-purple-100 to-blue-100 rounded-2xl flex items-center justify-center">
-              <Code className="w-24 h-24 text-purple-400" />
+            <div className="w-full h-64 bg-gradient-to-br from-purple-100 to-blue-100 rounded-2xl flex items-center justify-center overflow-hidden relative">
+              {project.image ? (
+                <img 
+                  src={project.image} 
+                  alt={project.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    const placeholder = e.target.nextElementSibling;
+                    if (placeholder) placeholder.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div className={`absolute inset-0 flex items-center justify-center ${project.image ? 'hidden' : ''}`}>
+                <Code className="w-24 h-24 text-purple-400" />
+              </div>
             </div>
 
             {/* Project Info */}
@@ -3011,10 +3060,29 @@ function ProjectsPanel({ isMobile }) {
                 }}
               >
                 {/* Project Image/Icon */}
-                <div className={`w-full bg-gradient-to-br from-purple-100 to-blue-100 rounded-xl flex items-center justify-center mb-3 flex-shrink-0 overflow-hidden ${
+                <div className={`w-full ${project.id === 2 || project.id === 3 ? '' : 'bg-gradient-to-br from-purple-100 to-blue-100'} rounded-xl flex items-center justify-center mb-3 flex-shrink-0 overflow-hidden relative ${
                   isMobile ? 'h-32' : 'h-40'
                 }`}>
-                  <Code className={`text-purple-400 ${isMobile ? 'w-12 h-12' : 'w-16 h-16'}`} />
+                  {project.image ? (
+                    <>
+                      <img 
+                        src={project.image} 
+                        alt={project.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Hide image and show placeholder if loading fails
+                          e.target.style.display = 'none';
+                          const placeholder = e.target.nextElementSibling;
+                          if (placeholder) placeholder.style.display = 'flex';
+                        }}
+                      />
+                      <div className="absolute inset-0 hidden items-center justify-center">
+                        <Code className={`text-purple-400 ${isMobile ? 'w-12 h-12' : 'w-16 h-16'}`} />
+                      </div>
+                    </>
+                  ) : (
+                    <Code className={`text-purple-400 ${isMobile ? 'w-12 h-12' : 'w-16 h-16'}`} />
+                  )}
                 </div>
 
                 {/* Project Info */}
@@ -3189,25 +3257,29 @@ export default function Portfolio() {
   useEffect(() => {
     // Preload all icon GLB files
     const iconFiles = [
-      '/icons/weather.glb',
-      '/icons/message.glb',
-      '/icons/clock.glb',
-      '/icons/file.glb',
-      '/icons/music.glb',
-      '/icons/photo.glb',
-      '/icons/video.glb',
-      '/icons/safari.glb',
-      '/icons/setting.glb',
-      '/icons/findmy.glb'
+      getRemoteModelUrl('/icons/weather.glb'),
+      getRemoteModelUrl('/icons/message.glb'),
+      getRemoteModelUrl('/icons/clock.glb'),
+      getRemoteModelUrl('/icons/file.glb'),
+      getRemoteModelUrl('/icons/music.glb'),
+      getRemoteModelUrl('/icons/photo.glb'),
+      getRemoteModelUrl('/icons/video.glb'),
+      getRemoteModelUrl('/icons/safari.glb'),
+      getRemoteModelUrl('/icons/setting.glb'),
+      getRemoteModelUrl('/icons/findmy.glb')
     ];
 
     // Preload all icons
     iconFiles.forEach((url) => {
       try {
         useGLTF.preload(url);
-        console.log('✅ Preloaded icon:', url);
+        // Only log successful preloads in development
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ Preloaded icon:', url);
+        }
       } catch (error) {
-        console.warn('⚠️ Failed to preload icon:', url, error);
+        // Silently handle preload errors - some GLB files may not exist or fail to load
+        // This is expected behavior and doesn't need to spam the console
       }
     });
 
@@ -3215,10 +3287,39 @@ export default function Portfolio() {
     const backgroundModelUrl = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/cozy_living_room_baked.glb';
     try {
       useGLTF.preload(backgroundModelUrl);
-      console.log('✅ Preloaded 3D background:', backgroundModelUrl);
+      // Only log successful preloads in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Preloaded 3D background:', backgroundModelUrl);
+      }
     } catch (error) {
-      console.warn('⚠️ Failed to preload 3D background:', backgroundModelUrl, error);
+      // Silently handle preload errors
     }
+
+    // Preload all project images
+    const projectImages = [
+      getRemoteImageUrl('/images/portfolio.png'),
+      getRemoteImageUrl('/images/VariantzWeb.png'),
+      getRemoteImageUrl('/images/APLG.png'),
+      getRemoteImageUrl('/images/project-mobile.jpg'),
+      getRemoteImageUrl('/images/project-api.jpg')
+    ];
+
+    projectImages.forEach((imageUrl) => {
+      if (imageUrl) {
+        const img = new window.Image();
+        img.src = imageUrl;
+        img.onload = () => {
+          // Only log successful preloads in development
+          if (process.env.NODE_ENV === 'development') {
+            console.log('✅ Preloaded project image:', imageUrl);
+          }
+        };
+        img.onerror = () => {
+          // Silently handle missing images - don't spam console with warnings
+          // These images may not exist yet (e.g., project-mobile.jpg, project-api.jpg)
+        };
+      }
+    });
   }, []);
 
   const panelOrder = ['calendar', 'icons', 'weather'];
@@ -3493,16 +3594,16 @@ export default function Portfolio() {
   }, [isMobile, hasOrientationPermission, deviceOrientation, mousePos]);
 
   const icons = useMemo(() => [
-    { type: 'glb', src: '/icons/weather.glb', label: 'Weather', depth: 1.4, scale: 0.475, action: 'weather' },
-    { type: 'glb', src: '/icons/message.glb', label: 'Messages', depth: 1.5, scale: 0.48, action: 'messages' },
-    { type: 'glb', src: '/icons/clock.glb', label: 'Clock', depth: 1.2, scale: 0.485, action: 'clock' },
-    { type: 'glb', src: '/icons/file.glb', label: 'My Projects', depth: 1.2, scale: 0.48, action: 'projects' },
-    { type: 'glb', src: '/icons/music.glb', label: 'My Musics', depth: 1.3, scale: 0.48, action: 'music' },
-    { type: 'glb', src: '/icons/photo.glb', label: 'My Photographies', depth: 1.3, scale: 0.5, action: 'photos' },
-    { type: 'glb', src: '/icons/video.glb', label: 'My Videographies', depth: 1.5, scale: 3, action: 'videos' },
-    { type: 'glb', src: '/icons/safari.glb', label: 'Jijun AI', depth: 1.4, scale: 0.5, action: 'ai' },
-    { type: 'glb', src: '/icons/setting.glb', label: 'Settings', depth: 1.2, scale: 0.47, action: 'settings' },
-    { type: 'glb', src: '/icons/findmy.glb', label: 'Find My Journeys', depth: 1.3, scale: 0.5, action: 'journeys' },
+    { type: 'glb', src: getRemoteModelUrl('/icons/weather.glb'), label: 'Weather', depth: 1.4, scale: 0.475, action: 'weather' },
+    { type: 'glb', src: getRemoteModelUrl('/icons/message.glb'), label: 'Messages', depth: 1.5, scale: 0.48, action: 'messages' },
+    { type: 'glb', src: getRemoteModelUrl('/icons/clock.glb'), label: 'Clock', depth: 1.2, scale: 0.485, action: 'clock' },
+    { type: 'glb', src: getRemoteModelUrl('/icons/file.glb'), label: 'My Projects', depth: 1.2, scale: 0.48, action: 'projects' },
+    { type: 'glb', src: getRemoteModelUrl('/icons/music.glb'), label: 'My Musics', depth: 1.3, scale: 0.48, action: 'music' },
+    { type: 'glb', src: getRemoteModelUrl('/icons/photo.glb'), label: 'My Photographies', depth: 1.3, scale: 0.5, action: 'photos' },
+    { type: 'glb', src: getRemoteModelUrl('/icons/video.glb'), label: 'My Videographies', depth: 1.5, scale: 3, action: 'videos' },
+    { type: 'glb', src: getRemoteModelUrl('/icons/safari.glb'), label: 'Jijun AI', depth: 1.4, scale: 0.5, action: 'ai' },
+    { type: 'glb', src: getRemoteModelUrl('/icons/setting.glb'), label: 'Settings', depth: 1.2, scale: 0.47, action: 'settings' },
+    { type: 'glb', src: getRemoteModelUrl('/icons/findmy.glb'), label: 'Find My Journeys', depth: 1.3, scale: 0.5, action: 'journeys' },
   ], []);
 
   const handleIconClick = useCallback((index) => {

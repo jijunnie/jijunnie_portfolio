@@ -1,2 +1,4 @@
 *.glb filter=lfs diff=lfs merge=lfs -text
+# Exclude public/icons/*.glb from LFS since they're loaded from remote URL
+public/icons/*.glb !filter !diff !merge -text
 public/models/cozy_living_room_baked.glb filter=lfs diff=lfs merge=lfs -text

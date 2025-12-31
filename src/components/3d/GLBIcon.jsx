@@ -17,7 +17,10 @@ class IconErrorBoundary extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.warn('Icon failed to load, showing fallback:', error);
+    // Only log in development mode to reduce console noise
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('Icon failed to load, showing fallback:', error);
+    }
   }
 
   render() {
@@ -54,7 +57,10 @@ function IconModel({ url, isHovered, baseScale = 1, spatialPos = { x: 0, y: 0 } 
     scene = gltf?.scene;
   } catch (error) {
     // This catch won't work for async loading errors, but helps with immediate errors
-    console.warn('GLB hook error:', url, error);
+    // Only log in development mode to reduce console noise
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('GLB hook error:', url, error);
+    }
   }
   
   // Smooth interpolation for rotation to prevent glitching
@@ -72,7 +78,10 @@ function IconModel({ url, isHovered, baseScale = 1, spatialPos = { x: 0, y: 0 } 
       // Set error if scene doesn't load after a timeout
       const timeout = setTimeout(() => {
         if (!clonedScene && !loadError) {
-          console.warn('GLB icon failed to load:', url);
+          // Only log in development mode to reduce console noise
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('GLB icon failed to load:', url);
+          }
           setLoadError(true);
         }
       }, 10000); // 10 second timeout

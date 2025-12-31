@@ -78,6 +78,62 @@ const getRemoteModelUrl = (localPath) => {
   return `${REMOTE_IMAGE_BASE_URL}${fileName}`;
 };
 
+// 修复纹理路径：将远程URL转换为本地路径
+const fixTexturePaths = (scene) => {
+  if (!scene) return;
+  
+  scene.traverse((child) => {
+    if (child.isMesh && child.material) {
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      
+      materials.forEach((material) => {
+        const textureProperties = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap'];
+        
+        textureProperties.forEach((prop) => {
+          if (material[prop]) {
+            const texture = material[prop];
+            const currentSrc = texture.image?.src || texture.image?.currentSrc || texture.source?.data?.src;
+            
+            // 检查是否是错误的远程路径（包含mixamo-mini或r2.dev/home）
+            if (currentSrc && (
+              currentSrc.includes('mixamo-mini') ||
+              currentSrc.includes('r2.dev/home') ||
+              currentSrc.includes('.fbm/')
+            )) {
+              // 提取文件名（去除路径和扩展名）
+              const fileName = currentSrc.split('/').pop().split('?')[0];
+              
+              // 尝试使用本地路径
+              // 首先尝试/models/textures/目录
+              const localPath = `/models/textures/${fileName}`;
+              
+              // 创建新的纹理加载器
+              const loader = new THREE.TextureLoader();
+              
+              // 尝试加载本地纹理
+              loader.load(
+                localPath,
+                (loadedTexture) => {
+                  // 成功加载，替换纹理
+                  material[prop] = loadedTexture;
+                  material.needsUpdate = true;
+                },
+                undefined,
+                () => {
+                  // 加载失败，移除纹理，使用默认材质
+                  material[prop] = null;
+                  material.needsUpdate = true;
+                }
+              );
+            }
+          }
+        });
+      });
+    }
+  });
+};
+
+
 function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundingBoxCalculated, noRotation = false, rotation = null }) {
   const group = useRef();
   const mixer = useRef();
@@ -88,7 +144,11 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
   useEffect(() => {
     if (error) {
     }
-  }, [error]);
+    // 修复纹理路径（如果模型已加载）
+    if (baseAvatar) {
+      fixTexturePaths(baseAvatar);
+    }
+  }, [error, baseAvatar]);
   
   const fbx = useFBX(animationPath);
   
@@ -101,6 +161,9 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
     } catch (error) {
       cloned = baseAvatar.clone(true);
     }
+    
+    // 修复克隆场景中的纹理路径
+    fixTexturePaths(cloned);
     
     cloned.traverse((child) => {
       if (child.isMesh) {
@@ -1043,7 +1106,7 @@ export default function About() {
     }
   }, [deviceInfo]);
   
-  const titleTypingRef = useRef({ currentIndex: 0, timeoutId: null });
+  const titleTypingRef = useRef({ currentIndex: 0, timeoutId: null, timerId: null });
   
   useEffect(() => {
     if (!mainTitleVisible) return;
@@ -1057,29 +1120,45 @@ export default function About() {
       if (state.currentIndex < titleText.length) {
         setTitleTypingText(titleText.slice(0, state.currentIndex + 1));
         state.currentIndex++;
-        state.timeoutId = setTimeout(typeTitle, 60);
+        // Use requestAnimationFrame for smoother typing animation
+        state.timeoutId = setTimeout(() => {
+          requestAnimationFrame(typeTitle);
+        }, 50);
       } else {
         setTitleComplete(true);
       }
     };
     
-    const timer = setTimeout(() => {
-      typeTitle();
-    }, 100);
+    // Start typing animation after a brief delay to ensure smooth fade-in completes
+    // Use double requestAnimationFrame for smoother start
+    const rafId = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const timer = setTimeout(() => {
+          requestAnimationFrame(typeTitle);
+        }, 150);
+        titleTypingRef.current.timerId = timer;
+      });
+    });
     
     return () => {
-      clearTimeout(timer);
+      cancelAnimationFrame(rafId);
       if (titleTypingRef.current.timeoutId) {
         clearTimeout(titleTypingRef.current.timeoutId);
+      }
+      if (titleTypingRef.current.timerId) {
+        clearTimeout(titleTypingRef.current.timerId);
       }
     };
   }, [mainTitleVisible]);
   
   useEffect(() => {
     // Show title immediately for smooth hero animation
-    // Use requestAnimationFrame to ensure it happens after initial render
+    // Use double requestAnimationFrame to ensure it happens after browser completes initial render
+    // This prevents layout shifts and ensures smooth animation start
     requestAnimationFrame(() => {
-      setMainTitleVisible(true);
+      requestAnimationFrame(() => {
+        setMainTitleVisible(true);
+      });
     });
   }, []);
   
@@ -3232,10 +3311,13 @@ export default function About() {
                 ? (1 - scrollProgress * 0.4) 
                 : Math.max(0, 1 - scrollProgress * 0.6)) : 0,
               transform: `${mainTitleVisible ? 'translateY(0)' : 'translateY(8px)'} ${textTransform}`,
-              transition: 'opacity 0.6s ease-out, transform 0.6s ease-out, fontSize 0.3s ease-out',
+              transition: 'opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), transform 0.8s cubic-bezier(0.4, 0, 0.2, 1), fontSize 0.3s ease-out',
+              willChange: mainTitleVisible ? 'opacity, transform' : 'opacity, transform',
               marginBottom: `${calculateSpacing(16)}px`,
               whiteSpace: isMobile ? 'normal' : 'nowrap',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              backfaceVisibility: 'hidden',
+              WebkitFontSmoothing: 'antialiased'
             }}
           >
             {titleTypingText}

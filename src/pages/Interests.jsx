@@ -5,17 +5,95 @@ import { SkeletonUtils } from 'three-stdlib';
 import * as THREE from 'three';
 import { Camera, Music, Guitar, Trophy, Plane, Gamepad2, Users, X } from 'lucide-react';
 
+// 远程资源基础 URL
+const REMOTE_BASE_URL = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/';
+
+// 辅助函数：将本地模型/动画路径转换为远程 URL
+const getRemoteModelUrl = (localPath) => {
+  if (!localPath) return localPath;
+  // 提取文件名（去除前导斜杠和目录）
+  const fileName = localPath.replace(/^\/[^\/]+\//, '').replace(/^\//, '');
+  return `${REMOTE_BASE_URL}${fileName}`;
+};
+
+// 修复纹理路径：将远程URL转换为本地路径
+const fixTexturePaths = (scene) => {
+  if (!scene) return;
+  
+  scene.traverse((child) => {
+    if (child.isMesh && child.material) {
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      
+      materials.forEach((material) => {
+        const textureProperties = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap'];
+        
+        textureProperties.forEach((prop) => {
+          if (material[prop]) {
+            const texture = material[prop];
+            const currentSrc = texture.image?.src || texture.image?.currentSrc || texture.source?.data?.src;
+            
+            // 检查是否是错误的远程路径（包含mixamo-mini或r2.dev/home）
+            if (currentSrc && (
+              currentSrc.includes('mixamo-mini') ||
+              currentSrc.includes('r2.dev/home') ||
+              currentSrc.includes('.fbm/')
+            )) {
+              // 提取文件名（去除路径和扩展名）
+              const fileName = currentSrc.split('/').pop().split('?')[0];
+              
+              // 尝试使用本地路径
+              // 首先尝试/models/textures/目录
+              const localPath = `/models/textures/${fileName}`;
+              
+              // 创建新的纹理加载器
+              const loader = new THREE.TextureLoader();
+              
+              // 尝试加载本地纹理
+              loader.load(
+                localPath,
+                (loadedTexture) => {
+                  // 成功加载，替换纹理
+                  material[prop] = loadedTexture;
+                  material.needsUpdate = true;
+                },
+                undefined,
+                () => {
+                  // 加载失败，移除纹理，使用默认材质
+                  material[prop] = null;
+                  material.needsUpdate = true;
+                }
+              );
+            }
+          }
+        });
+      });
+    }
+  });
+};
+
+
 // 3D Avatar Component
-function Avatar({ animationPath = '/animations/idle.fbx', scale = 1.5, position = [0, -0.5, 0] }) {
+function Avatar({ animationPath = getRemoteModelUrl('/animations/idle.fbx'), scale = 1.5, position = [0, -0.5, 0] }) {
   const group = useRef();
   const mixer = useRef();
   const currentActionRef = useRef();
-  const { scene: baseAvatar } = useGLTF('/models/avatar.glb');
+  const { scene: baseAvatar } = useGLTF(getRemoteModelUrl('/models/avatar.glb'));
   const fbx = useFBX(animationPath);
+
+  useEffect(() => {
+    // 修复纹理路径（如果模型已加载）
+    if (baseAvatar) {
+      fixTexturePaths(baseAvatar);
+    }
+  }, [baseAvatar]);
 
   const clonedAvatar = useMemo(() => {
     if (!baseAvatar) return null;
     const cloned = SkeletonUtils.clone(baseAvatar);
+    
+    // 修复克隆场景中的纹理路径
+    fixTexturePaths(cloned);
+    
     cloned.traverse((child) => {
       if (child.isMesh) {
         child.castShadow = true;
@@ -86,7 +164,7 @@ function Avatar({ animationPath = '/animations/idle.fbx', scale = 1.5, position 
   );
 }
 
-useGLTF.preload('/models/avatar.glb');
+useGLTF.preload(getRemoteModelUrl('/models/avatar.glb'));
 
 export default function Interests() {
   const [rotation, setRotation] = useState(0);
