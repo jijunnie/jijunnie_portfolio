@@ -2010,58 +2010,29 @@ const createPlaceholderSVG = (color, text) => {
 function MusicPanel({ isMobile }) {
   const [selectedSong, setSelectedSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef(null);
 
-  // Placeholder music data - memoized to avoid regenerating SVG on every render
+  // Reset playing state when song changes
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.load(); // Reload audio for new song
+      setIsPlaying(false);
+    }
+  }, [selectedSong]);
+
+  // Music data - memoized to avoid regenerating SVG on every render
   const songs = useMemo(() => [
     {
       id: 1,
-      title: 'Midnight Dreams',
+      title: 'Always Remember Us This Way (Jijun\'s Version)',
       artist: 'Jijun Nie',
-      album: 'Night Vibes',
-      duration: '3:45',
+      album: 'Jijun\'s Covers',
+      duration: '4:30',
       albumCover: createPlaceholderSVG('#6366f1', 'Album 1'),
       year: '2024',
-      genre: 'Electronic'
-    },
-    {
-      id: 2,
-      title: 'Ocean Waves',
-      artist: 'Jijun Nie',
-      album: 'Nature Sounds',
-      duration: '4:12',
-      albumCover: createPlaceholderSVG('#8b5cf6', 'Album 2'),
-      year: '2024',
-      genre: 'Ambient'
-    },
-    {
-      id: 3,
-      title: 'City Lights',
-      artist: 'Jijun Nie',
-      album: 'Urban Stories',
-      duration: '3:28',
-      albumCover: createPlaceholderSVG('#ec4899', 'Album 3'),
-      year: '2023',
-      genre: 'Pop'
-    },
-    {
-      id: 4,
-      title: 'Mountain Peak',
-      artist: 'Jijun Nie',
-      album: 'Nature Sounds',
-      duration: '5:03',
-      albumCover: createPlaceholderSVG('#14b8a6', 'Album 4'),
-      year: '2023',
-      genre: 'Instrumental'
-    },
-    {
-      id: 5,
-      title: 'Sunset Boulevard',
-      artist: 'Jijun Nie',
-      album: 'Urban Stories',
-      duration: '4:37',
-      albumCover: createPlaceholderSVG('#f59e0b', 'Album 5'),
-      year: '2024',
-      genre: 'Jazz'
+      genre: 'Pop',
+      audioUrl: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/Always%20remember.m4a'
     }
   ], []);
 
@@ -2088,16 +2059,35 @@ function MusicPanel({ isMobile }) {
                 onError={createSafeImageErrorHandler({
                   onError: (e) => {
                     try {
-                      if (e && e.target && e.target.nextSibling) {
-                        e.target.nextSibling.style.display = 'flex';
+                      if (e && e.target) {
+                        // Hide broken image
+                        e.target.style.display = 'none';
+                        // Show placeholder
+                        if (e.target.nextSibling) {
+                          e.target.nextSibling.style.display = 'flex';
+                        }
+                        // Clear src to prevent retries and memory leaks (mobile optimization)
+                        e.target.src = '';
+                        e.target.onerror = null; // Remove error handler to prevent loops
                       }
                     } catch (error) {
+                      // Prevent error handler from crashing
                       console.debug('Image error handling failed:', error);
                     }
                   }
                 })}
                 loading="lazy"
                 decoding="async"
+                onLoad={(e) => {
+                  // Clean up error handlers after successful load to prevent memory leaks
+                  try {
+                    if (e && e.target) {
+                      e.target.onerror = null;
+                    }
+                  } catch (error) {
+                    console.debug('Image load handler error:', error);
+                  }
+                }}
               />
               <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center" style={{ display: 'none' }}>
                 <Music className="w-24 h-24 text-purple-400" />
@@ -2108,7 +2098,22 @@ function MusicPanel({ isMobile }) {
             <div className="flex items-center gap-4">
               <button
                 className="w-12 h-12 rounded-full bg-gray-800 text-white flex items-center justify-center hover:bg-gray-700 transition-colors"
-                onClick={() => setIsPlaying(!isPlaying)}
+                onClick={async () => {
+                  if (!audioRef.current) return;
+                  
+                  try {
+                    if (isPlaying) {
+                      audioRef.current.pause();
+                      setIsPlaying(false);
+                    } else {
+                      await audioRef.current.play();
+                      setIsPlaying(true);
+                    }
+                  } catch (error) {
+                    console.debug('Audio play error:', error);
+                    setIsPlaying(false);
+                  }
+                }}
               >
                 {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
               </button>
@@ -2153,6 +2158,21 @@ function MusicPanel({ isMobile }) {
             </div>
           </div>
         </div>
+        
+        {/* Audio Element */}
+        {song.audioUrl && (
+          <audio
+            ref={audioRef}
+            src={song.audioUrl}
+            onEnded={() => setIsPlaying(false)}
+            onPause={() => setIsPlaying(false)}
+            onPlay={() => setIsPlaying(true)}
+            onError={(e) => {
+              console.debug('Audio error:', e);
+              setIsPlaying(false);
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -2213,6 +2233,13 @@ function MusicPanel({ isMobile }) {
               </div>
             </button>
           ))}
+          
+          {/* More coming soon message */}
+          <div className="mt-6 text-center py-4">
+            <p className="text-sm text-gray-500 italic">
+              More coming soon...
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -2294,24 +2321,43 @@ function PhotoGallery({ isMobile }) {
 
         <div className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-hidden">
           <div className="w-full h-full flex items-center justify-center">
-            <img 
-              src={photo.url} 
-              alt={photo.title}
-              className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
-              onError={createSafeImageErrorHandler({
-                onError: (e) => {
+              <img 
+                src={photo.url} 
+                alt={photo.title}
+                className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
+                onError={createSafeImageErrorHandler({
+                  onError: (e) => {
+                    try {
+                      if (e && e.target) {
+                        // Hide broken image
+                        e.target.style.display = 'none';
+                        // Show placeholder
+                        if (e.target.nextSibling) {
+                          e.target.nextSibling.style.display = 'flex';
+                        }
+                        // Clear src to prevent retries and memory leaks (mobile optimization)
+                        e.target.src = '';
+                        e.target.onerror = null; // Remove error handler to prevent loops
+                      }
+                    } catch (error) {
+                      // Prevent error handler from crashing
+                      console.debug('Image error handling failed:', error);
+                    }
+                  }
+                })}
+                loading="lazy"
+                decoding="async"
+                onLoad={(e) => {
+                  // Clean up error handlers after successful load to prevent memory leaks
                   try {
-                    if (e && e.target && e.target.nextSibling) {
-                      e.target.nextSibling.style.display = 'flex';
+                    if (e && e.target) {
+                      e.target.onerror = null;
                     }
                   } catch (error) {
-                    console.debug('Image error handling failed:', error);
+                    console.debug('Image load handler error:', error);
                   }
-                }
-              })}
-              loading="lazy"
-              decoding="async"
-            />
+                }}
+              />
             <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center rounded-2xl" style={{ display: 'none' }}>
               <Image className="w-24 h-24 text-purple-400" />
             </div>
@@ -2384,16 +2430,35 @@ function PhotoGallery({ isMobile }) {
                 onError={createSafeImageErrorHandler({
                   onError: (e) => {
                     try {
-                      if (e && e.target && e.target.nextSibling) {
-                        e.target.nextSibling.style.display = 'flex';
+                      if (e && e.target) {
+                        // Hide broken image
+                        e.target.style.display = 'none';
+                        // Show placeholder
+                        if (e.target.nextSibling) {
+                          e.target.nextSibling.style.display = 'flex';
+                        }
+                        // Clear src to prevent retries and memory leaks (mobile optimization)
+                        e.target.src = '';
+                        e.target.onerror = null; // Remove error handler to prevent loops
                       }
                     } catch (error) {
+                      // Prevent error handler from crashing
                       console.debug('Image error handling failed:', error);
                     }
                   }
                 })}
                 loading="lazy"
                 decoding="async"
+                onLoad={(e) => {
+                  // Clean up error handlers after successful load to prevent memory leaks
+                  try {
+                    if (e && e.target) {
+                      e.target.onerror = null;
+                    }
+                  } catch (error) {
+                    console.debug('Image load handler error:', error);
+                  }
+                }}
               />
               <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center" style={{ display: 'none' }}>
                 <Image className="w-12 h-12 text-purple-400" />
@@ -2415,8 +2480,16 @@ function VideoGallery({ isMobile }) {
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all');
 
-  // Video data - all videos removed
-  const videos = [];
+  // Video data
+  const videos = [
+    {
+      id: 1,
+      title: 'Video 1',
+      url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/video1.mov',
+      category: 'video',
+      year: '2024'
+    }
+  ];
 
   const filters = [
     { id: 'all', label: 'All Videos' },
@@ -2447,16 +2520,23 @@ function VideoGallery({ isMobile }) {
             <video 
               src={video.url} 
               controls
+              playsInline
+              preload="metadata"
               className="max-w-full max-h-full rounded-2xl shadow-2xl"
               onError={(e) => {
                 try {
-                  e.target.style.display = 'none';
-                  if (e.target.nextSibling) {
-                    e.target.nextSibling.style.display = 'flex';
+                  if (e && e.target) {
+                    e.target.style.display = 'none';
+                    if (e.target.nextSibling) {
+                      e.target.nextSibling.style.display = 'flex';
+                    }
                   }
                 } catch (error) {
-                  console.debug('Image error handling failed:', error);
+                  console.debug('Video error handling failed:', error);
                 }
+              }}
+              onLoadStart={() => {
+                // Video started loading
               }}
             >
               Your browser does not support the video tag.
@@ -2540,24 +2620,46 @@ function VideoGallery({ isMobile }) {
                 onClick={() => setSelectedVideo(video.id)}
                 className="relative aspect-video rounded-xl overflow-hidden group hover:scale-105 transition-transform duration-200"
               >
-                <img 
-                  src={video.thumbnail} 
-                  alt={video.title}
-                  className="w-full h-full object-cover"
-                  onError={createSafeImageErrorHandler({
-                    onError: (e) => {
+                {video.thumbnail ? (
+                  <img 
+                    src={video.thumbnail} 
+                    alt={video.title}
+                    className="w-full h-full object-cover"
+                    onError={createSafeImageErrorHandler({
+                      onError: (e) => {
+                        try {
+                          if (e && e.target) {
+                            e.target.style.display = 'none';
+                            if (e.target.nextSibling) {
+                              e.target.nextSibling.style.display = 'flex';
+                            }
+                            // Clear src to prevent retries
+                            e.target.src = '';
+                            e.target.onerror = null;
+                          }
+                        } catch (error) {
+                          console.debug('Image error handling failed:', error);
+                        }
+                      }
+                    })}
+                    loading="lazy"
+                    decoding="async"
+                    onLoad={(e) => {
+                      // Clean up error handlers after successful load
                       try {
-                        if (e && e.target && e.target.nextSibling) {
-                          e.target.nextSibling.style.display = 'flex';
+                        if (e && e.target) {
+                          e.target.onerror = null;
                         }
                       } catch (error) {
-                        console.debug('Image error handling failed:', error);
+                        console.debug('Image load handler error:', error);
                       }
-                    }
-                  })}
-                  loading="lazy"
-                  decoding="async"
-                />
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center">
+                    <Image className="w-12 h-12 text-purple-400" />
+                  </div>
+                )}
                 <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center" style={{ display: 'none' }}>
                   <Image className="w-12 h-12 text-purple-400" />
                 </div>
@@ -2871,32 +2973,70 @@ function ProjectsPanel({ isMobile }) {
     }
   ];
 
-  // Preload all project images when component mounts
+  // Preload all project images when component mounts (skip on mobile)
   useEffect(() => {
+    // Skip preloading on mobile to prevent crashes and memory issues
+    const checkMobile = window.innerWidth < 1024 || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (checkMobile) {
+      return;
+    }
+
     if (!Array.isArray(projects)) return;
     
     let isMounted = true;
+    let loadedCount = 0;
+    const maxConcurrentLoads = 3; // Limit concurrent image loads
     
-    projects.forEach((project) => {
+    const loadImage = (project, index) => {
       if (!isMounted) return;
       
-      try {
-        if (project && project.image && typeof project.image === 'string') {
-          const img = new window.Image();
-          img.src = project.image;
-          img.onload = () => {
-            if (isMounted && process.env.NODE_ENV === 'development') {
-              console.log('✅ Preloaded project image:', project.image);
+      // Stagger image loading to prevent overwhelming the browser
+      setTimeout(() => {
+        if (!isMounted) return;
+        
+        try {
+          if (project && project.image && typeof project.image === 'string') {
+            const img = new window.Image();
+            
+            // Add error handler before setting src to catch all errors
+            img.onerror = (e) => {
+              loadedCount--;
+              // Silently handle missing images - don't spam console with warnings
+              // These images may not exist yet (e.g., project-mobile.jpg, project-api.jpg)
+              try {
+                if (e && e.target) {
+                  e.target.src = ''; // Clear src to prevent retries
+                }
+              } catch (err) {
+                // Prevent any errors in error handler from crashing
+                console.debug('Image error handler error:', err);
+              }
+            };
+            
+            img.onload = () => {
+              loadedCount--;
+              if (isMounted && process.env.NODE_ENV === 'development') {
+                console.log('✅ Preloaded project image:', project.image);
+              }
+            };
+            
+            // Only load if we haven't exceeded concurrent limit
+            if (loadedCount < maxConcurrentLoads) {
+              loadedCount++;
+              img.src = project.image;
             }
-          };
-          img.onerror = () => {
-            // Silently handle missing images - don't spam console with warnings
-            // These images may not exist yet (e.g., project-mobile.jpg, project-api.jpg)
-          };
+          }
+        } catch (error) {
+          // Prevent crashes from image loading errors
+          console.debug('Image preload error (caught):', error);
+          loadedCount--;
         }
-      } catch (error) {
-        console.warn('Image preload error:', error);
-      }
+      }, index * 200); // Stagger by 200ms per image
+    };
+    
+    projects.forEach((project, index) => {
+      if (!isMounted) return;
+      loadImage(project, index);
     });
     
     return () => {
@@ -2961,10 +3101,31 @@ function ProjectsPanel({ isMobile }) {
                   src={project.image} 
                   alt={project.title}
                   className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
                   onError={(e) => {
-                    e.target.style.display = 'none';
-                    const placeholder = e.target.nextElementSibling;
-                    if (placeholder) placeholder.style.display = 'flex';
+                    try {
+                      if (e && e.target) {
+                        e.target.style.display = 'none';
+                        const placeholder = e.target.nextElementSibling;
+                        if (placeholder) placeholder.style.display = 'flex';
+                        // Clear src to prevent retries and memory leaks
+                        e.target.src = '';
+                      }
+                    } catch (error) {
+                      // Prevent error handler from crashing
+                      console.debug('Image error handler failed:', error);
+                    }
+                  }}
+                  onLoad={(e) => {
+                    // Prevent memory leaks by removing error handlers after successful load
+                    try {
+                      if (e && e.target) {
+                        e.target.onerror = null;
+                      }
+                    } catch (error) {
+                      console.debug('Image load handler error:', error);
+                    }
                   }}
                 />
               ) : null}
@@ -3303,9 +3464,16 @@ export default function Portfolio() {
   const lastSpatialPosRef = useRef({ x: 0, y: 0 });
   const [spatialPos, setSpatialPos] = useState({ x: 0, y: 0 });
 
-  // Preload all GLB files on component mount
+  // Preload all GLB files on component mount (skip on mobile to prevent crashes)
   useEffect(() => {
-    // Preload all icon GLB files
+    // Check if mobile - skip preloading on mobile to prevent memory issues
+    const checkMobile = window.innerWidth < 1024 || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (checkMobile) {
+      // On mobile, skip aggressive preloading to prevent crashes
+      return;
+    }
+
+    // Preload all icon GLB files (desktop only)
     const iconFiles = [
       getRemoteModelUrl('/icons/weather.glb'),
       getRemoteModelUrl('/icons/message.glb'),
@@ -3319,7 +3487,7 @@ export default function Portfolio() {
       getRemoteModelUrl('/icons/findmy.glb')
     ];
 
-    // Preload all icons
+    // Preload all icons (desktop only)
     iconFiles.forEach((url) => {
       try {
         useGLTF.preload(url);
@@ -3333,7 +3501,7 @@ export default function Portfolio() {
       }
     });
 
-    // Preload 3D background model (from CDN)
+    // Preload 3D background model (from CDN) - desktop only
     const backgroundModelUrl = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/cozy_living_room_baked.glb';
     try {
       useGLTF.preload(backgroundModelUrl);
@@ -3345,7 +3513,7 @@ export default function Portfolio() {
       // Silently handle preload errors
     }
 
-    // Preload all project images
+    // Preload all project images (desktop only)
     const projectImages = [
       getRemoteImageUrl('/images/portfolio.png'),
       getRemoteImageUrl('/images/VariantzWeb.png'),
@@ -3356,18 +3524,23 @@ export default function Portfolio() {
 
     projectImages.forEach((imageUrl) => {
       if (imageUrl) {
-        const img = new window.Image();
-        img.src = imageUrl;
-        img.onload = () => {
-          // Only log successful preloads in development
-          if (process.env.NODE_ENV === 'development') {
-            console.log('✅ Preloaded project image:', imageUrl);
-          }
-        };
-        img.onerror = () => {
-          // Silently handle missing images - don't spam console with warnings
-          // These images may not exist yet (e.g., project-mobile.jpg, project-api.jpg)
-        };
+        try {
+          const img = new window.Image();
+          img.src = imageUrl;
+          img.onload = () => {
+            // Only log successful preloads in development
+            if (process.env.NODE_ENV === 'development') {
+              console.log('✅ Preloaded project image:', imageUrl);
+            }
+          };
+          img.onerror = () => {
+            // Silently handle missing images - don't spam console with warnings
+            // These images may not exist yet (e.g., project-mobile.jpg, project-api.jpg)
+          };
+        } catch (error) {
+          // Prevent crashes from image loading errors
+          console.debug('Image preload error (caught):', error);
+        }
       }
     });
   }, []);

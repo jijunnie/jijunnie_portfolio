@@ -595,8 +595,8 @@ export default function Resume() {
           }`}
         >
           <a 
-            href="/Jijun_Nie_Resume.pdf" 
-            download="Jijun_Nie_Resume.pdf"
+            href="/Jijun Nie Resume.pdf" 
+            download="Jijun Nie Resume.pdf"
             className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-12 py-4 rounded-lg font-semibold text-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-110"
           >
             📄 Download Full Resume (PDF)

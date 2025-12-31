@@ -500,6 +500,22 @@ function MainApp({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
   const isPortfolioPage = location.pathname === '/projects';
   const isAboutPage = location.pathname === '/about';
   
+  // Set page title based on current route
+  React.useEffect(() => {
+    const pageTitles = {
+      '/': 'Home',
+      '/about': 'About',
+      '/resume': 'Resume',
+      '/projects': 'Portfolio',
+      '/interests': 'Interests',
+      '/globe': 'Travel',
+      '/contact': 'Contact'
+    };
+    
+    const pageName = pageTitles[location.pathname] || 'Home';
+    document.title = `Jijun's Portfolio | ${pageName}`;
+  }, [location.pathname]);
+  
   // Full-screen pages have transparent/no background
   const bgClass = (isHomePage || isGlobePage || isPortfolioPage || isAboutPage) 
     ? 'min-h-screen' 

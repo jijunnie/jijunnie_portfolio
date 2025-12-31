@@ -4,35 +4,24 @@ import { OrbitControls } from '@react-three/drei';
 import Globe from '../components/globe/Globe';
 import Borders from '../components/globe/Borders';
 import FilledRegions from '../components/globe/FilledRegions';
-import Marker from '../components/globe/Marker';
 import InfoPanel from '../components/globe/InfoPanel';
 import RotatingBackground from '../components/globe/RotatingBackground';
-import { markers } from '../data/visitedRegions';
 
 export default function GlobePage() {
   const [selectedRegion, setSelectedRegion] = useState(null);
   const [hoveredRegion, setHoveredRegion] = useState(null);
-  const [selectedMarker, setSelectedMarker] = useState(null);
   const [infoPanelOpen, setInfoPanelOpen] = useState(false);
   const [isGlobeHovered, setIsGlobeHovered] = useState(false);
   const globeRotationRef = useRef(0);
 
   const handleRegionClick = (regionName) => {
     setSelectedRegion(regionName);
-    setSelectedMarker(null);
-    setInfoPanelOpen(true);
-  };
-
-  const handleMarkerClick = (markerData) => {
-    setSelectedMarker(markerData);
-    setSelectedRegion(null);
     setInfoPanelOpen(true);
   };
 
   const handleClosePanel = () => {
     setInfoPanelOpen(false);
     setSelectedRegion(null);
-    setSelectedMarker(null);
   };
 
   return (
@@ -91,22 +80,6 @@ export default function GlobePage() {
           />
         </Suspense>
 
-        {/* Markers */}
-        <Suspense fallback={null}>
-          {markers.map((marker) => (
-            <Marker
-              key={marker.id}
-              lat={marker.lat}
-              lon={marker.lon}
-              name={marker.name}
-              description={marker.description}
-              visited={marker.visited}
-              onClick={handleMarkerClick}
-              globeRotationRef={globeRotationRef}
-              isGlobeHovered={isGlobeHovered}
-            />
-          ))}
-        </Suspense>
 
         {/* Camera Controls */}
         <OrbitControls
@@ -125,7 +98,7 @@ export default function GlobePage() {
       {infoPanelOpen && (
         <InfoPanel
           region={selectedRegion}
-          marker={selectedMarker}
+          marker={null}
           onClose={handleClosePanel}
         />
       )}
@@ -134,7 +107,7 @@ export default function GlobePage() {
       <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-30">
         <div className="bg-black/60 backdrop-blur-md text-white px-6 py-3 rounded-full text-sm">
           <p className="text-center">
-            🖱️ Click on countries or markers to see details • 🎯 Drag to rotate • 🔍 Scroll to zoom
+            🖱️ Click on countries to see details • 🎯 Drag to rotate • 🔍 Scroll to zoom
           </p>
         </div>
       </div>

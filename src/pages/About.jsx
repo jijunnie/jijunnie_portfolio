@@ -5314,7 +5314,7 @@ export default function About() {
             pointerEvents: 'none'
           }}
         />
-        {hasEnteredMusicSection && (
+        {hasEnteredMusicSection && windowSize.width >= 768 && (
           <video
             ref={musicVideoRef}
             src="https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/music.MP4"

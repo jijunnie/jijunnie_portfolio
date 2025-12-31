@@ -9,6 +9,8 @@ export default function InfoPanel({ region, marker, onClose }) {
   const displayName = region || marker?.name || 'Unknown';
   const displayType = data?.type || 'location';
   const isVisited = data?.visited || marker?.visited || false;
+  const isHome = data?.isHome || marker?.isHome || false;
+  const isHometown = data?.isHometown || marker?.isHometown || false;
   const notes = data?.notes || marker?.description || 'No additional information.';
 
   return (
