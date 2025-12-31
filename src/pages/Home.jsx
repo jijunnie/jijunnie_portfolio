@@ -5,6 +5,17 @@ import { Send } from 'lucide-react';
 import { SkeletonUtils } from 'three-stdlib';
 import * as THREE from 'three';
 
+// 远程资源基础 URL
+const REMOTE_BASE_URL = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/';
+
+// 辅助函数：将本地模型/动画路径转换为远程 URL
+const getRemoteModelUrl = (localPath) => {
+  if (!localPath) return localPath;
+  // 提取文件名（去除前导斜杠和目录）
+  const fileName = localPath.replace(/^\/[^\/]+\//, '').replace(/^\//, '');
+  return `${REMOTE_BASE_URL}${fileName}`;
+};
+
 // Lazy load Spline to reduce initial bundle size (4.5MB library)
 const Spline = lazy(() => import('@splinetool/react-spline').then(module => ({ default: module.default })));
 // ============================================
@@ -162,7 +173,7 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0] }) {
   const currentActionRef = useRef();
   const fadeTimeRef = useRef(0);
   
-  const { scene: baseAvatar, error } = useGLTF('/models/avatar.glb');
+  const { scene: baseAvatar, error } = useGLTF(getRemoteModelUrl('/models/avatar.glb'));
   
   useEffect(() => {
     if (error) {
@@ -286,7 +297,7 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0] }) {
     </group>
   );
 }
-useGLTF.preload('/models/avatar.glb');
+useGLTF.preload(getRemoteModelUrl('/models/avatar.glb'));
 
 export default function Home() {
   const [showTitle, setShowTitle] = useState(false);
@@ -294,7 +305,7 @@ export default function Home() {
   const [showAvatar, setShowAvatar] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [currentAnimation, setCurrentAnimation] = useState('/animations/Waving.fbx');
+  const [currentAnimation, setCurrentAnimation] = useState(getRemoteModelUrl('/animations/Waving.fbx'));
   const [bubbleText, setBubbleText] = useState('');
   const [typingBubbleText, setTypingBubbleText] = useState('');
   const [showBubble, setShowBubble] = useState(false);
@@ -303,9 +314,9 @@ export default function Home() {
   const [isRespondingToUser, setIsRespondingToUser] = useState(false);
   
   // Preload animations to prevent flashing on first visit
-  useFBX('/animations/Waving.fbx');
-  useFBX('/animations/Talking.fbx');
-  useFBX('/animations/idle.fbx');
+  useFBX(getRemoteModelUrl('/animations/Waving.fbx'));
+  useFBX(getRemoteModelUrl('/animations/Talking.fbx'));
+  useFBX(getRemoteModelUrl('/animations/idle.fbx'));
   
   // Step 1: Title dissolve in
   useEffect(() => {
@@ -333,7 +344,7 @@ export default function Home() {
     
     const timer = setTimeout(() => {
       setShowAvatar(true);
-      setCurrentAnimation('/animations/Waving.fbx');
+      setCurrentAnimation(getRemoteModelUrl('/animations/Waving.fbx'));
       
       setTimeout(() => {
         setShowBubble(true);
@@ -349,7 +360,7 @@ export default function Home() {
     if (!showAvatar) return;
     
     const timer = setTimeout(() => {
-      setCurrentAnimation('/animations/Talking.fbx');
+      setCurrentAnimation(getRemoteModelUrl('/animations/Talking.fbx'));
       
       setTimeout(() => {
         typeOutBubble("Chat with me to know more about me!", false);
@@ -365,7 +376,7 @@ export default function Home() {
       const timer = setTimeout(() => {
         setShowChatInput(true);
         setTimeout(() => {
-          setCurrentAnimation('/animations/idle.fbx');
+          setCurrentAnimation(getRemoteModelUrl('/animations/idle.fbx'));
         }, 500);
       }, 500);
       
@@ -377,7 +388,7 @@ export default function Home() {
   useEffect(() => {
     if (!isTyping && isRespondingToUser) {
       const timer = setTimeout(() => {
-        setCurrentAnimation('/animations/idle.fbx');
+        setCurrentAnimation(getRemoteModelUrl('/animations/idle.fbx'));
         setIsRespondingToUser(false);
       }, 500);
       return () => clearTimeout(timer);
@@ -414,7 +425,7 @@ export default function Home() {
     setInputMessage('');
     setIsLoading(true);
     
-    setCurrentAnimation('/animations/Talking.fbx');
+    setCurrentAnimation(getRemoteModelUrl('/animations/Talking.fbx'));
     
     try {
       const systemPrompt = `You are Jijun Nie. Answer ONLY what the user asks in 1-2 short sentences. Be brief, friendly, and direct.

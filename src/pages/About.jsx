@@ -57,13 +57,33 @@ import { OrbitControls, useGLTF, useFBX } from '@react-three/drei';
 import { SkeletonUtils } from 'three-stdlib';
 import * as THREE from 'three';
 import Spline from '@splinetool/react-spline';
+import { createSafeImageErrorHandler, safePreloadImage } from '../utils/safeImageLoader';
+
+// 远程资源基础 URL
+const REMOTE_IMAGE_BASE_URL = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/';
+
+// 辅助函数：将本地图片路径转换为远程 URL
+const getRemoteImageUrl = (localPath) => {
+  if (!localPath) return localPath;
+  // 提取文件名（去除前导斜杠和目录）
+  const fileName = localPath.replace(/^\/[^\/]+\//, '').replace(/^\//, '');
+  return `${REMOTE_IMAGE_BASE_URL}${fileName}`;
+};
+
+// 辅助函数：将本地模型/动画路径转换为远程 URL
+const getRemoteModelUrl = (localPath) => {
+  if (!localPath) return localPath;
+  // 提取文件名（去除前导斜杠和目录）
+  const fileName = localPath.replace(/^\/[^\/]+\//, '').replace(/^\//, '');
+  return `${REMOTE_IMAGE_BASE_URL}${fileName}`;
+};
 
 function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundingBoxCalculated, noRotation = false, rotation = null }) {
   const group = useRef();
   const mixer = useRef();
   const currentActionRef = useRef();
   
-  const { scene: baseAvatar, error } = useGLTF('/models/avatar.glb');
+  const { scene: baseAvatar, error } = useGLTF(getRemoteModelUrl('/models/avatar.glb'));
   
   useEffect(() => {
     if (error) {
@@ -287,7 +307,7 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
   );
 }
 
-useGLTF.preload('/models/avatar.glb');
+useGLTF.preload(getRemoteModelUrl('/models/avatar.glb'));
 
 function CameraDrift() {
   const lastUpdateRef = useRef(0);
@@ -564,7 +584,7 @@ export default function About() {
   // Fixed viewport height to prevent content shift on mobile address bar collapse
   const fixedViewportHeight = useRef(null);
   
-  const [currentAnimation, setCurrentAnimation] = useState('/animations/idle.fbx');
+  const [currentAnimation, setCurrentAnimation] = useState(getRemoteModelUrl('/animations/idle.fbx'));
   const [navBarTop, setNavBarTop] = useState(16); // Dynamic navigation bar top position
   const [windowSize, setWindowSize] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -755,8 +775,8 @@ export default function About() {
   const [subtitlePrefixVisible, setSubtitlePrefixVisible] = useState(false);
   const [typingText, setTypingText] = useState('');
   const [currentIdentityIndex, setCurrentIdentityIndex] = useState(0);
-  const [pageOpacity, setPageOpacity] = useState(0);
-  const [pageReady, setPageReady] = useState(false);
+  const [pageOpacity, setPageOpacity] = useState(1); // Start at 1 to prevent initial flash
+  const [pageReady, setPageReady] = useState(true); // Start ready to prevent delays
   const [scriptVisible, setScriptVisible] = useState(false);
   const [galleryScroll, setGalleryScroll] = useState(0);
   const [hoveredGalleryItem, setHoveredGalleryItem] = useState(null);
@@ -802,77 +822,80 @@ export default function About() {
     'Creative Thinker'
   ];
   
-  useFBX('/animations/idle.fbx');
-  useFBX('/animations/Waving.fbx');
-  useFBX('/animations/Singing.fbx');
+  useFBX(getRemoteModelUrl('/animations/idle.fbx'));
+  useFBX(getRemoteModelUrl('/animations/Waving.fbx'));
+  useFBX(getRemoteModelUrl('/animations/Singing.fbx'));
   
   // Define all icons from icons2 folder (all PNG files)
   const learningIcons = [
-    { url: '/icons2/asana.png', name: 'Asana' },
-    { url: '/icons2/three.js.png', name: 'Three.js' },
-    { url: '/icons2/google.png', name: 'Google' },
-    { url: '/icons2/capcut.png', name: 'CapCut' },
-    { url: '/icons2/solidwork.png', name: 'SolidWorks' },
-    { url: '/icons2/chatgpt.png', name: 'ChatGPT' },
-    { url: '/icons2/claude.png', name: 'Claude' },
-    { url: '/icons2/coursera.png', name: 'Coursera' },
-    { url: '/icons2/cursor.png', name: 'Cursor' },
-    { url: '/icons2/dji.png', name: 'DJI' },
-    { url: '/icons2/canva.png', name: 'Canva' },
-    { url: '/icons2/jimengai.png', name: 'JiMengAI' },
-    { url: '/icons2/microsoft.png', name: 'Microsoft' },
-    { url: '/icons2/vite.png', name: 'Vite' },
-    { url: '/icons2/react.png', name: 'React' },
-    { url: '/icons2/spline.png', name: 'Spline' },
-    { url: '/icons2/chanjing.png', name: 'ChanJing' },
-    { url: '/icons2/meitu.png', name: 'Meitu' },
-    { url: '/icons2/blender.png', name: 'Blender' },
-    { url: '/icons2/SQL.png', name: 'SQL' },
-    { url: '/icons2/vscode.png', name: 'VS Code' },
+    { url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/asana.png', name: 'Asana' },
+    { url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/three.js.png', name: 'Three.js' },
+    { url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/google.png', name: 'Google' },
+    { url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/capcut.png', name: 'CapCut' },
+    { url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/solidwork.png', name: 'SolidWorks' },
+    { url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/chatgpt.png', name: 'ChatGPT' },
+    { url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/claude.png', name: 'Claude' },
+    { url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/coursera.png', name: 'Coursera' },
+    { url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/cursor.png', name: 'Cursor' },
+    { url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/dji.png', name: 'DJI' },
+    { url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/canva.png', name: 'Canva' },
+    { url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/jimengai.png', name: 'JiMengAI' },
+    { url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/microsoft.png', name: 'Microsoft' },
+    { url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/vite.png', name: 'Vite' },
+    { url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/react.png', name: 'React' },
+    { url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/spline.png', name: 'Spline' },
+    { url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/chanjing.png', name: 'ChanJing' },
+    { url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/meitu.png', name: 'Meitu' },
+    { url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/blender.png', name: 'Blender' },
+    { url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/SQL.png', name: 'SQL' },
+    { url: 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/vscode.png', name: 'VS Code' },
   ];
   
   // Sing Out Voices carousel images
   const carouselImages = useMemo(() => [
-    '/images/sing1.jpg',
-    '/images/sing2.JPG',
-    '/images/sing3.JPG',
-    '/images/sing4.jpg',
-    '/images/sing5.JPG',
-    '/images/sing6.jpg',
-    '/images/sing7.jpg'
+    getRemoteImageUrl('/images/sing1.jpg'),
+    getRemoteImageUrl('/images/sing2.JPG'),
+    getRemoteImageUrl('/images/sing3.JPG'),
+    getRemoteImageUrl('/images/sing4.jpg'),
+    getRemoteImageUrl('/images/sing5.JPG'),
+    getRemoteImageUrl('/images/sing6.jpg'),
+    getRemoteImageUrl('/images/sing7.jpg')
   ], []);
   
-  // Capture the Beauty gallery images - all 28 images
-  const galleryImages = useMemo(() => [
-    '/aboutImage/1.jpg',
-    '/aboutImage/2.jpg',
-    '/aboutImage/3.JPG',
-    '/aboutImage/4.jpg',
-    '/aboutImage/5.JPG',
-    '/aboutImage/6.JPG',
-    '/aboutImage/7.jpg.JPG',
-    '/aboutImage/8.jpg',
-    '/aboutImage/9.jpg',
-    '/aboutImage/10.jpg',
-    '/aboutImage/11.jpg',
-    '/aboutImage/12.JPG',
-    '/aboutImage/13.JPG',
-    '/aboutImage/14.jpg',
-    '/aboutImage/15.JPG',
-    '/aboutImage/16.jpg',
-    '/aboutImage/17.jpg',
-    '/aboutImage/18.JPG',
-    '/aboutImage/19.JPG',
-    '/aboutImage/20.JPG',
-    '/aboutImage/21.JPG',
-    '/aboutImage/22.jpg',
-    '/aboutImage/23.JPG',
-    '/aboutImage/24.JPG',
-    '/aboutImage/25.JPG',
-    '/aboutImage/26.JPG',
-    '/aboutImage/27.png',
-    '/aboutImage/28.JPG',
+  // Capture the Beauty gallery images - all 28 images with metadata
+  const galleryItems = useMemo(() => [
+    { title: 'Photo 1', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/1.jpg'), location: 'Daytona Beach, Florida' },
+    { title: 'Photo 2', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/2.jpg'), location: 'Marina Bay Sands, Singapore' },
+    { title: 'Photo 3', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/3.JPG'), location: 'Niagara Falls, Canada' },
+    { title: 'Photo 4', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/4.jpg'), location: '大三巴, Macau' },
+    { title: 'Photo 5', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/5.JPG'), location: 'Gardens by the Bay, Singapore' },
+    { title: 'Photo 6', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/6.JPG'), location: 'My Home, South Florida' },
+    { title: 'Photo 7', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/7.jpg.JPG'), location: 'Universal Studios Singapore' },
+    { title: 'Photo 8', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/8.jpg'), location: '九寨沟, Sichuan' },
+    { title: 'Photo 9', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/9.jpg'), location: 'Bayside Marketplace, Miami' },
+    { title: 'Photo 10', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/10.jpg'), location: '佛山, 广东' },
+    { title: 'Photo 11', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/11.jpg'), location: 'Random Library, 佛山' },
+    { title: 'Photo 12', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/12.JPG'), location: 'My Home, South Florida' },
+    { title: 'Photo 13', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/13.JPG'), location: 'Deerfield Beach, Florida' },
+    { title: 'Photo 14', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/14.jpg'), location: 'Manhattan, New York' },
+    { title: 'Photo 15', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/15.JPG'), location: 'Everglades, Florida' },
+    { title: 'Photo 16', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/16.jpg'), location: 'Marina Bay Sands, Singapore' },
+    { title: 'Photo 17', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/17.jpg'), location: 'Marina Bay Sands, Singapore' },
+    { title: 'Photo 18', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/18.JPG'), location: 'Daytona Beach, Florida' },
+    { title: 'Photo 19', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/19.JPG'), location: 'Niagara Falls, Canada' },
+    { title: 'Photo 20', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/20.JPG'), location: 'Downtown Miami' },
+    { title: 'Photo 21', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/21.JPG'), location: 'Everglades, Florida' },
+    { title: 'Photo 22', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/22.jpg'), location: 'Kuala Lumpur, Malaysia' },
+    { title: 'Photo 23', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/23.JPG'), location: 'Boca Raton, Florida' },
+    { title: 'Photo 24', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/24.JPG'), location: 'Fort Canning Park, Singapore' },
+    { title: 'Photo 25', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/25.JPG'), location: 'South Beach, Florida' },
+    { title: 'Photo 26', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/26.JPG'), location: 'Toronto, Canada' },
+    { title: 'Photo 27', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/27.png'), location: '香格里拉, 云南' },
+    { title: 'Photo 28', description: 'Capturing the beauty of moments', image: getRemoteImageUrl('/aboutImage/28.JPG'), location: '香格里拉, 云南' },
   ], []);
+  
+  // Extract just the image URLs for preloading
+  const galleryImages = useMemo(() => galleryItems.map(item => item.image), [galleryItems]);
   
   const carouselItemsCount = carouselImages.length;
   const angleStep = 360 / carouselItemsCount;
@@ -896,19 +919,21 @@ export default function About() {
     if (galleryPreloadRef.current) return; // Already started
     galleryPreloadRef.current = true;
     
-    // Use device-specific settings
-    const CONCURRENT_LOADS = deviceInfo.maxConcurrentImageLoads;
-    const INITIAL_DELAY = deviceInfo.imageLoadDelay;
-    const BATCH_DELAY = deviceInfo.performanceTier === 'low' ? 500 : 
-                       deviceInfo.performanceTier === 'medium' ? 300 : 
-                       deviceInfo.isMobile ? 200 : 50;
+    // Use device-specific settings - increase concurrency for faster loading
+    const CONCURRENT_LOADS = deviceInfo.performanceTier === 'low' ? 3 :
+                             deviceInfo.performanceTier === 'medium' ? 5 :
+                             deviceInfo.isMobile ? 4 : 8; // Increased for faster preloading
+    const BATCH_DELAY = deviceInfo.performanceTier === 'low' ? 300 : 
+                       deviceInfo.performanceTier === 'medium' ? 200 : 
+                       deviceInfo.isMobile ? 150 : 50; // Reduced delays for faster loading
     const TIMEOUT = deviceInfo.performanceTier === 'low' ? 15000 : 10000;
     
     let currentIndex = 0;
     const loadedImages = new Set();
     const failedImages = new Set();
+    const totalImages = galleryImages.length;
     
-    const loadImage = (src) => {
+    const loadImage = (src, index) => {
       return new Promise((resolve) => {
         // Skip if already loaded or failed
         if (loadedImages.has(src) || failedImages.has(src)) {
@@ -916,103 +941,105 @@ export default function About() {
           return;
         }
         
+        // Create image element for preloading
         const img = new Image();
+        img.crossOrigin = 'anonymous';
         
-        // Set timeout to prevent hanging (longer for low-end devices)
-        const timeout = setTimeout(() => {
+        const timeoutId = setTimeout(() => {
           failedImages.add(src);
           resolve();
         }, TIMEOUT);
         
         img.onload = () => {
-          clearTimeout(timeout);
+          clearTimeout(timeoutId);
           loadedImages.add(src);
           resolve();
         };
         
         img.onerror = () => {
-          clearTimeout(timeout);
+          clearTimeout(timeoutId);
           failedImages.add(src);
-          // Silently handle errors to prevent crashes
           resolve();
         };
         
-        try {
-          img.src = src;
-        } catch (error) {
-          clearTimeout(timeout);
-          failedImages.add(src);
-          resolve();
-        }
+        // Start loading
+        img.src = src;
       });
     };
     
     const loadBatch = async () => {
       const batch = [];
-      const endIndex = Math.min(currentIndex + CONCURRENT_LOADS, galleryImages.length);
+      const endIndex = Math.min(currentIndex + CONCURRENT_LOADS, totalImages);
       
       for (let i = currentIndex; i < endIndex; i++) {
-        batch.push(loadImage(galleryImages[i]));
+        batch.push(loadImage(galleryImages[i], i));
       }
       
       await Promise.all(batch);
       currentIndex = endIndex;
       
-      if (currentIndex < galleryImages.length) {
+      if (currentIndex < totalImages) {
         setTimeout(loadBatch, BATCH_DELAY);
       } else {
+        // All images loaded (or attempted)
         setGalleryImagesPreloaded(true);
+        console.debug(`Gallery preload complete: ${loadedImages.size}/${totalImages} images loaded`);
       }
     };
     
-    // Delay preloading based on device performance
-    const startDelay = deviceInfo.performanceTier === 'low' ? 5000 :
-                      deviceInfo.performanceTier === 'medium' ? 3000 :
-                      deviceInfo.isMobile ? 2000 : 0;
-    
-    if (startDelay > 0) {
-      setTimeout(() => {
-        requestAnimationFrame(() => {
-          loadBatch();
-        });
-      }, startDelay);
-    } else {
-      requestAnimationFrame(() => {
-        loadBatch();
-      });
-    }
+    // Start preloading immediately - no delay for better UX
+    requestAnimationFrame(() => {
+      loadBatch();
+    });
   }, [galleryImages, deviceInfo]);
   
   useEffect(() => {
-    // Set page ready immediately to prevent flash
-    setPageReady(true);
-    
-    // Use device-specific initialization based on performance tier
-    setPageOpacity(1);
-    
+    // Page is already ready and visible (initialized in state)
+    // Optimize 3D model loading for smooth initial animation
     if (deviceInfo.shouldDisable3D) {
       // Low-end devices: disable 3D models completely
       setModelsVisible(false);
     } else if (deviceInfo.performanceTier === 'low' || deviceInfo.isMobile) {
-      // Low-end or mobile: delay 3D models significantly
-      const delay = deviceInfo.performanceTier === 'low' ? 2000 : deviceInfo.isMobile ? 500 : 200;
-      setTimeout(() => {
-        try {
-          setModelsVisible(true);
-        } catch (error) {
-        }
-      }, delay);
-    } else {
-      // Desktop/High-end: optimize initialization to reduce lag
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            setTimeout(() => {
+      // Low-end or mobile: delay 3D models but reduce delay for better UX
+      const delay = deviceInfo.performanceTier === 'low' ? 1000 : deviceInfo.isMobile ? 200 : 100;
+      // Use requestIdleCallback if available for better performance
+      if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(() => {
+          setTimeout(() => {
+            try {
               setModelsVisible(true);
-            }, 50);
+            } catch (error) {
+            }
+          }, delay);
+        }, { timeout: 500 });
+      } else {
+        setTimeout(() => {
+          try {
+            setModelsVisible(true);
+          } catch (error) {
+          }
+        }, delay);
+      }
+    } else {
+      // Desktop/High-end: load immediately for smooth hero animation
+      // Use requestIdleCallback to avoid blocking initial render
+      if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(() => {
+          requestAnimationFrame(() => {
+            try {
+              setModelsVisible(true);
+            } catch (error) {
+            }
           });
+        }, { timeout: 100 });
+      } else {
+        requestAnimationFrame(() => {
+          try {
+            setModelsVisible(true);
+          } catch (error) {
+          }
         });
-      });
+      }
     }
   }, [deviceInfo]);
   
@@ -1049,11 +1076,11 @@ export default function About() {
   }, [mainTitleVisible]);
   
   useEffect(() => {
-    // Reduce delay for faster initial render
-    const timer = setTimeout(() => {
+    // Show title immediately for smooth hero animation
+    // Use requestAnimationFrame to ensure it happens after initial render
+    requestAnimationFrame(() => {
       setMainTitleVisible(true);
-    }, 100);
-    return () => clearTimeout(timer);
+    });
   }, []);
   
   useEffect(() => {
@@ -1090,34 +1117,32 @@ export default function About() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [deviceInfo]);
   
-  // Start preloading gallery images based on device performance
-  // This ensures images are ready when user reaches the "Capture the Beauty" section
+  // Start preloading gallery images immediately on page load
+  // This ensures all images are ready when user reaches the "Capture the Beauty" section
   useEffect(() => {
-    const delay = deviceInfo.performanceTier === 'low' ? 5000 :
-                 deviceInfo.performanceTier === 'medium' ? 3000 :
-                 deviceInfo.isMobile ? 2000 : 0;
-    
-    if (delay > 0) {
-      const timeoutId = setTimeout(() => {
+    // Start preloading immediately after initial render
+    // Use requestIdleCallback if available for better performance, otherwise use requestAnimationFrame
+    if (typeof requestIdleCallback !== 'undefined') {
+      requestIdleCallback(() => {
         preloadGalleryImages();
-      }, delay);
-      return () => clearTimeout(timeoutId);
+      }, { timeout: 1000 }); // Start within 1 second even if browser is busy
     } else {
+      // Fallback: start after a very short delay to not block initial render
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           preloadGalleryImages();
         });
       });
     }
-  }, [preloadGalleryImages, deviceInfo]);
+  }, [preloadGalleryImages]);
   
   // Preload sport background images
   useEffect(() => {
     const preloadSportImages = () => {
       const horizontalImg = new Image();
       const verticalImg = new Image();
-      horizontalImg.src = '/images/sport horizontal.jpg';
-      verticalImg.src = '/images/sport vertical.jpg';
+      horizontalImg.src = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/sport horizontal.jpg';
+      verticalImg.src = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/sport vertical.jpg';
       
       // Handle load errors
       horizontalImg.onerror = () => {};
@@ -1247,8 +1272,9 @@ export default function About() {
         window.addEventListener('scroll', throttledHandleScroll, { passive: true });
         // Use longer delay on mobile to prevent crashes
         const isMobile = windowSize.width < 768;
-        const initialDelay = isMobile ? 100 : 0;
-        setTimeout(() => {
+        // Initialize scroll immediately for smooth hero animation
+        // Use requestAnimationFrame to avoid blocking initial render
+        requestAnimationFrame(() => {
           try {
             if (isMounted) {
               handleScroll();
@@ -1256,7 +1282,7 @@ export default function About() {
           } catch (error) {
             console.debug('Initial scroll handler error:', error);
           }
-        }, initialDelay);
+        });
       }
     } catch (error) {
       console.debug('Scroll listener setup error:', error);
@@ -1678,7 +1704,7 @@ export default function About() {
   }, []);
 
   useEffect(() => {
-    setCurrentAnimation('/animations/idle.fbx');
+    setCurrentAnimation(getRemoteModelUrl('/animations/idle.fbx'));
     
     let timeoutIds = [];
 
@@ -1691,9 +1717,9 @@ export default function About() {
     };
 
     const triggerWaving = () => {
-      setCurrentAnimation('/animations/Waving.fbx');
+      setCurrentAnimation(getRemoteModelUrl('/animations/Waving.fbx'));
       const wavingTimeout = setTimeout(() => {
-        setCurrentAnimation('/animations/idle.fbx');
+        setCurrentAnimation(getRemoteModelUrl('/animations/idle.fbx'));
         scheduleNextWaving();
       }, 3000);
       timeoutIds.push(wavingTimeout);
@@ -2143,12 +2169,40 @@ export default function About() {
     const handleVisibilityChange = () => {
       try {
         if (typeof document !== 'undefined' && document.hidden) {
-          // Page is hidden - pause audio to prevent crashes
-          if (musicAudioRef.current && !musicAudioRef.current.paused) {
-            musicAudioRef.current.pause();
+          // Page is hidden - pause audio and video to prevent crashes
+          if (musicAudioRef.current) {
+            try {
+              if (!musicAudioRef.current.paused) {
+                musicAudioRef.current.pause();
+              }
+              // Reset audio to prevent memory issues
+              musicAudioRef.current.currentTime = 0;
+            } catch (error) {
+              console.debug('Audio pause error in visibility change:', error);
+            }
           }
-          if (musicVideoRef.current && !musicVideoRef.current.paused) {
-            musicVideoRef.current.pause();
+          if (musicVideoRef.current) {
+            try {
+              if (!musicVideoRef.current.paused) {
+                musicVideoRef.current.pause();
+              }
+              // On mobile, also reset video source to free memory
+              if (windowSize.width < 768) {
+                // Don't reset source, just pause and mark as paused
+                musicVideoRef.current.dataset.wasPausedByVisibility = 'true';
+              }
+            } catch (error) {
+              console.debug('Video pause error in visibility change:', error);
+            }
+          }
+        } else {
+          // Page is visible again - don't auto-resume on mobile to prevent crashes
+          if (windowSize.width < 768) {
+            // On mobile, require user interaction to resume
+            if (musicVideoRef.current && musicVideoRef.current.dataset.wasPausedByVisibility === 'true') {
+              musicVideoRef.current.dataset.wasPausedByVisibility = 'false';
+              // Don't auto-resume - wait for user interaction
+            }
           }
         }
       } catch (error) {
@@ -2159,11 +2213,28 @@ export default function About() {
     const handlePageHide = () => {
       try {
         // Pause all media when page is being hidden
-        if (musicAudioRef.current && !musicAudioRef.current.paused) {
-          musicAudioRef.current.pause();
+        if (musicAudioRef.current) {
+          try {
+            if (!musicAudioRef.current.paused) {
+              musicAudioRef.current.pause();
+            }
+            musicAudioRef.current.currentTime = 0;
+          } catch (error) {
+            console.debug('Audio pause error in page hide:', error);
+          }
         }
-        if (musicVideoRef.current && !musicVideoRef.current.paused) {
-          musicVideoRef.current.pause();
+        if (musicVideoRef.current) {
+          try {
+            if (!musicVideoRef.current.paused) {
+              musicVideoRef.current.pause();
+            }
+            // On mobile, also unload video to free memory
+            if (windowSize.width < 768) {
+              musicVideoRef.current.load(); // Reload to free memory
+            }
+          } catch (error) {
+            console.debug('Video pause error in page hide:', error);
+          }
         }
       } catch (error) {
         console.debug('Page hide handler error:', error);
@@ -2461,8 +2532,8 @@ export default function About() {
   const sportBackgroundImage = useMemo(() => {
     // Use encodeURI to handle spaces in filename
     const imagePath = windowSize.width > windowSize.height 
-      ? '/images/sport horizontal.jpg' 
-      : '/images/sport vertical.jpg';
+      ? 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/sport horizontal.jpg' 
+      : 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/sport vertical.jpg';
     return encodeURI(imagePath);
   }, [windowSize.width, windowSize.height]);
   
@@ -2971,17 +3042,24 @@ export default function About() {
           >
             <Canvas 
               camera={{ position: [0, 0, 5], fov: 50, up: [0, 1, 0] }}
+              dpr={windowSize.width < 768 ? Math.min(window.devicePixelRatio || 1, 1.5) : Math.min(window.devicePixelRatio || 1, 2)}
+              frameloop="always"
               gl={{ 
-                antialias: true, 
+                antialias: windowSize.width >= 768, 
                 alpha: true,
                 premultipliedAlpha: false,
                 powerPreference: "high-performance",
-                preserveDrawingBuffer: true,
-                failIfMajorPerformanceCaveat: false
+                preserveDrawingBuffer: false, // Set to false for better performance
+                failIfMajorPerformanceCaveat: false,
+                stencil: false, // Disable stencil for better performance
+                depth: true
               }}
               onCreated={({ gl }) => {
                 gl.setClearColor(0x000000, 0);
+                // Optimize WebGL context for better performance
+                gl.domElement.style.willChange = 'auto';
               }}
+              performance={{ min: 0.5 }} // Allow lower FPS when needed
               style={{ 
                 background: 'transparent', 
                 width: '100%', 
@@ -3590,6 +3668,9 @@ export default function About() {
                 <img 
                   src={icon.url} 
                   alt={icon.name}
+                  onError={createSafeImageErrorHandler()}
+                  loading="lazy"
+                  decoding="async"
                   style={{
                     width: '100%',
                     height: '100%',
@@ -3633,7 +3714,7 @@ export default function About() {
         {}
         <video
           ref={developVideoRef}
-          src="/images/develop bg.mp4"
+          src="https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/develop bg.mp4"
           autoPlay={false}
           loop
           muted
@@ -4047,6 +4128,9 @@ export default function About() {
                             objectFit: 'cover',
                             objectPosition: 'center'
                           }}
+                          onError={createSafeImageErrorHandler()}
+                          loading="lazy"
+                          decoding="async"
                         />
                       </div>
                     </div>
@@ -4142,7 +4226,7 @@ export default function About() {
                 </>
               )}
               <Avatar
-                animationPath="/animations/Singing.fbx"
+                animationPath={getRemoteModelUrl('/animations/Singing.fbx')}
                 scale={windowSize.width >= 1024 
                   ? 1.4 
                   : windowSize.width < 640 
@@ -4505,36 +4589,7 @@ export default function About() {
                 }
               }}
             >
-              {[
-                { title: 'Photo 1', description: 'Capturing the beauty of moments', image: '/aboutImage/1.jpg', location: 'Daytona Beach, Florida' },
-                { title: 'Photo 2', description: 'Capturing the beauty of moments', image: '/aboutImage/2.jpg', location: 'Marina Bay Sands, Singapore' },
-                { title: 'Photo 3', description: 'Capturing the beauty of moments', image: '/aboutImage/3.JPG', location: 'Niagara Falls, Canada' },
-                { title: 'Photo 4', description: 'Capturing the beauty of moments', image: '/aboutImage/4.jpg', location: '大三巴, Macau' },
-                { title: 'Photo 5', description: 'Capturing the beauty of moments', image: '/aboutImage/5.JPG', location: 'Gardens by the Bay, Singapore' },
-                { title: 'Photo 6', description: 'Capturing the beauty of moments', image: '/aboutImage/6.JPG', location: 'My Home, South Florida' },
-                { title: 'Photo 7', description: 'Capturing the beauty of moments', image: '/aboutImage/7.jpg.JPG', location: 'Universal Studios Singapore' },
-                { title: 'Photo 8', description: 'Capturing the beauty of moments', image: '/aboutImage/8.jpg', location: '九寨沟, Sichuan' },
-                { title: 'Photo 9', description: 'Capturing the beauty of moments', image: '/aboutImage/9.jpg', location: 'Bayside Marketplace, Miami' },
-                { title: 'Photo 10', description: 'Capturing the beauty of moments', image: '/aboutImage/10.jpg', location: '佛山, 广东' },
-                { title: 'Photo 11', description: 'Capturing the beauty of moments', image: '/aboutImage/11.jpg', location: 'Random Library, 佛山' },
-                { title: 'Photo 12', description: 'Capturing the beauty of moments', image: '/aboutImage/12.JPG', location: 'My Home, South Florida' },
-                { title: 'Photo 13', description: 'Capturing the beauty of moments', image: '/aboutImage/13.JPG', location: 'Deerfield Beach, Florida' },
-                { title: 'Photo 14', description: 'Capturing the beauty of moments', image: '/aboutImage/14.jpg', location: 'Manhattan, New York' },
-                { title: 'Photo 15', description: 'Capturing the beauty of moments', image: '/aboutImage/15.JPG', location: 'Everglades, Florida' },
-                { title: 'Photo 16', description: 'Capturing the beauty of moments', image: '/aboutImage/16.jpg', location: 'Marina Bay Sands, Singapore' },
-                { title: 'Photo 17', description: 'Capturing the beauty of moments', image: '/aboutImage/17.jpg', location: 'Marina Bay Sands, Singapore' },
-                { title: 'Photo 18', description: 'Capturing the beauty of moments', image: '/aboutImage/18.JPG', location: 'Daytona Beach, Florida' },
-                { title: 'Photo 19', description: 'Capturing the beauty of moments', image: '/aboutImage/19.JPG', location: 'Niagara Falls, Canada' },
-                { title: 'Photo 20', description: 'Capturing the beauty of moments', image: '/aboutImage/20.JPG', location: 'Downtown Miami' },
-                { title: 'Photo 21', description: 'Capturing the beauty of moments', image: '/aboutImage/21.JPG', location: 'Everglades, Florida' },
-                { title: 'Photo 22', description: 'Capturing the beauty of moments', image: '/aboutImage/22.jpg', location: 'Kuala Lumpur, Malaysia' },
-                { title: 'Photo 23', description: 'Capturing the beauty of moments', image: '/aboutImage/23.JPG', location: 'Boca Raton, Florida' },
-                { title: 'Photo 24', description: 'Capturing the beauty of moments', image: '/aboutImage/24.JPG', location: 'Fort Canning Park, Singapore' },
-                { title: 'Photo 25', description: 'Capturing the beauty of moments', image: '/aboutImage/25.JPG', location: 'South Beach, Florida' },
-                { title: 'Photo 26', description: 'Capturing the beauty of moments', image: '/aboutImage/26.JPG', location: 'Toronto, Canada' },
-                { title: 'Photo 27', description: 'Capturing the beauty of moments', image: '/aboutImage/27.png', location: '香格里拉, 云南' },
-                { title: 'Photo 28', description: 'Capturing the beauty of moments', image: '/aboutImage/28.JPG', location: '香格里拉, 云南' },
-              ].map((item, i) => {
+              {galleryItems.map((item, i) => {
                 // 图片直接显示，无淡入效果
                 const itemOpacity = 1;
                 
@@ -4612,6 +4667,8 @@ export default function About() {
                     <img 
                       src={item.image}
                       alt={item.title}
+                      loading={galleryImagesPreloaded ? "eager" : (deviceInfo.shouldLazyLoadImages ? "lazy" : "eager")}
+                      decoding="async"
                       style={{
                         width: '100%',
                         height: '100%',
@@ -4625,20 +4682,9 @@ export default function About() {
                         willChange: windowSize.width < 768 ? 'auto' : 'transform',
                         opacity: 1
                       }}
-                      loading={deviceInfo.shouldLazyLoadImages ? "lazy" : "eager"}
-                      decoding="async"
-                      onError={(e) => {
-                        try {
-                          // Fallback to gradient if image fails to load
-                          if (e && e.target && e.target.parentElement) {
-                            e.target.style.display = 'none';
-                            e.target.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-                          }
-                        } catch (error) {
-                          // Silently handle errors to prevent crashes
-                          console.error('Image error handler failed:', error);
-                        }
-                      }}
+                      onError={createSafeImageErrorHandler({
+                        fallbackBackground: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                      })}
                     />
                     {}
                     {isHovered && item.location && (
@@ -4831,7 +4877,7 @@ export default function About() {
         {}
         <video
           ref={competeVideoRef}
-          src="/images/compete bg.mp4"
+          src="https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/compete bg.mp4"
           autoPlay
           loop
           muted
@@ -4975,7 +5021,7 @@ export default function About() {
         {}
         <audio
           ref={musicAudioRef}
-          src="/images/music.m4a"
+          src="https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/music.m4a"
           loop
           preload={windowSize.width < 768 ? "none" : "metadata"}
           volume={0.5}
@@ -5029,12 +5075,13 @@ export default function About() {
         {hasEnteredMusicSection && (
           <video
             ref={musicVideoRef}
-            src="/images/music.MP4"
+            src="https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/music.MP4"
             autoPlay={false}
             loop
             muted
             playsInline
             preload={windowSize.width < 768 ? "none" : "metadata"}
+            crossOrigin="anonymous"
             style={{
               position: 'absolute',
               top: 0,
@@ -5047,14 +5094,29 @@ export default function About() {
               opacity: sectionTriggers && sectionTriggers[5] 
                 ? Math.min(1, Math.max(0, (scrollProgress - (sectionTriggers[5] - sectionConfig.fadeOffset - 0.03)) * (sectionConfig.fadeInSpeed * 0.8)))
                 : 0,
-              transition: 'opacity 1.5s ease-out'
+              transition: 'opacity 1.5s ease-out',
+              // Mobile-specific optimizations
+              ...(windowSize.width < 768 ? {
+                willChange: 'opacity',
+                transform: 'translateZ(0)', // Force GPU acceleration on mobile
+                WebkitTransform: 'translateZ(0)',
+              } : {})
             }}
             onError={(e) => {
               try {
                 if (e && e.target && !e.target.dataset.errorLogged) {
                   e.target.dataset.errorLogged = 'true';
+                  console.debug('Video load error, hiding video element');
                   if (e.target) {
                     e.target.style.display = 'none';
+                    e.target.style.opacity = '0';
+                  }
+                  // On mobile, don't retry to prevent crashes
+                  if (windowSize.width < 768) {
+                    // Set a flag to prevent further attempts
+                    if (musicVideoRef.current) {
+                      musicVideoRef.current.dataset.loadFailed = 'true';
+                    }
                   }
                 }
               } catch (error) {
@@ -5065,6 +5127,7 @@ export default function About() {
               try {
                 if (musicVideoRef.current) {
                   musicVideoRef.current.dataset.errorLogged = 'false';
+                  musicVideoRef.current.dataset.loadFailed = 'false';
                 }
               } catch (error) {
                 console.debug('Video loadStart error:', error);
@@ -5074,30 +5137,62 @@ export default function About() {
               try {
                 if (!musicVideoRef.current || !sectionTriggers || !sectionTriggers[5]) return;
                 
-                const video = musicVideoRef.current;
-                if (video && typeof video.playbackRate !== 'undefined') {
-                  video.playbackRate = 0.7;
+                // Check if video previously failed to load
+                if (musicVideoRef.current.dataset.loadFailed === 'true') {
+                  return; // Don't try to play if it previously failed
                 }
                 
-                // On mobile, be more conservative with autoplay
+                const video = musicVideoRef.current;
                 const isMobile = windowSize.width < 768;
+                
+                // Set playback rate safely
+                if (video && typeof video.playbackRate !== 'undefined') {
+                  try {
+                    video.playbackRate = 0.7;
+                  } catch (error) {
+                    console.debug('Playback rate error:', error);
+                  }
+                }
+                
+                // On mobile, be much more conservative with autoplay
                 if (scrollProgress >= sectionTriggers[5] - 0.05) {
                   if (isMobile) {
-                    // On mobile, only try to play if user has interacted
-                    // Don't force autoplay to prevent crashes
-                    const playPromise = video.play();
-                    if (playPromise !== undefined) {
-                      playPromise.catch((error) => {
-                        console.debug('Video play error (mobile):', error);
-                        // Silently fail on mobile
-                      });
-                    }
+                    // On mobile, wait a bit longer and check page visibility
+                    setTimeout(() => {
+                      try {
+                        if (!video || video.dataset.loadFailed === 'true') return;
+                        if (typeof document !== 'undefined' && document.hidden) {
+                          console.debug('Page hidden, not playing video on mobile');
+                          return;
+                        }
+                        
+                        // Only attempt play if video is ready and page is visible
+                        if (video.readyState >= 2) {
+                          const playPromise = video.play();
+                          if (playPromise !== undefined) {
+                            playPromise.catch((error) => {
+                              console.debug('Video play error (mobile):', error);
+                              // Mark as failed to prevent retries
+                              if (video) {
+                                video.dataset.loadFailed = 'true';
+                                video.style.display = 'none';
+                              }
+                            });
+                          }
+                        }
+                      } catch (error) {
+                        console.debug('Mobile video play attempt error:', error);
+                      }
+                    }, 200); // Delay on mobile to prevent crashes
                   } else {
-                    // Desktop: normal play
+                    // Desktop: normal play with error handling
                     const playPromise = video.play();
                     if (playPromise !== undefined) {
                       playPromise.catch((error) => {
                         console.debug('Video play error:', error);
+                        if (video) {
+                          video.style.display = 'none';
+                        }
                       });
                     }
                   }
@@ -5106,20 +5201,66 @@ export default function About() {
                 console.debug('Video metadata error:', error);
               }
             }}
+            onCanPlay={() => {
+              // Additional safety check when video can play
+              try {
+                const isMobile = windowSize.width < 768;
+                if (isMobile && musicVideoRef.current) {
+                  // On mobile, ensure video is muted and has proper attributes
+                  if (musicVideoRef.current.muted !== true) {
+                    musicVideoRef.current.muted = true;
+                  }
+                  if (!musicVideoRef.current.hasAttribute('playsinline')) {
+                    musicVideoRef.current.setAttribute('playsinline', '');
+                  }
+                }
+              } catch (error) {
+                console.debug('Video canPlay handler error:', error);
+              }
+            }}
+            onSuspend={() => {
+              // Handle video suspension (common on mobile when memory is low)
+              try {
+                if (windowSize.width < 768 && musicVideoRef.current) {
+                  console.debug('Video suspended on mobile, pausing to prevent crashes');
+                  if (!musicVideoRef.current.paused) {
+                    musicVideoRef.current.pause();
+                  }
+                }
+              } catch (error) {
+                console.debug('Video suspend handler error:', error);
+              }
+            }}
+            onStalled={() => {
+              // Handle video stalling (network issues)
+              try {
+                if (windowSize.width < 768 && musicVideoRef.current) {
+                  console.debug('Video stalled on mobile');
+                  // Don't retry on mobile to prevent crashes
+                  if (musicVideoRef.current.dataset.retryCount) {
+                    const retryCount = parseInt(musicVideoRef.current.dataset.retryCount) || 0;
+                    if (retryCount >= 2) {
+                      musicVideoRef.current.dataset.loadFailed = 'true';
+                      musicVideoRef.current.style.display = 'none';
+                      return;
+                    }
+                    musicVideoRef.current.dataset.retryCount = (retryCount + 1).toString();
+                  } else {
+                    musicVideoRef.current.dataset.retryCount = '1';
+                  }
+                }
+              } catch (error) {
+                console.debug('Video stall handler error:', error);
+              }
+            }}
           />
         )}
         <img
-          src="/images/music.png"
+          src="https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/music.png"
           alt="Music"
-          onError={(e) => {
-            try {
-              if (e && e.target) {
-                e.target.style.display = 'none';
-              }
-            } catch (error) {
-              console.debug('Image error handler error:', error);
-            }
-          }}
+          onError={createSafeImageErrorHandler()}
+          loading="lazy"
+          decoding="async"
           style={{
             position: 'absolute',
             width: 'calc(min(100vw, 100vh) * 0.85)',

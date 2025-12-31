@@ -7,6 +7,18 @@ import { OrbitControls } from '@react-three/drei';
 import GLBIcon from '../components/3d/GLBIcon';
 import LivingRoomBackgroundWithMouseTracking from '../components/3d/LivingRoomBackground';
 import Globe from '../components/globe/Globe';
+import { createSafeImageErrorHandler } from '../utils/safeImageLoader';
+
+// 远程图片基础 URL
+const REMOTE_IMAGE_BASE_URL = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/';
+
+// 辅助函数：将本地图片路径转换为远程 URL
+const getRemoteImageUrl = (localPath) => {
+  if (!localPath) return localPath;
+  // 提取文件名（去除前导斜杠和目录）
+  const fileName = localPath.replace(/^\/[^\/]+\//, '').replace(/^\//, '');
+  return `${REMOTE_IMAGE_BASE_URL}${fileName}`;
+};
 import Borders from '../components/globe/Borders';
 import FilledRegions from '../components/globe/FilledRegions';
 import Marker from '../components/globe/Marker';
@@ -2033,10 +2045,19 @@ function MusicPanel({ isMobile }) {
                 src={song.albumCover} 
                 alt={song.album}
                 className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'flex';
-                }}
+                onError={createSafeImageErrorHandler({
+                  onError: (e) => {
+                    try {
+                      if (e && e.target && e.target.nextSibling) {
+                        e.target.nextSibling.style.display = 'flex';
+                      }
+                    } catch (error) {
+                      console.debug('Image error handling failed:', error);
+                    }
+                  }
+                })}
+                loading="lazy"
+                decoding="async"
               />
               <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center" style={{ display: 'none' }}>
                 <Music className="w-24 h-24 text-purple-400" />
@@ -2121,10 +2142,19 @@ function MusicPanel({ isMobile }) {
                   src={song.albumCover} 
                   alt={song.album}
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
-                  }}
+                  onError={createSafeImageErrorHandler({
+                    onError: (e) => {
+                      try {
+                        if (e && e.target && e.target.nextSibling) {
+                          e.target.nextSibling.style.display = 'flex';
+                        }
+                      } catch (error) {
+                        console.debug('Image error handling failed:', error);
+                      }
+                    }
+                  })}
+                  loading="lazy"
+                  decoding="async"
                 />
                 <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center" style={{ display: 'none' }}>
                   <Music className="w-8 h-8 text-purple-400" />
@@ -2156,34 +2186,34 @@ function PhotoGallery({ isMobile }) {
 
   // Photo data from Capture the Moment (aboutImage folder)
   const photos = [
-    { id: 1, url: '/aboutImage/1.jpg', title: 'Capture the Moment 1', category: 'landscape', city: null, year: '2024' },
-    { id: 2, url: '/aboutImage/2.jpg', title: 'Capture the Moment 2', category: 'landscape', city: null, year: '2024' },
-    { id: 3, url: '/aboutImage/3.JPG', title: 'Capture the Moment 3', category: 'landscape', city: null, year: '2024' },
-    { id: 4, url: '/aboutImage/4.jpg', title: 'Capture the Moment 4', category: 'landscape', city: null, year: '2024' },
-    { id: 5, url: '/aboutImage/5.JPG', title: 'Capture the Moment 5', category: 'landscape', city: null, year: '2024' },
-    { id: 6, url: '/aboutImage/6.JPG', title: 'Capture the Moment 6', category: 'landscape', city: null, year: '2024' },
-    { id: 7, url: '/aboutImage/7.jpg.JPG', title: 'Capture the Moment 7', category: 'landscape', city: null, year: '2024' },
-    { id: 8, url: '/aboutImage/8.jpg', title: 'Capture the Moment 8', category: 'landscape', city: null, year: '2024' },
-    { id: 9, url: '/aboutImage/9.jpg', title: 'Capture the Moment 9', category: 'landscape', city: null, year: '2024' },
-    { id: 10, url: '/aboutImage/10.jpg', title: 'Capture the Moment 10', category: 'landscape', city: null, year: '2024' },
-    { id: 11, url: '/aboutImage/11.jpg', title: 'Capture the Moment 11', category: 'landscape', city: null, year: '2024' },
-    { id: 12, url: '/aboutImage/12.JPG', title: 'Capture the Moment 12', category: 'landscape', city: null, year: '2024' },
-    { id: 13, url: '/aboutImage/13.JPG', title: 'Capture the Moment 13', category: 'landscape', city: null, year: '2024' },
-    { id: 14, url: '/aboutImage/14.jpg', title: 'Capture the Moment 14', category: 'landscape', city: null, year: '2024' },
-    { id: 15, url: '/aboutImage/15.JPG', title: 'Capture the Moment 15', category: 'landscape', city: null, year: '2024' },
-    { id: 16, url: '/aboutImage/16.jpg', title: 'Capture the Moment 16', category: 'landscape', city: null, year: '2024' },
-    { id: 17, url: '/aboutImage/17.jpg', title: 'Capture the Moment 17', category: 'landscape', city: null, year: '2024' },
-    { id: 18, url: '/aboutImage/18.JPG', title: 'Capture the Moment 18', category: 'landscape', city: null, year: '2024' },
-    { id: 19, url: '/aboutImage/19.JPG', title: 'Capture the Moment 19', category: 'landscape', city: null, year: '2024' },
-    { id: 20, url: '/aboutImage/20.JPG', title: 'Capture the Moment 20', category: 'landscape', city: null, year: '2024' },
-    { id: 21, url: '/aboutImage/21.JPG', title: 'Capture the Moment 21', category: 'landscape', city: null, year: '2024' },
-    { id: 22, url: '/aboutImage/22.jpg', title: 'Capture the Moment 22', category: 'landscape', city: null, year: '2024' },
-    { id: 23, url: '/aboutImage/23.JPG', title: 'Capture the Moment 23', category: 'landscape', city: null, year: '2024' },
-    { id: 24, url: '/aboutImage/24.JPG', title: 'Capture the Moment 24', category: 'landscape', city: null, year: '2024' },
-    { id: 25, url: '/aboutImage/25.JPG', title: 'Capture the Moment 25', category: 'landscape', city: null, year: '2024' },
-    { id: 26, url: '/aboutImage/26.JPG', title: 'Capture the Moment 26', category: 'landscape', city: null, year: '2024' },
-    { id: 27, url: '/aboutImage/27.png', title: 'Capture the Moment 27', category: 'landscape', city: null, year: '2024' },
-    { id: 28, url: '/aboutImage/28.JPG', title: 'Capture the Moment 28', category: 'landscape', city: null, year: '2024' },
+    { id: 1, url: getRemoteImageUrl('/aboutImage/1.jpg'), title: 'Capture the Moment 1', category: 'landscape', city: null, year: '2024' },
+    { id: 2, url: getRemoteImageUrl('/aboutImage/2.jpg'), title: 'Capture the Moment 2', category: 'landscape', city: null, year: '2024' },
+    { id: 3, url: getRemoteImageUrl('/aboutImage/3.JPG'), title: 'Capture the Moment 3', category: 'landscape', city: null, year: '2024' },
+    { id: 4, url: getRemoteImageUrl('/aboutImage/4.jpg'), title: 'Capture the Moment 4', category: 'landscape', city: null, year: '2024' },
+    { id: 5, url: getRemoteImageUrl('/aboutImage/5.JPG'), title: 'Capture the Moment 5', category: 'landscape', city: null, year: '2024' },
+    { id: 6, url: getRemoteImageUrl('/aboutImage/6.JPG'), title: 'Capture the Moment 6', category: 'landscape', city: null, year: '2024' },
+    { id: 7, url: getRemoteImageUrl('/aboutImage/7.jpg.JPG'), title: 'Capture the Moment 7', category: 'landscape', city: null, year: '2024' },
+    { id: 8, url: getRemoteImageUrl('/aboutImage/8.jpg'), title: 'Capture the Moment 8', category: 'landscape', city: null, year: '2024' },
+    { id: 9, url: getRemoteImageUrl('/aboutImage/9.jpg'), title: 'Capture the Moment 9', category: 'landscape', city: null, year: '2024' },
+    { id: 10, url: getRemoteImageUrl('/aboutImage/10.jpg'), title: 'Capture the Moment 10', category: 'landscape', city: null, year: '2024' },
+    { id: 11, url: getRemoteImageUrl('/aboutImage/11.jpg'), title: 'Capture the Moment 11', category: 'landscape', city: null, year: '2024' },
+    { id: 12, url: getRemoteImageUrl('/aboutImage/12.JPG'), title: 'Capture the Moment 12', category: 'landscape', city: null, year: '2024' },
+    { id: 13, url: getRemoteImageUrl('/aboutImage/13.JPG'), title: 'Capture the Moment 13', category: 'landscape', city: null, year: '2024' },
+    { id: 14, url: getRemoteImageUrl('/aboutImage/14.jpg'), title: 'Capture the Moment 14', category: 'landscape', city: null, year: '2024' },
+    { id: 15, url: getRemoteImageUrl('/aboutImage/15.JPG'), title: 'Capture the Moment 15', category: 'landscape', city: null, year: '2024' },
+    { id: 16, url: getRemoteImageUrl('/aboutImage/16.jpg'), title: 'Capture the Moment 16', category: 'landscape', city: null, year: '2024' },
+    { id: 17, url: getRemoteImageUrl('/aboutImage/17.jpg'), title: 'Capture the Moment 17', category: 'landscape', city: null, year: '2024' },
+    { id: 18, url: getRemoteImageUrl('/aboutImage/18.JPG'), title: 'Capture the Moment 18', category: 'landscape', city: null, year: '2024' },
+    { id: 19, url: getRemoteImageUrl('/aboutImage/19.JPG'), title: 'Capture the Moment 19', category: 'landscape', city: null, year: '2024' },
+    { id: 20, url: getRemoteImageUrl('/aboutImage/20.JPG'), title: 'Capture the Moment 20', category: 'landscape', city: null, year: '2024' },
+    { id: 21, url: getRemoteImageUrl('/aboutImage/21.JPG'), title: 'Capture the Moment 21', category: 'landscape', city: null, year: '2024' },
+    { id: 22, url: getRemoteImageUrl('/aboutImage/22.jpg'), title: 'Capture the Moment 22', category: 'landscape', city: null, year: '2024' },
+    { id: 23, url: getRemoteImageUrl('/aboutImage/23.JPG'), title: 'Capture the Moment 23', category: 'landscape', city: null, year: '2024' },
+    { id: 24, url: getRemoteImageUrl('/aboutImage/24.JPG'), title: 'Capture the Moment 24', category: 'landscape', city: null, year: '2024' },
+    { id: 25, url: getRemoteImageUrl('/aboutImage/25.JPG'), title: 'Capture the Moment 25', category: 'landscape', city: null, year: '2024' },
+    { id: 26, url: getRemoteImageUrl('/aboutImage/26.JPG'), title: 'Capture the Moment 26', category: 'landscape', city: null, year: '2024' },
+    { id: 27, url: getRemoteImageUrl('/aboutImage/27.png'), title: 'Capture the Moment 27', category: 'landscape', city: null, year: '2024' },
+    { id: 28, url: getRemoteImageUrl('/aboutImage/28.JPG'), title: 'Capture the Moment 28', category: 'landscape', city: null, year: '2024' },
   ];
 
   const filters = [
@@ -2228,16 +2258,19 @@ function PhotoGallery({ isMobile }) {
               src={photo.url} 
               alt={photo.title}
               className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
-              onError={(e) => {
-                try {
-                  e.target.style.display = 'none';
-                  if (e.target.nextSibling) {
-                    e.target.nextSibling.style.display = 'flex';
+              onError={createSafeImageErrorHandler({
+                onError: (e) => {
+                  try {
+                    if (e && e.target && e.target.nextSibling) {
+                      e.target.nextSibling.style.display = 'flex';
+                    }
+                  } catch (error) {
+                    console.debug('Image error handling failed:', error);
                   }
-                } catch (error) {
-                  console.debug('Image error handling failed:', error);
                 }
-              }}
+              })}
+              loading="lazy"
+              decoding="async"
             />
             <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center rounded-2xl" style={{ display: 'none' }}>
               <Image className="w-24 h-24 text-purple-400" />
@@ -2308,12 +2341,19 @@ function PhotoGallery({ isMobile }) {
                 src={photo.url} 
                 alt={photo.title}
                 className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  if (e.target.nextSibling) {
-                    e.target.nextSibling.style.display = 'flex';
+                onError={createSafeImageErrorHandler({
+                  onError: (e) => {
+                    try {
+                      if (e && e.target && e.target.nextSibling) {
+                        e.target.nextSibling.style.display = 'flex';
+                      }
+                    } catch (error) {
+                      console.debug('Image error handling failed:', error);
+                    }
                   }
-                }}
+                })}
+                loading="lazy"
+                decoding="async"
               />
               <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center" style={{ display: 'none' }}>
                 <Image className="w-12 h-12 text-purple-400" />
@@ -2464,16 +2504,19 @@ function VideoGallery({ isMobile }) {
                   src={video.thumbnail} 
                   alt={video.title}
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    try {
-                      e.target.style.display = 'none';
-                      if (e.target.nextSibling) {
-                        e.target.nextSibling.style.display = 'flex';
+                  onError={createSafeImageErrorHandler({
+                    onError: (e) => {
+                      try {
+                        if (e && e.target && e.target.nextSibling) {
+                          e.target.nextSibling.style.display = 'flex';
+                        }
+                      } catch (error) {
+                        console.debug('Image error handling failed:', error);
                       }
-                    } catch (error) {
-                      console.debug('Image error handling failed:', error);
                     }
-                  }}
+                  })}
+                  loading="lazy"
+                  decoding="async"
                 />
                 <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center" style={{ display: 'none' }}>
                   <Image className="w-12 h-12 text-purple-400" />
