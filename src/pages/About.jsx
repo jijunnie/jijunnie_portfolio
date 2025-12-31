@@ -79,8 +79,13 @@ const getRemoteModelUrl = (localPath) => {
 };
 
 // 修复纹理路径：将远程URL转换为本地路径
+// 使用WeakSet来跟踪已经修复过的场景，防止重复修复
+const fixedScenes = new WeakSet();
+const textureLoader = new THREE.TextureLoader(); // 复用单个加载器实例
+
 const fixTexturePaths = (scene) => {
-  if (!scene) return;
+  if (!scene || fixedScenes.has(scene)) return; // 已经修复过，跳过
+  fixedScenes.add(scene);
   
   scene.traverse((child) => {
     if (child.isMesh && child.material) {
@@ -100,31 +105,9 @@ const fixTexturePaths = (scene) => {
               currentSrc.includes('r2.dev/home') ||
               currentSrc.includes('.fbm/')
             )) {
-              // 提取文件名（去除路径和扩展名）
-              const fileName = currentSrc.split('/').pop().split('?')[0];
-              
-              // 尝试使用本地路径
-              // 首先尝试/models/textures/目录
-              const localPath = `/models/textures/${fileName}`;
-              
-              // 创建新的纹理加载器
-              const loader = new THREE.TextureLoader();
-              
-              // 尝试加载本地纹理
-              loader.load(
-                localPath,
-                (loadedTexture) => {
-                  // 成功加载，替换纹理
-                  material[prop] = loadedTexture;
-                  material.needsUpdate = true;
-                },
-                undefined,
-                () => {
-                  // 加载失败，移除纹理，使用默认材质
-                  material[prop] = null;
-                  material.needsUpdate = true;
-                }
-              );
+              // 直接移除无效纹理，使用默认材质（避免异步加载导致的问题）
+              material[prop] = null;
+              material.needsUpdate = true;
             }
           }
         });
@@ -143,12 +126,13 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
   
   useEffect(() => {
     if (error) {
+      console.warn('Avatar loading error:', error);
     }
-    // 修复纹理路径（如果模型已加载）
+    // 修复纹理路径（如果模型已加载）- 只执行一次
     if (baseAvatar) {
       fixTexturePaths(baseAvatar);
     }
-  }, [error, baseAvatar]);
+  }, [baseAvatar]); // 移除error依赖，避免不必要的重渲染
   
   const fbx = useFBX(animationPath);
   
@@ -162,7 +146,7 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
       cloned = baseAvatar.clone(true);
     }
     
-    // 修复克隆场景中的纹理路径
+    // 修复克隆场景中的纹理路径（在useMemo中执行，只执行一次）
     fixTexturePaths(cloned);
     
     cloned.traverse((child) => {
@@ -193,7 +177,7 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
     }
     
     return cloned;
-  }, [baseAvatar, onBoundingBoxCalculated]);
+  }, [baseAvatar]); // 移除onBoundingBoxCalculated依赖，避免不必要的重新克隆
   
   useEffect(() => {
     if (clonedAvatar && group.current) {
@@ -243,8 +227,21 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
     };
   }, [clonedAvatar]);
   
+  // 使用ref来跟踪当前动画路径，避免不必要的重新加载
+  const currentAnimationPathRef = useRef(animationPath);
+  const animationsLengthRef = useRef(0);
+  
   useEffect(() => {
     if (!fbx.animations?.length || !mixer.current || !clonedAvatar) return;
+    
+    // 如果动画路径和长度都没变，跳过
+    if (currentAnimationPathRef.current === animationPath && 
+        animationsLengthRef.current === fbx.animations.length) {
+      return;
+    }
+    
+    currentAnimationPathRef.current = animationPath;
+    animationsLengthRef.current = fbx.animations.length;
     
     const newAnimation = fbx.animations[0];
     if (!newAnimation || !newAnimation.tracks || newAnimation.tracks.length === 0) {
@@ -327,8 +324,9 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0], onBoundin
         }
       };
     } catch (error) {
+      console.warn('Animation error:', error);
     }
-  }, [animationPath, fbx.animations, clonedAvatar]);
+  }, [animationPath, clonedAvatar]); // 移除fbx.animations依赖，使用ref跟踪
   
   const lastUpdateRef = useRef(0);
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -1030,7 +1028,12 @@ export default function About() {
       });
     };
     
+    let isMounted = true;
+    let timeoutId = null;
+    
     const loadBatch = async () => {
+      if (!isMounted) return;
+      
       const batch = [];
       const endIndex = Math.min(currentIndex + CONCURRENT_LOADS, totalImages);
       
@@ -1039,11 +1042,14 @@ export default function About() {
       }
       
       await Promise.all(batch);
+      
+      if (!isMounted) return;
+      
       currentIndex = endIndex;
       
-      if (currentIndex < totalImages) {
-        setTimeout(loadBatch, BATCH_DELAY);
-      } else {
+      if (currentIndex < totalImages && isMounted) {
+        timeoutId = setTimeout(loadBatch, BATCH_DELAY);
+      } else if (isMounted) {
         // All images loaded (or attempted)
         setGalleryImagesPreloaded(true);
         console.debug(`Gallery preload complete: ${loadedImages.size}/${totalImages} images loaded`);
@@ -1052,8 +1058,18 @@ export default function About() {
     
     // Start preloading immediately - no delay for better UX
     requestAnimationFrame(() => {
-      loadBatch();
+      if (isMounted) {
+        loadBatch();
+      }
     });
+    
+    return () => {
+      isMounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+    };
   }, [galleryImages, deviceInfo]);
   
   useEffect(() => {
@@ -1193,7 +1209,13 @@ export default function About() {
     }, throttleTime);
     
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      // Cancel throttle if it has cancel method
+      if (handleMouseMove.cancel) {
+        handleMouseMove.cancel();
+      }
+    };
   }, [deviceInfo]);
   
   // Start preloading gallery images immediately on page load
@@ -1232,6 +1254,12 @@ export default function About() {
     setTimeout(preloadSportImages, 1000);
   }, []);
   
+  // 使用ref存储deviceInfo，避免依赖变化导致重新设置监听器
+  const deviceInfoRef = useRef(deviceInfo);
+  useEffect(() => {
+    deviceInfoRef.current = deviceInfo;
+  }, [deviceInfo]);
+  
   useEffect(() => {
     const rafIdRef = { current: null };
     let ticking = false;
@@ -1248,7 +1276,7 @@ export default function About() {
         
         // Throttle updates based on device performance to prevent crashes
         const now = Date.now();
-        const throttleMs = deviceInfo.scrollThrottle;
+        const throttleMs = deviceInfoRef.current.scrollThrottle;
         if (now - lastUpdateTime < throttleMs) {
           ticking = false;
           return;
@@ -1275,9 +1303,9 @@ export default function About() {
           return;
         }
         
-        const progressThreshold = deviceInfo.performanceTier === 'low' ? 0.02 :
-                                 deviceInfo.performanceTier === 'medium' ? 0.015 :
-                                 deviceInfo.isMobile ? 0.01 : 0.001;
+        const progressThreshold = deviceInfoRef.current.performanceTier === 'low' ? 0.02 :
+                                 deviceInfoRef.current.performanceTier === 'medium' ? 0.015 :
+                                 deviceInfoRef.current.isMobile ? 0.01 : 0.001;
         const progressDiff = Math.abs(progress - previousScrollProgress.current);
         if (progressDiff < progressThreshold) {
           ticking = false;
@@ -1318,7 +1346,7 @@ export default function About() {
         if (!isMounted || ticking) return;
         
         // Additional safety check for mobile
-        const isMobile = windowSize.width < 768;
+        const isMobile = deviceInfoRef.current.isMobile;
         if (isMobile) {
           // On mobile, add extra validation to prevent crashes
           if (typeof window === 'undefined' || !window.document) return;
@@ -1344,13 +1372,11 @@ export default function About() {
         console.debug('Scroll handler error:', error);
       }
     };
-    const throttleTime = deviceInfo.scrollThrottle;
+    const throttleTime = deviceInfoRef.current.scrollThrottle;
     const throttledHandleScroll = throttle(handleScroll, throttleTime);
     try {
       if (typeof window !== 'undefined' && window.addEventListener) {
         window.addEventListener('scroll', throttledHandleScroll, { passive: true });
-        // Use longer delay on mobile to prevent crashes
-        const isMobile = windowSize.width < 768;
         // Initialize scroll immediately for smooth hero animation
         // Use requestAnimationFrame to avoid blocking initial render
         requestAnimationFrame(() => {
@@ -1383,7 +1409,7 @@ export default function About() {
         console.warn('Error cleaning up scroll listener:', error);
       }
     };
-  }, [windowSize.width, deviceInfo]);
+  }, []); // 移除依赖，只在组件挂载时设置一次
   
   const typingStateRef = useRef({
     currentCharIndex: 0,
@@ -1654,6 +1680,10 @@ export default function About() {
           window.visualViewport.removeEventListener('scroll', handleViewportResize);
         }
         window.removeEventListener('resize', handleWindowResize);
+        // Cancel debounce if it has cancel method
+        if (handleWindowResize.cancel) {
+          handleWindowResize.cancel();
+        }
       };
     }
   }, [windowSize.width]);

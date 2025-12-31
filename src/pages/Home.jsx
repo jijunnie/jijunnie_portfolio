@@ -17,8 +17,12 @@ const getRemoteModelUrl = (localPath) => {
 };
 
 // 修复纹理路径：将远程URL转换为本地路径
+// 使用WeakSet来跟踪已经修复过的场景，防止重复修复
+const fixedScenes = new WeakSet();
+
 const fixTexturePaths = (scene) => {
-  if (!scene) return;
+  if (!scene || fixedScenes.has(scene)) return; // 已经修复过，跳过
+  fixedScenes.add(scene);
   
   scene.traverse((child) => {
     if (child.isMesh && child.material) {
@@ -38,31 +42,9 @@ const fixTexturePaths = (scene) => {
               currentSrc.includes('r2.dev/home') ||
               currentSrc.includes('.fbm/')
             )) {
-              // 提取文件名（去除路径和扩展名）
-              const fileName = currentSrc.split('/').pop().split('?')[0];
-              
-              // 尝试使用本地路径
-              // 首先尝试/models/textures/目录
-              const localPath = `/models/textures/${fileName}`;
-              
-              // 创建新的纹理加载器
-              const loader = new THREE.TextureLoader();
-              
-              // 尝试加载本地纹理
-              loader.load(
-                localPath,
-                (loadedTexture) => {
-                  // 成功加载，替换纹理
-                  material[prop] = loadedTexture;
-                  material.needsUpdate = true;
-                },
-                undefined,
-                () => {
-                  // 加载失败，移除纹理，使用默认材质
-                  material[prop] = null;
-                  material.needsUpdate = true;
-                }
-              );
+              // 直接移除无效纹理，使用默认材质（避免异步加载导致的问题）
+              material[prop] = null;
+              material.needsUpdate = true;
             }
           }
         });
@@ -233,13 +215,13 @@ function Avatar({ animationPath, scale = 1.6, position = [0, -1.5, 0] }) {
   
   useEffect(() => {
     if (error) {
-      console.error('Error loading avatar:', error);
+      console.warn('Avatar loading error:', error);
     }
-    // 修复纹理路径（如果模型已加载）
+    // 修复纹理路径（如果模型已加载）- 只执行一次
     if (baseAvatar) {
       fixTexturePaths(baseAvatar);
     }
-  }, [error, baseAvatar]);
+  }, [baseAvatar]); // 移除error依赖，避免不必要的重渲染
   
   const fbx = useFBX(animationPath);
   

@@ -461,11 +461,18 @@ function WeatherWidget({ compact = true }) {
   });
 
   useEffect(() => {
+    let isMounted = true;
+    let intervalId = null;
+    
     const fetchWeather = async () => {
+      if (!isMounted) return;
+      
       try {
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             async (position) => {
+              if (!isMounted) return;
+              
               try {
                 const { latitude, longitude } = position.coords;
                 
@@ -476,22 +483,28 @@ function WeatherWidget({ compact = true }) {
                   const geoResponse = await fetch(
                     `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
                   );
-                  if (geoResponse.ok) {
+                  if (geoResponse.ok && isMounted) {
                     const geoData = await geoResponse.json();
                     cityName = geoData.city || geoData.locality || geoData.principalSubdivision || 'Your Location';
                     countryName = geoData.countryName || '';
                   }
                 } catch (geoError) {
-                  console.log('Geocoding error:', geoError);
+                  if (isMounted) {
+                    console.log('Geocoding error:', geoError);
+                  }
                 }
+                
+                if (!isMounted) return;
                 
                 const response = await fetch(
                   `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=7&temperature_unit=fahrenheit&wind_speed_unit=mph`
                 );
                 
-                if (!response.ok) return;
+                if (!response.ok || !isMounted) return;
                 
                 const data = await response.json();
+                
+                if (!isMounted) return;
                 
                 const weatherCodes = {
                   0: { condition: 'Clear', icon: 'sun' },
@@ -549,35 +562,47 @@ function WeatherWidget({ compact = true }) {
                   }
                 }
                 
-                setWeather({
-                  temp: Math.round(data.current?.temperature_2m || 72),
-                  feelsLike: Math.round(data.current?.apparent_temperature || 70),
-                  humidity: Math.round(data.current?.relative_humidity_2m || 55),
-                  windSpeed: Math.round(data.current?.wind_speed_10m || 8),
-                  condition: weatherInfo.condition,
-                  icon: weatherInfo.icon,
-                  location: cityName,
-                  country: countryName,
-                  high: Math.round(data.daily?.temperature_2m_max?.[0] || 78),
-                  low: Math.round(data.daily?.temperature_2m_min?.[0] || 65),
-                  forecast: forecast.length > 0 ? forecast : weather.forecast,
-                  hourly: hourly.length > 0 ? hourly : weather.hourly
-                });
+                if (isMounted) {
+                  setWeather({
+                    temp: Math.round(data.current?.temperature_2m || 72),
+                    feelsLike: Math.round(data.current?.apparent_temperature || 70),
+                    humidity: Math.round(data.current?.relative_humidity_2m || 55),
+                    windSpeed: Math.round(data.current?.wind_speed_10m || 8),
+                    condition: weatherInfo.condition,
+                    icon: weatherInfo.icon,
+                    location: cityName,
+                    country: countryName,
+                    high: Math.round(data.daily?.temperature_2m_max?.[0] || 78),
+                    low: Math.round(data.daily?.temperature_2m_min?.[0] || 65),
+                    forecast: forecast.length > 0 ? forecast : weather.forecast,
+                    hourly: hourly.length > 0 ? hourly : weather.hourly
+                  });
+                }
               } catch (e) {
-                console.log('Weather API error:', e);
+                if (isMounted) {
+                  console.log('Weather API error:', e);
+                }
               }
             },
             () => {}
           );
         }
       } catch (error) {
-        console.log('Weather fetch error:', error);
+        if (isMounted) {
+          console.log('Weather fetch error:', error);
+        }
       }
     };
 
     fetchWeather();
-    const interval = setInterval(fetchWeather, 10 * 60 * 1000);
-    return () => clearInterval(interval);
+    intervalId = setInterval(fetchWeather, 10 * 60 * 1000);
+    
+    return () => {
+      isMounted = false;
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
   }, []);
 
   const WeatherIcon = ({ type, className }) => {
@@ -2583,8 +2608,10 @@ function JourneysPanel({ isMobile }) {
     checkDimensions();
 
     // Use ResizeObserver to watch for size changes
-    let resizeObserver;
-    let debouncedCheckDimensions;
+    let resizeObserver = null;
+    let debouncedCheckDimensions = null;
+    let timeoutId = null;
+    
     if (containerRef.current && window.ResizeObserver) {
       resizeObserver = new ResizeObserver(checkDimensions);
       resizeObserver.observe(containerRef.current);
@@ -2595,15 +2622,25 @@ function JourneysPanel({ isMobile }) {
     }
 
     // Also check after a short delay to catch delayed sizing
-    const timeoutId = setTimeout(checkDimensions, 100);
+    timeoutId = setTimeout(checkDimensions, 100);
 
     return () => {
       if (resizeObserver) {
         resizeObserver.disconnect();
-      } else if (debouncedCheckDimensions) {
-        window.removeEventListener('resize', debouncedCheckDimensions);
+        resizeObserver = null;
       }
-      clearTimeout(timeoutId);
+      if (debouncedCheckDimensions) {
+        window.removeEventListener('resize', debouncedCheckDimensions);
+        // Cancel debounce if it has cancel method
+        if (debouncedCheckDimensions.cancel) {
+          debouncedCheckDimensions.cancel();
+        }
+        debouncedCheckDimensions = null;
+      }
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
     };
   }, []);
 
@@ -3381,7 +3418,13 @@ export default function Portfolio() {
     checkMobile();
     const debouncedCheckMobile = debounce(checkMobile, 150);
     window.addEventListener('resize', debouncedCheckMobile, { passive: true });
-    return () => window.removeEventListener('resize', debouncedCheckMobile);
+    return () => {
+      window.removeEventListener('resize', debouncedCheckMobile);
+      // Cancel debounce if it has cancel method
+      if (debouncedCheckMobile.cancel) {
+        debouncedCheckMobile.cancel();
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -3532,6 +3575,10 @@ export default function Portfolio() {
         cancelAnimationFrame(mouseAnimationFrame.current);
         mouseAnimationFrame.current = null;
       }
+      // Cancel throttle if it has cancel method
+      if (handleMouseMove.cancel) {
+        handleMouseMove.cancel();
+      }
     };
   }, []);
 
@@ -3540,9 +3587,12 @@ export default function Portfolio() {
   // On iPad/mobile ONLY: add device orientation to mouse movement
   // Smoothly combine mouse and device orientation for stable spatial effects
   useEffect(() => {
-    let animationFrame = null;
+    const spatialAnimationFrameRef = { current: null };
+    let isMounted = true;
     
     const updateSpatialPos = () => {
+      if (!isMounted) return;
+      
       let targetPos;
       
       if (isMobile && hasOrientationPermission) {
@@ -3573,22 +3623,28 @@ export default function Portfolio() {
           x: smoothedSpatialPos.current.x,
           y: smoothedSpatialPos.current.y
         };
-        setSpatialPos({
-          x: smoothedSpatialPos.current.x,
-          y: smoothedSpatialPos.current.y
-        });
+        if (isMounted) {
+          setSpatialPos({
+            x: smoothedSpatialPos.current.x,
+            y: smoothedSpatialPos.current.y
+          });
+        }
       }
       
       // Continue animation loop using requestAnimationFrame for better performance
-      animationFrame = requestAnimationFrame(updateSpatialPos);
+      if (isMounted) {
+        spatialAnimationFrameRef.current = requestAnimationFrame(updateSpatialPos);
+      }
     };
     
     // Start the animation loop
-    animationFrame = requestAnimationFrame(updateSpatialPos);
+    spatialAnimationFrameRef.current = requestAnimationFrame(updateSpatialPos);
     
     return () => {
-      if (animationFrame) {
-        cancelAnimationFrame(animationFrame);
+      isMounted = false;
+      if (spatialAnimationFrameRef.current) {
+        cancelAnimationFrame(spatialAnimationFrameRef.current);
+        spatialAnimationFrameRef.current = null;
       }
     };
   }, [isMobile, hasOrientationPermission, deviceOrientation, mousePos]);
