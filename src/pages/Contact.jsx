@@ -251,7 +251,7 @@ export default function Contact() {
   };
 
   return (
-    <section className="relative px-3 xs:px-4 sm:px-6 lg:px-8 h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-purple-50 to-blue-50">
+    <section className="relative px-4 sm:px-6 lg:px-8 h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-purple-50 to-blue-50">
       {/* Network Background Canvas */}
       <canvas
         ref={canvasRef}
@@ -259,22 +259,22 @@ export default function Contact() {
         style={{ zIndex: 0 }}
       />
 
-      <div className="relative max-w-7xl mx-auto h-full flex flex-col justify-start pt-4 xs:pt-5 sm:pt-6 lg:pt-8" style={{ zIndex: 10, paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 1rem))' }}>
+      <div className="relative max-w-7xl mx-auto h-full flex flex-col justify-start pt-6 lg:pt-8" style={{ zIndex: 10 }}>
         {/* Header */}
-        <div className="text-center mb-4 xs:mb-5 sm:mb-6 lg:mb-8 px-2">
-          <h2 className="text-2xl xs:text-3xl sm:text-4xl lg:text-5xl font-bold mb-1.5 xs:mb-2 lg:mb-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
+        <div className="text-center mb-6 lg:mb-8">
+          <h2 className="text-4xl lg:text-5xl font-bold mb-2 lg:mb-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
             Let's Connect
           </h2>
-          <p className="text-sm xs:text-base sm:text-base lg:text-lg text-gray-700 max-w-2xl mx-auto px-2">
+          <p className="text-base lg:text-lg text-gray-700 max-w-2xl mx-auto">
             Have a project in mind? Let's create something amazing together.
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-4 xs:gap-5 sm:gap-6 lg:gap-8 items-start flex-1 overflow-y-auto lg:overflow-visible pb-3 xs:pb-4 lg:pb-0 px-2 xs:px-0">
+        <div className="grid lg:grid-cols-2 gap-6 lg:gap-8 items-start flex-1 overflow-y-auto lg:overflow-visible pb-4 lg:pb-0">
           {/* Left Column - Contact Methods & Social */}
-          <div className="space-y-3 xs:space-y-4 lg:space-y-5">
+          <div className="space-y-4 lg:space-y-5">
             {/* Contact Cards */}
-            <div className="space-y-2.5 xs:space-y-3">
+            <div className="space-y-3">
               {contactMethods.map((method, index) => {
                 const Icon = method.icon;
                 const isMailto = method.link.startsWith('mailto:');
@@ -286,28 +286,28 @@ export default function Contact() {
                     {...(!isMailto && !isTel ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                     onMouseEnter={() => setHoveredCard(index)}
                     onMouseLeave={() => setHoveredCard(null)}
-                    className="block group touch-manipulation"
+                    className="block group"
                   >
                     <div className={`
-                      relative bg-white/90 backdrop-blur-md rounded-lg xs:rounded-xl lg:rounded-2xl p-3 xs:p-3.5 sm:p-4 lg:p-5 
+                      relative bg-white/90 backdrop-blur-md rounded-xl lg:rounded-2xl p-4 lg:p-5 
                       border-2 border-gray-200 transition-all duration-300
-                      shadow-lg hover:shadow-2xl active:scale-95
+                      shadow-lg hover:shadow-2xl
                       ${hoveredCard === index ? 'scale-105 border-purple-400 bg-white' : 'hover:scale-102'}
                     `}>
-                      <div className="flex items-center space-x-2.5 xs:space-x-3 lg:space-x-4">
+                      <div className="flex items-center space-x-3 lg:space-x-4">
                         <div className={`
-                          p-2 xs:p-2.5 lg:p-3 rounded-lg lg:rounded-xl bg-gradient-to-br ${method.color}
-                          transform transition-transform duration-300 flex-shrink-0
+                          p-2.5 lg:p-3 rounded-lg lg:rounded-xl bg-gradient-to-br ${method.color}
+                          transform transition-transform duration-300
                           ${hoveredCard === index ? 'rotate-12 scale-110' : ''}
                         `}>
-                          <Icon className="w-4 h-4 xs:w-5 xs:h-5 lg:w-6 lg:h-6 text-white" />
+                          <Icon className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-gray-900 font-semibold text-sm xs:text-base lg:text-lg">{method.title}</h3>
-                          <p className="text-gray-600 text-xs xs:text-sm lg:text-base truncate">{method.value}</p>
+                          <h3 className="text-gray-900 font-semibold text-base lg:text-lg">{method.title}</h3>
+                          <p className="text-gray-600 text-sm lg:text-base truncate">{method.value}</p>
                         </div>
                         <Send className={`
-                          w-3.5 h-3.5 xs:w-4 xs:h-4 lg:w-5 lg:h-5 text-gray-400 transition-all duration-300 flex-shrink-0
+                          w-4 h-4 lg:w-5 lg:h-5 text-gray-400 transition-all duration-300 flex-shrink-0
                           ${hoveredCard === index ? 'translate-x-2 text-purple-600' : ''}
                         `} />
                       </div>
@@ -318,9 +318,9 @@ export default function Contact() {
             </div>
 
             {/* Social Media Links */}
-            <div className="bg-white/90 backdrop-blur-md rounded-lg xs:rounded-xl lg:rounded-2xl p-4 xs:p-4.5 sm:p-5 lg:p-6 border-2 border-gray-200 shadow-lg">
-              <h3 className="text-gray-900 font-semibold text-base xs:text-lg lg:text-xl mb-3 xs:mb-4 lg:mb-5 text-center">Follow Me</h3>
-              <div className="flex justify-center space-x-2.5 xs:space-x-3 lg:space-x-4">
+            <div className="bg-white/90 backdrop-blur-md rounded-xl lg:rounded-2xl p-5 lg:p-6 border-2 border-gray-200 shadow-lg">
+              <h3 className="text-gray-900 font-semibold text-lg lg:text-xl mb-4 lg:mb-5 text-center">Follow Me</h3>
+              <div className="flex justify-center space-x-3 lg:space-x-4">
                 {socialLinks.map((social, index) => {
                   const Icon = social.icon;
                   return (
@@ -330,18 +330,18 @@ export default function Contact() {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={social.label}
-                      className="group relative touch-manipulation"
+                      className="group relative"
                     >
                       <div className="
-                        w-10 h-10 xs:w-12 xs:h-12 lg:w-14 lg:h-14 rounded-lg lg:rounded-xl bg-gray-50
+                        w-12 h-12 lg:w-14 lg:h-14 rounded-lg lg:rounded-xl bg-gray-50
                         flex items-center justify-center
                         border-2 border-gray-200 transition-all duration-300
                         group-hover:scale-110 group-hover:rotate-6 group-hover:border-purple-400
-                        group-hover:shadow-lg active:scale-95
+                        group-hover:shadow-lg
                       ">
-                        <Icon className="w-4 h-4 xs:w-5 xs:h-5 lg:w-6 lg:h-6 transition-colors" style={{ color: social.color }} />
+                        <Icon className="w-5 h-5 lg:w-6 lg:h-6 transition-colors" style={{ color: social.color }} />
                       </div>
-                      <span className="absolute -bottom-6 xs:-bottom-7 lg:-bottom-8 left-1/2 -translate-x-1/2 text-[10px] xs:text-xs text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden sm:block">
+                      <span className="absolute -bottom-7 lg:-bottom-8 left-1/2 -translate-x-1/2 text-xs text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                         {social.label}
                       </span>
                     </a>
@@ -352,11 +352,11 @@ export default function Contact() {
           </div>
 
           {/* Right Column - Contact Form */}
-          <div className="bg-white/90 backdrop-blur-md rounded-lg xs:rounded-xl lg:rounded-2xl p-4 xs:p-5 sm:p-6 lg:p-7 border-2 border-gray-200 shadow-lg">
-            <h3 className="text-gray-900 font-semibold text-lg xs:text-xl lg:text-2xl mb-3 xs:mb-4 lg:mb-5">Send a Message</h3>
-            <form onSubmit={handleSubmit} className="space-y-3 xs:space-y-4 lg:space-y-5">
+          <div className="bg-white/90 backdrop-blur-md rounded-xl lg:rounded-2xl p-6 lg:p-7 border-2 border-gray-200 shadow-lg">
+            <h3 className="text-gray-900 font-semibold text-xl lg:text-2xl mb-4 lg:mb-5">Send a Message</h3>
+            <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-5">
               <div>
-                <label htmlFor="name" className="block text-gray-700 mb-1 xs:mb-1.5 lg:mb-2 text-xs lg:text-sm font-medium">
+                <label htmlFor="name" className="block text-gray-700 mb-1.5 lg:mb-2 text-xs lg:text-sm font-medium">
                   Your Name
                 </label>
                 <input
@@ -365,14 +365,13 @@ export default function Contact() {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  className="w-full px-3 xs:px-3.5 lg:px-4 py-2 xs:py-2.5 lg:py-2.5 rounded-lg lg:rounded-xl bg-gray-50 border-2 border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all text-sm lg:text-base touch-manipulation"
-                  style={{ fontSize: '16px' }}
+                  className="w-full px-3 lg:px-4 py-2 lg:py-2.5 rounded-lg lg:rounded-xl bg-gray-50 border-2 border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all text-sm lg:text-base"
                   placeholder="First Last"
                 />
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-gray-700 mb-1 xs:mb-1.5 lg:mb-2 text-xs lg:text-sm font-medium">
+                <label htmlFor="email" className="block text-gray-700 mb-1.5 lg:mb-2 text-xs lg:text-sm font-medium">
                   Your Email
                 </label>
                 <input
@@ -381,14 +380,13 @@ export default function Contact() {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  className="w-full px-3 xs:px-3.5 lg:px-4 py-2 xs:py-2.5 lg:py-2.5 rounded-lg lg:rounded-xl bg-gray-50 border-2 border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all text-sm lg:text-base touch-manipulation"
-                  style={{ fontSize: '16px' }}
+                  className="w-full px-3 lg:px-4 py-2 lg:py-2.5 rounded-lg lg:rounded-xl bg-gray-50 border-2 border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all text-sm lg:text-base"
                   placeholder="name@example.com"
                 />
               </div>
 
               <div>
-                <label htmlFor="message" className="block text-gray-700 mb-1 xs:mb-1.5 lg:mb-2 text-xs lg:text-sm font-medium">
+                <label htmlFor="message" className="block text-gray-700 mb-1.5 lg:mb-2 text-xs lg:text-sm font-medium">
                   Your Message
                 </label>
                 <textarea
@@ -397,8 +395,7 @@ export default function Contact() {
                   rows="4"
                   value={formData.message}
                   onChange={(e) => setFormData({...formData, message: e.target.value})}
-                  className="w-full px-3 xs:px-3.5 lg:px-4 py-2 xs:py-2.5 lg:py-2.5 rounded-lg lg:rounded-xl bg-gray-50 border-2 border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all resize-none text-sm lg:text-base touch-manipulation"
-                  style={{ fontSize: '16px' }}
+                  className="w-full px-3 lg:px-4 py-2 lg:py-2.5 rounded-lg lg:rounded-xl bg-gray-50 border-2 border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all resize-none text-sm lg:text-base"
                   placeholder="Tell me about your project..."
                 />
               </div>
@@ -406,16 +403,16 @@ export default function Contact() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-2.5 xs:py-3 lg:py-3.5 rounded-lg lg:rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 text-white font-semibold text-sm xs:text-base lg:text-lg shadow-lg hover:shadow-2xl transform hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 touch-manipulation"
+                className="w-full py-3 lg:py-3.5 rounded-lg lg:rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 text-white font-semibold text-base lg:text-lg shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               >
                 {isSubmitting ? (
                   <>
-                    <div className="w-4 h-4 xs:w-5 xs:h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     <span>Sending...</span>
                   </>
                 ) : (
                   <>
-                    <Send className="w-4 h-4 xs:w-5 xs:h-5" />
+                    <Send className="w-5 h-5" />
                     <span>Send Message</span>
                   </>
                 )}

@@ -479,9 +479,9 @@ export default function Interests() {
       </div>
 
       {/* Instruction Text */}
-      <div className="fixed top-16 xs:top-18 sm:top-20 md:top-24 left-1/2 transform -translate-x-1/2 z-40 text-center px-3 xs:px-4">
-        <p className="text-gray-700 font-medium text-[10px] xs:text-xs sm:text-sm bg-white/80 backdrop-blur-sm px-2.5 xs:px-3 sm:px-4 py-1.5 xs:py-2 rounded-full shadow-lg">
-          {isDragging ? '🔄 Drag to rotate' : '✨ Auto-rotating • Tap & drag to control'}
+      <div className="fixed top-20 sm:top-24 left-1/2 transform -translate-x-1/2 z-40 text-center px-4">
+        <p className="text-gray-700 font-medium text-xs sm:text-sm bg-white/80 backdrop-blur-sm px-3 sm:px-4 py-2 rounded-full shadow-lg">
+          {isDragging ? '🔄 Drag to rotate' : '✨ Auto-rotating • Click & drag to control'}
         </p>
       </div>
 
@@ -492,55 +492,54 @@ export default function Interests() {
           onClick={handleCloseModal}
         >
           <div
-            className={`relative w-[92vw] xs:w-[90vw] sm:w-[85vw] h-[90vh] xs:h-[88vh] sm:h-[85vh] bg-gradient-to-br ${selectedInterest.color} shadow-2xl p-4 xs:p-5 sm:p-8 md:p-12 lg:p-16 text-white animate-scale-in-cyber overflow-y-auto rounded-lg border-2 sm:border-3 md:border-4 ${selectedInterest.borderColor} ${selectedInterest.glowColor} cyberpunk-modal`}
+            className={`relative w-[85vw] h-[85vh] bg-gradient-to-br ${selectedInterest.color} shadow-2xl p-6 sm:p-12 lg:p-16 text-white animate-scale-in-cyber overflow-y-auto rounded-lg border-4 ${selectedInterest.borderColor} ${selectedInterest.glowColor} cyberpunk-modal`}
             onClick={(e) => e.stopPropagation()}
-            style={{ maxHeight: '90vh', margin: 'auto' }}
           >
             {/* Modal corner decorations */}
-            <div className="absolute top-1.5 xs:top-2 left-1.5 xs:left-2 w-6 h-6 xs:w-7 xs:h-7 sm:w-8 sm:h-8 border-l-2 xs:border-l-3 sm:border-l-4 border-t-2 xs:border-t-3 sm:border-t-4 border-cyan-400"></div>
-            <div className="absolute top-1.5 xs:top-2 right-1.5 xs:right-2 w-6 h-6 xs:w-7 xs:h-7 sm:w-8 sm:h-8 border-r-2 xs:border-r-3 sm:border-r-4 border-t-2 xs:border-t-3 sm:border-t-4 border-cyan-400"></div>
-            <div className="absolute bottom-1.5 xs:bottom-2 left-1.5 xs:left-2 w-6 h-6 xs:w-7 xs:h-7 sm:w-8 sm:h-8 border-l-2 xs:border-l-3 sm:border-l-4 border-b-2 xs:border-b-3 sm:border-b-4 border-cyan-400"></div>
-            <div className="absolute bottom-1.5 xs:bottom-2 right-1.5 xs:right-2 w-6 h-6 xs:w-7 xs:h-7 sm:w-8 sm:h-8 border-r-2 xs:border-r-3 sm:border-r-4 border-b-2 xs:border-b-3 sm:border-b-4 border-cyan-400"></div>
+            <div className="absolute top-2 left-2 w-8 h-8 border-l-4 border-t-4 border-cyan-400"></div>
+            <div className="absolute top-2 right-2 w-8 h-8 border-r-4 border-t-4 border-cyan-400"></div>
+            <div className="absolute bottom-2 left-2 w-8 h-8 border-l-4 border-b-4 border-cyan-400"></div>
+            <div className="absolute bottom-2 right-2 w-8 h-8 border-r-4 border-b-4 border-cyan-400"></div>
             
             {/* Glitch overlay for modal */}
             <div className="absolute inset-0 glitch-overlay-modal pointer-events-none rounded-lg"></div>
             
             <button
               onClick={handleCloseModal}
-              className="absolute top-3 xs:top-3.5 sm:top-4 md:top-6 right-3 xs:right-3.5 sm:right-4 md:right-6 bg-black/40 hover:bg-cyan-500/40 active:bg-cyan-500/50 border-2 border-cyan-400 rounded p-1.5 xs:p-2 sm:p-2.5 md:p-3 transition-all duration-300 hover:scale-110 active:scale-95 z-10 shadow-xl shadow-cyan-500/50 cyber-close-btn touch-manipulation"
+              className="absolute top-4 right-4 sm:top-6 sm:right-6 bg-black/40 hover:bg-cyan-500/40 border-2 border-cyan-400 rounded p-2 sm:p-3 transition-all duration-300 hover:scale-110 z-10 shadow-xl shadow-cyan-500/50 cyber-close-btn"
             >
-              <X className="w-4 h-4 xs:w-5 xs:h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-cyan-400" />
+              <X className="w-5 h-5 sm:w-7 sm:h-7 text-cyan-400" />
             </button>
 
-            <div className="max-w-6xl mx-auto pt-6 xs:pt-7 sm:pt-8 md:pt-12 px-2 xs:px-3">
-              <div className="text-center mb-6 xs:mb-7 sm:mb-8 md:mb-12">
-                <div className="text-5xl xs:text-6xl sm:text-7xl md:text-9xl lg:text-[150px] mb-3 xs:mb-4 sm:mb-6 md:mb-8 animate-bounce-cyber neon-glow-large">
+            <div className="max-w-6xl mx-auto pt-8 sm:pt-12">
+              <div className="text-center mb-8 sm:mb-12">
+                <div className="text-7xl sm:text-9xl lg:text-[150px] mb-4 sm:mb-8 animate-bounce-cyber neon-glow-large">
                   {selectedInterest.emoji}
                 </div>
-                <h2 className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold mb-3 xs:mb-4 sm:mb-5 md:mb-6 uppercase tracking-wider cyber-title px-2">{selectedInterest.title}</h2>
+                <h2 className="text-4xl sm:text-5xl lg:text-7xl font-bold mb-4 sm:mb-6 uppercase tracking-wider cyber-title">{selectedInterest.title}</h2>
               </div>
 
-              <div className="space-y-6 xs:space-y-7 sm:space-y-8 md:space-y-12">
+              <div className="space-y-8 sm:space-y-12">
                 <div className="cyber-section">
-                  <h3 className="text-xl xs:text-2xl sm:text-2.5xl md:text-3xl lg:text-5xl font-semibold mb-3 xs:mb-4 sm:mb-5 md:mb-8 flex items-center gap-2 xs:gap-2.5 sm:gap-3 md:gap-4 uppercase tracking-wide">
-                    <span className="w-1.5 xs:w-2 sm:w-2.5 md:w-3 h-6 xs:h-7 sm:h-8 md:h-12 bg-cyan-400 rounded shadow-lg shadow-cyan-500/50 cyber-bar"></span>
-                    <span className="text-base xs:text-lg sm:text-xl md:text-2xl lg:text-3xl">ABOUT THIS PASSION</span>
+                  <h3 className="text-2xl sm:text-3xl lg:text-5xl font-semibold mb-4 sm:mb-8 flex items-center gap-2 sm:gap-4 uppercase tracking-wide">
+                    <span className="w-2 sm:w-3 h-8 sm:h-12 bg-cyan-400 rounded shadow-lg shadow-cyan-500/50 cyber-bar"></span>
+                    ABOUT THIS PASSION
                   </h3>
-                  <p className="text-white/95 leading-relaxed text-sm xs:text-base sm:text-lg md:text-xl lg:text-3xl pl-2 xs:pl-3 sm:pl-4 md:pl-8 font-light cyber-text-content">
+                  <p className="text-white/95 leading-relaxed text-lg sm:text-xl lg:text-3xl pl-4 sm:pl-8 font-light cyber-text-content">
                     {selectedInterest.detailedDescription}
                   </p>
                 </div>
 
                 <div className="cyber-section">
-                  <h3 className="text-xl xs:text-2xl sm:text-2.5xl md:text-3xl lg:text-5xl font-semibold mb-3 xs:mb-4 sm:mb-5 md:mb-8 flex items-center gap-2 xs:gap-2.5 sm:gap-3 md:gap-4 uppercase tracking-wide">
-                    <span className="w-1.5 xs:w-2 sm:w-2.5 md:w-3 h-6 xs:h-7 sm:h-8 md:h-12 bg-cyan-400 rounded shadow-lg shadow-cyan-500/50 cyber-bar"></span>
-                    <span className="text-base xs:text-lg sm:text-xl md:text-2xl lg:text-3xl">SKILLS & ATTRIBUTES</span>
+                  <h3 className="text-2xl sm:text-3xl lg:text-5xl font-semibold mb-4 sm:mb-8 flex items-center gap-2 sm:gap-4 uppercase tracking-wide">
+                    <span className="w-2 sm:w-3 h-8 sm:h-12 bg-cyan-400 rounded shadow-lg shadow-cyan-500/50 cyber-bar"></span>
+                    SKILLS & ATTRIBUTES
                   </h3>
-                  <div className="flex flex-wrap gap-2 xs:gap-2.5 sm:gap-3 md:gap-5 pl-2 xs:pl-3 sm:pl-4 md:pl-8">
+                  <div className="flex flex-wrap gap-3 sm:gap-5 pl-4 sm:pl-8">
                     {selectedInterest.skills.map((skill, index) => (
                       <span
                         key={index}
-                        className="cyber-skill-tag bg-black/50 backdrop-blur-sm px-3 py-1.5 xs:px-4 xs:py-2 sm:px-6 sm:py-3 md:px-8 md:py-5 rounded border-2 border-cyan-400 text-xs xs:text-sm sm:text-base md:text-xl lg:text-2xl font-semibold uppercase tracking-wide hover:bg-cyan-400/20 hover:shadow-lg hover:shadow-cyan-500/50 transition-all touch-manipulation"
+                        className="cyber-skill-tag bg-black/50 backdrop-blur-sm px-4 py-2 sm:px-8 sm:py-5 rounded border-2 border-cyan-400 text-base sm:text-xl lg:text-2xl font-semibold uppercase tracking-wide hover:bg-cyan-400/20 hover:shadow-lg hover:shadow-cyan-500/50 transition-all"
                         style={{ animationDelay: `${index * 0.1}s` }}
                       >
                         {skill}
@@ -550,10 +549,10 @@ export default function Interests() {
                 </div>
               </div>
 
-              <div className="mt-8 xs:mt-10 sm:mt-12 md:mt-16 text-center pb-4 xs:pb-5">
+              <div className="mt-12 sm:mt-16 text-center">
                 <button
                   onClick={handleCloseModal}
-                  className="cyber-button bg-black/50 hover:bg-cyan-500/30 active:bg-cyan-500/40 px-6 py-2.5 xs:px-8 xs:py-3 sm:px-12 sm:py-4 md:px-16 md:py-6 rounded border-2 border-cyan-400 font-bold text-sm xs:text-base sm:text-lg md:text-2xl uppercase tracking-wider transition-all duration-300 hover:scale-105 active:scale-95 shadow-xl shadow-cyan-500/50 touch-manipulation"
+                  className="cyber-button bg-black/50 hover:bg-cyan-500/30 px-8 py-3 sm:px-16 sm:py-6 rounded border-2 border-cyan-400 font-bold text-lg sm:text-2xl uppercase tracking-wider transition-all duration-300 hover:scale-105 shadow-xl shadow-cyan-500/50"
                 >
                   BACK TO INTERESTS
                 </button>

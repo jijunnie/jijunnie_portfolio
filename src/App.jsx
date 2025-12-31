@@ -15,13 +15,7 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
   const isGlobePage = location.pathname === '/globe';
   
   return (
-    <nav 
-      className="fixed left-1/2 transform -translate-x-1/2 z-50 w-[96%] xs:w-[95%] sm:w-[92%] md:w-[88%] lg:w-[85%] xl:w-[80%] max-w-4xl" 
-      style={{ 
-        background: 'transparent',
-        top: 'var(--nav-bar-top, 0.5rem)',
-      }}
-    >
+    <nav className="fixed top-2 sm:top-3 md:top-4 left-1/2 transform -translate-x-1/2 z-50 w-[96%] xs:w-[95%] sm:w-[92%] md:w-[88%] lg:w-[85%] xl:w-[80%] max-w-4xl" style={{ background: 'transparent' }}>
       {/* Liquid Glass Background */}
       <div className={`liquid-glass-nav ${isGlobePage ? 'globe-page-nav' : ''}`}>
         <div className="relative flex items-center justify-between h-12 xs:h-13 sm:h-14 md:h-16 px-3 xs:px-4 sm:px-4 md:px-6" style={{ alignItems: 'center' }}>

@@ -8,13 +8,22 @@ const backgroundModelUrl = 'https://pub-d25f02af88d94b5cb8a6754606bd5ea1.r2.dev/
 // Preload immediately when module loads (before any component renders)
 try {
   useGLTF.preload(backgroundModelUrl);
-  console.log('✅ Preloaded 3D background at module level');
+  console.log('✅ Preloaded 3D background at module level:', backgroundModelUrl);
 } catch (error) {
   console.warn('⚠️ Failed to preload 3D background at module level:', error);
 }
 
 // Also preload in browser cache using fetch for maximum reliability
 if (typeof window !== 'undefined') {
+  // Prefetch the model file to ensure it's in cache
+  const link = document.createElement('link');
+  link.rel = 'prefetch';
+  link.as = 'fetch';
+  link.href = backgroundModelUrl;
+  link.crossOrigin = 'anonymous';
+  document.head.appendChild(link);
+  
+  // Also do a HEAD request to warm up the connection
   fetch(backgroundModelUrl, { method: 'HEAD', cache: 'force-cache' }).catch(() => {});
 }
 

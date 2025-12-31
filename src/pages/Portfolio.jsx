@@ -2154,68 +2154,52 @@ function PhotoGallery({ isMobile }) {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all');
 
-  // Sample photo data with categories
+  // Photo data from Capture the Moment (aboutImage folder)
   const photos = [
-    // Portrait photos
-    { id: 1, url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800', title: 'Portrait 1', category: 'portrait', city: null, year: '2024' },
-    { id: 2, url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800', title: 'Portrait 2', category: 'portrait', city: null, year: '2023' },
-    { id: 3, url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800', title: 'Portrait 3', category: 'portrait', city: null, year: '2024' },
-    
-    // Landscape photos
-    { id: 4, url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800', title: 'Mountain View', category: 'landscape', city: null, year: '2024' },
-    { id: 5, url: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800', title: 'Forest Path', category: 'landscape', city: null, year: '2023' },
-    { id: 6, url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800', title: 'Sunset', category: 'landscape', city: null, year: '2024' },
-    
-    // Concert photos
-    { id: 7, url: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800', title: 'Concert 1', category: 'concerts', city: null, year: '2024' },
-    { id: 8, url: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800', title: 'Concert 2', category: 'concerts', city: null, year: '2023' },
-    { id: 9, url: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800', title: 'Concert 3', category: 'concerts', city: null, year: '2024' },
-    
-    // Florida photos
-    { id: 10, url: 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=800', title: 'Florida Beach', category: 'landscape', city: 'Florida', year: '2024' },
-    { id: 11, url: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800', title: 'Florida Sunset', category: 'landscape', city: 'Florida', year: '2023' },
-    { id: 12, url: 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=800', title: 'Florida Palm', category: 'landscape', city: 'Florida', year: '2024' },
-    
-    // New York photos
-    { id: 13, url: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800', title: 'NYC Skyline', category: 'landscape', city: 'New York', year: '2024' },
-    { id: 14, url: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800', title: 'NYC Street', category: 'landscape', city: 'New York', year: '2023' },
-    { id: 15, url: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800', title: 'NYC Night', category: 'landscape', city: 'New York', year: '2024' },
-    
-    // China photos
-    { id: 16, url: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'China Temple', category: 'landscape', city: 'China', year: '2023' },
-    { id: 17, url: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'China Street', category: 'landscape', city: 'China', year: '2024' },
-    { id: 18, url: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'China Landscape', category: 'landscape', city: 'China', year: '2023' },
-    
-    // Guangdong photos
-    { id: 19, url: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'Guangdong City', category: 'landscape', city: 'Guangdong', year: '2024' },
-    { id: 20, url: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'Guangdong View', category: 'landscape', city: 'Guangdong', year: '2023' },
-    { id: 21, url: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'Guangdong Night', category: 'landscape', city: 'Guangdong', year: '2024' },
+    { id: 1, url: '/aboutImage/1.jpg', title: 'Capture the Moment 1', category: 'landscape', city: null, year: '2024' },
+    { id: 2, url: '/aboutImage/2.jpg', title: 'Capture the Moment 2', category: 'landscape', city: null, year: '2024' },
+    { id: 3, url: '/aboutImage/3.JPG', title: 'Capture the Moment 3', category: 'landscape', city: null, year: '2024' },
+    { id: 4, url: '/aboutImage/4.jpg', title: 'Capture the Moment 4', category: 'landscape', city: null, year: '2024' },
+    { id: 5, url: '/aboutImage/5.JPG', title: 'Capture the Moment 5', category: 'landscape', city: null, year: '2024' },
+    { id: 6, url: '/aboutImage/6.JPG', title: 'Capture the Moment 6', category: 'landscape', city: null, year: '2024' },
+    { id: 7, url: '/aboutImage/7.jpg.JPG', title: 'Capture the Moment 7', category: 'landscape', city: null, year: '2024' },
+    { id: 8, url: '/aboutImage/8.jpg', title: 'Capture the Moment 8', category: 'landscape', city: null, year: '2024' },
+    { id: 9, url: '/aboutImage/9.jpg', title: 'Capture the Moment 9', category: 'landscape', city: null, year: '2024' },
+    { id: 10, url: '/aboutImage/10.jpg', title: 'Capture the Moment 10', category: 'landscape', city: null, year: '2024' },
+    { id: 11, url: '/aboutImage/11.jpg', title: 'Capture the Moment 11', category: 'landscape', city: null, year: '2024' },
+    { id: 12, url: '/aboutImage/12.JPG', title: 'Capture the Moment 12', category: 'landscape', city: null, year: '2024' },
+    { id: 13, url: '/aboutImage/13.JPG', title: 'Capture the Moment 13', category: 'landscape', city: null, year: '2024' },
+    { id: 14, url: '/aboutImage/14.jpg', title: 'Capture the Moment 14', category: 'landscape', city: null, year: '2024' },
+    { id: 15, url: '/aboutImage/15.JPG', title: 'Capture the Moment 15', category: 'landscape', city: null, year: '2024' },
+    { id: 16, url: '/aboutImage/16.jpg', title: 'Capture the Moment 16', category: 'landscape', city: null, year: '2024' },
+    { id: 17, url: '/aboutImage/17.jpg', title: 'Capture the Moment 17', category: 'landscape', city: null, year: '2024' },
+    { id: 18, url: '/aboutImage/18.JPG', title: 'Capture the Moment 18', category: 'landscape', city: null, year: '2024' },
+    { id: 19, url: '/aboutImage/19.JPG', title: 'Capture the Moment 19', category: 'landscape', city: null, year: '2024' },
+    { id: 20, url: '/aboutImage/20.JPG', title: 'Capture the Moment 20', category: 'landscape', city: null, year: '2024' },
+    { id: 21, url: '/aboutImage/21.JPG', title: 'Capture the Moment 21', category: 'landscape', city: null, year: '2024' },
+    { id: 22, url: '/aboutImage/22.jpg', title: 'Capture the Moment 22', category: 'landscape', city: null, year: '2024' },
+    { id: 23, url: '/aboutImage/23.JPG', title: 'Capture the Moment 23', category: 'landscape', city: null, year: '2024' },
+    { id: 24, url: '/aboutImage/24.JPG', title: 'Capture the Moment 24', category: 'landscape', city: null, year: '2024' },
+    { id: 25, url: '/aboutImage/25.JPG', title: 'Capture the Moment 25', category: 'landscape', city: null, year: '2024' },
+    { id: 26, url: '/aboutImage/26.JPG', title: 'Capture the Moment 26', category: 'landscape', city: null, year: '2024' },
+    { id: 27, url: '/aboutImage/27.png', title: 'Capture the Moment 27', category: 'landscape', city: null, year: '2024' },
+    { id: 28, url: '/aboutImage/28.JPG', title: 'Capture the Moment 28', category: 'landscape', city: null, year: '2024' },
   ];
 
   const filters = [
     { id: 'all', label: 'All Photos' },
-    { id: 'portrait', label: 'Portrait' },
     { id: 'landscape', label: 'Landscape' },
-    { id: 'concerts', label: 'Concerts' },
-    { id: 'Florida', label: 'Florida' },
-    { id: 'New York', label: 'New York' },
-    { id: 'China', label: 'China' },
-    { id: 'Guangdong', label: 'Guangdong' },
     { id: '2024', label: '2024' },
-    { id: '2023', label: '2023' },
   ];
 
   const filteredPhotos = useMemo(() => {
     if (activeFilter === 'all') return photos;
     
     return photos.filter(photo => {
-      if (activeFilter === 'portrait' || activeFilter === 'landscape' || activeFilter === 'concerts') {
+      if (activeFilter === 'landscape') {
         return photo.category === activeFilter;
       }
-      if (['Florida', 'New York', 'China', 'Guangdong'].includes(activeFilter)) {
-        return photo.city === activeFilter;
-      }
-      if (['2024', '2023'].includes(activeFilter)) {
+      if (activeFilter === '2024') {
         return photo.year === activeFilter;
       }
       return true;
@@ -2224,6 +2208,10 @@ function PhotoGallery({ isMobile }) {
 
   if (selectedPhoto) {
     const photo = photos.find(p => p.id === selectedPhoto);
+    if (!photo) {
+      setSelectedPhoto(null);
+      return null;
+    }
     return (
       <div className="h-full flex flex-col min-h-0">
         <button
@@ -2241,9 +2229,13 @@ function PhotoGallery({ isMobile }) {
               alt={photo.title}
               className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
               onError={(e) => {
-                e.target.style.display = 'none';
-                if (e.target.nextSibling) {
-                  e.target.nextSibling.style.display = 'flex';
+                try {
+                  e.target.style.display = 'none';
+                  if (e.target.nextSibling) {
+                    e.target.nextSibling.style.display = 'flex';
+                  }
+                } catch (error) {
+                  console.debug('Image error handling failed:', error);
                 }
               }}
             />
@@ -2343,76 +2335,23 @@ function VideoGallery({ isMobile }) {
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all');
 
-  // Sample video data with categories
-  const videos = [
-    // Portrait videos
-    { id: 1, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', thumbnail: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800', title: 'Portrait Video 1', category: 'portrait', city: null, year: '2024', duration: '2:30' },
-    { id: 2, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', thumbnail: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800', title: 'Portrait Video 2', category: 'portrait', city: null, year: '2023', duration: '3:15' },
-    { id: 3, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', thumbnail: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800', title: 'Portrait Video 3', category: 'portrait', city: null, year: '2024', duration: '1:45' },
-    
-    // Landscape videos
-    { id: 4, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4', thumbnail: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800', title: 'Mountain Journey', category: 'landscape', city: null, year: '2024', duration: '4:20' },
-    { id: 5, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4', thumbnail: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800', title: 'Forest Walk', category: 'landscape', city: null, year: '2023', duration: '3:50' },
-    { id: 6, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4', thumbnail: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800', title: 'Sunset Time-lapse', category: 'landscape', city: null, year: '2024', duration: '2:10' },
-    
-    // Concert videos
-    { id: 7, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4', thumbnail: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800', title: 'Concert Performance 1', category: 'concerts', city: null, year: '2024', duration: '5:30' },
-    { id: 8, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4', thumbnail: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800', title: 'Concert Performance 2', category: 'concerts', city: null, year: '2023', duration: '4:15' },
-    { id: 9, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4', thumbnail: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800', title: 'Concert Performance 3', category: 'concerts', city: null, year: '2024', duration: '6:00' },
-    
-    // Florida videos
-    { id: 10, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4', thumbnail: 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=800', title: 'Florida Beach Day', category: 'landscape', city: 'Florida', year: '2024', duration: '3:25' },
-    { id: 11, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/VolkswagenGTIReview.mp4', thumbnail: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800', title: 'Florida Sunset', category: 'landscape', city: 'Florida', year: '2023', duration: '2:45' },
-    { id: 12, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4', thumbnail: 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=800', title: 'Florida Palm Trees', category: 'landscape', city: 'Florida', year: '2024', duration: '4:10' },
-    
-    // New York videos
-    { id: 13, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', thumbnail: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800', title: 'NYC Skyline Tour', category: 'landscape', city: 'New York', year: '2024', duration: '5:00' },
-    { id: 14, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', thumbnail: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800', title: 'NYC Street Life', category: 'landscape', city: 'New York', year: '2023', duration: '3:30' },
-    { id: 15, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', thumbnail: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800', title: 'NYC Night Lights', category: 'landscape', city: 'New York', year: '2024', duration: '4:45' },
-    
-    // China videos
-    { id: 16, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4', thumbnail: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'China Temple Visit', category: 'landscape', city: 'China', year: '2023', duration: '3:20' },
-    { id: 17, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4', thumbnail: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'China Street Walk', category: 'landscape', city: 'China', year: '2024', duration: '4:00' },
-    { id: 18, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4', thumbnail: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'China Landscape', category: 'landscape', city: 'China', year: '2023', duration: '5:15' },
-    
-    // Guangdong videos
-    { id: 19, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4', thumbnail: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'Guangdong City Tour', category: 'landscape', city: 'Guangdong', year: '2024', duration: '3:55' },
-    { id: 20, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4', thumbnail: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'Guangdong View', category: 'landscape', city: 'Guangdong', year: '2023', duration: '4:30' },
-    { id: 21, url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4', thumbnail: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800', title: 'Guangdong Night', category: 'landscape', city: 'Guangdong', year: '2024', duration: '3:40' },
-  ];
+  // Video data - all videos removed
+  const videos = [];
 
   const filters = [
     { id: 'all', label: 'All Videos' },
-    { id: 'portrait', label: 'Portrait' },
-    { id: 'landscape', label: 'Landscape' },
-    { id: 'concerts', label: 'Concerts' },
-    { id: 'Florida', label: 'Florida' },
-    { id: 'New York', label: 'New York' },
-    { id: 'China', label: 'China' },
-    { id: 'Guangdong', label: 'Guangdong' },
-    { id: '2024', label: '2024' },
-    { id: '2023', label: '2023' },
   ];
 
   const filteredVideos = useMemo(() => {
-    if (activeFilter === 'all') return videos;
-    
-    return videos.filter(video => {
-      if (activeFilter === 'portrait' || activeFilter === 'landscape' || activeFilter === 'concerts') {
-        return video.category === activeFilter;
-      }
-      if (['Florida', 'New York', 'China', 'Guangdong'].includes(activeFilter)) {
-        return video.city === activeFilter;
-      }
-      if (['2024', '2023'].includes(activeFilter)) {
-        return video.year === activeFilter;
-      }
-      return true;
-    });
+    return videos;
   }, [activeFilter]);
 
   if (selectedVideo) {
     const video = videos.find(v => v.id === selectedVideo);
+    if (!video) {
+      setSelectedVideo(null);
+      return null;
+    }
     return (
       <div className="h-full flex flex-col min-h-0">
         <button
@@ -2430,9 +2369,13 @@ function VideoGallery({ isMobile }) {
               controls
               className="max-w-full max-h-full rounded-2xl shadow-2xl"
               onError={(e) => {
-                e.target.style.display = 'none';
-                if (e.target.nextSibling) {
-                  e.target.nextSibling.style.display = 'flex';
+                try {
+                  e.target.style.display = 'none';
+                  if (e.target.nextSibling) {
+                    e.target.nextSibling.style.display = 'flex';
+                  }
+                } catch (error) {
+                  console.debug('Image error handling failed:', error);
                 }
               }}
             >
@@ -2499,43 +2442,59 @@ function VideoGallery({ isMobile }) {
 
       {/* Video Grid */}
       <div className="flex-1 overflow-y-auto min-h-0 pr-2">
-        <div className={`grid gap-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-3'}`}>
-          {filteredVideos.map((video) => (
-            <button
-              key={video.id}
-              onClick={() => setSelectedVideo(video.id)}
-              className="relative aspect-video rounded-xl overflow-hidden group hover:scale-105 transition-transform duration-200"
-            >
-              <img 
-                src={video.thumbnail} 
-                alt={video.title}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  if (e.target.nextSibling) {
-                    e.target.nextSibling.style.display = 'flex';
-                  }
-                }}
-              />
-              <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center" style={{ display: 'none' }}>
-                <Image className="w-12 h-12 text-purple-400" />
-              </div>
-              {/* Play Button Overlay */}
-              <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
-                <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
-                  <Play className="w-8 h-8 text-gray-800 ml-1" />
+        {filteredVideos.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center py-12">
+            <div className="w-24 h-24 mx-auto mb-4 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center">
+              <Image className="w-12 h-12 text-purple-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">No Videos Available</h3>
+            <p className="text-sm text-gray-600 max-w-sm">
+              Videos will be added here in the future.
+            </p>
+          </div>
+        ) : (
+          <div className={`grid gap-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-3'}`}>
+            {filteredVideos.map((video) => (
+              <button
+                key={video.id}
+                onClick={() => setSelectedVideo(video.id)}
+                className="relative aspect-video rounded-xl overflow-hidden group hover:scale-105 transition-transform duration-200"
+              >
+                <img 
+                  src={video.thumbnail} 
+                  alt={video.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    try {
+                      e.target.style.display = 'none';
+                      if (e.target.nextSibling) {
+                        e.target.nextSibling.style.display = 'flex';
+                      }
+                    } catch (error) {
+                      console.debug('Image error handling failed:', error);
+                    }
+                  }}
+                />
+                <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center" style={{ display: 'none' }}>
+                  <Image className="w-12 h-12 text-purple-400" />
                 </div>
-              </div>
-              {/* Video Info Overlay */}
-              <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent">
-                <p className="text-white text-xs font-medium truncate">{video.title}</p>
-                {video.duration && (
-                  <p className="text-white/80 text-xs mt-0.5">{video.duration}</p>
-                )}
-              </div>
-            </button>
-          ))}
-        </div>
+                {/* Play Button Overlay */}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
+                  <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
+                    <Play className="w-8 h-8 text-gray-800 ml-1" />
+                  </div>
+                </div>
+                {/* Video Info Overlay */}
+                <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent">
+                  <p className="text-white text-xs font-medium truncate">{video.title}</p>
+                  {video.duration && (
+                    <p className="text-white/80 text-xs mt-0.5">{video.duration}</p>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

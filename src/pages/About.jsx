@@ -1973,17 +1973,25 @@ export default function About() {
       clearTimeout(audioPlaybackRef.current);
     }
     audioPlaybackRef.current = setTimeout(() => {
-      if (isMusicPlaying && hasEnteredMusicSection) {
-        if (audio.paused) {
-          const playPromise = audio.play();
-          if (playPromise !== undefined) {
-            playPromise.catch(() => {});
+      try {
+        if (isMusicPlaying && hasEnteredMusicSection) {
+          if (audio && audio.paused && audio.readyState >= 2) {
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+              playPromise.catch((error) => {
+                // Silently handle play errors to prevent crashes
+                console.debug('Audio play error:', error);
+              });
+            }
+          }
+        } else {
+          if (audio && !audio.paused) {
+            audio.pause().catch(() => {});
           }
         }
-      } else {
-        if (!audio.paused) {
-          audio.pause();
-        }
+      } catch (error) {
+        // Silently handle any errors to prevent crashes
+        console.debug('Audio playback error:', error);
       }
     }, 50);
     return () => {
@@ -4794,10 +4802,17 @@ export default function About() {
           preload={windowSize.width < 768 ? "none" : "metadata"}
           volume={0.5}
           style={{ display: 'none' }}
-          onError={() => {}}
+          onError={(e) => {
+            // Silently handle audio load errors
+            console.debug('Audio load error:', e);
+          }}
           onLoadedData={() => {
-            if (musicAudioRef.current) {
-              musicAudioRef.current.volume = 0.5;
+            try {
+              if (musicAudioRef.current) {
+                musicAudioRef.current.volume = 0.5;
+              }
+            } catch (error) {
+              console.debug('Audio loadedData error:', error);
             }
           }}
         />
@@ -4851,11 +4866,22 @@ export default function About() {
               }
             }}
             onLoadedMetadata={() => {
-              if (musicVideoRef.current) {
-                musicVideoRef.current.playbackRate = 0.7;
-                if (scrollProgress >= sectionTriggers[5] - 0.05) {
-                  musicVideoRef.current.play().catch(() => {});
+              try {
+                if (musicVideoRef.current) {
+                  musicVideoRef.current.playbackRate = 0.7;
+                  if (scrollProgress >= sectionTriggers[5] - 0.05) {
+                    const playPromise = musicVideoRef.current.play();
+                    if (playPromise !== undefined) {
+                      playPromise.catch((error) => {
+                        // Silently handle video play errors
+                        console.debug('Video play error:', error);
+                      });
+                    }
+                  }
                 }
+              } catch (error) {
+                // Silently handle any errors to prevent crashes
+                console.debug('Video metadata error:', error);
               }
             }}
           />

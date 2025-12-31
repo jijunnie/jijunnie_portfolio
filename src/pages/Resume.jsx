@@ -197,7 +197,7 @@ export default function Resume() {
   ];
 
   return (
-    <section className="py-12 xs:py-16 sm:py-20 px-3 xs:px-4 sm:px-6 lg:px-8 min-h-screen bg-blue-50 relative">
+    <section className="py-20 px-4 sm:px-6 lg:px-8 min-h-screen bg-blue-50 relative">
       {/* Interactive 3D Background */}
       <InteractiveBackground />
       <div className="max-w-4xl mx-auto relative z-10">
@@ -206,51 +206,51 @@ export default function Resume() {
         <div
           id="header"
           ref={(el) => (sectionRefs.current['header'] = el)}
-          className={`text-center mb-10 xs:mb-12 sm:mb-16 transition-all duration-1000 ${
+          className={`text-center mb-16 transition-all duration-1000 ${
             visibleSections['header']
               ? 'opacity-100 translate-y-0'
               : 'opacity-0 -translate-y-10'
           }`}
         >
-          <h2 className="text-3xl xs:text-4xl sm:text-5xl font-bold text-gray-900 mb-3 xs:mb-4">My Resume</h2>
-          <div className="w-16 xs:w-20 sm:w-24 h-0.5 xs:h-1 bg-blue-600 mx-auto mb-4 xs:mb-5 sm:mb-6"></div>
-          <p className="text-gray-600 text-sm xs:text-base sm:text-lg px-2">Industrial & System Engineering Student | Web Developer</p>
+          <h2 className="text-5xl font-bold text-gray-900 mb-4">My Resume</h2>
+          <div className="w-24 h-1 bg-blue-600 mx-auto mb-6"></div>
+          <p className="text-gray-600 text-lg">Industrial & System Engineering Student | Web Developer</p>
         </div>
 
         {/* Contact Info */}
         <div
           id="contact-info"
           ref={(el) => (sectionRefs.current['contact-info'] = el)}
-          className={`bg-white rounded-lg shadow-lg p-4 xs:p-5 sm:p-6 mb-8 xs:mb-10 sm:mb-12 border-t-4 border-blue-600 transition-all duration-1000 ${
+          className={`bg-white rounded-lg shadow-lg p-6 mb-12 border-t-4 border-blue-600 transition-all duration-1000 ${
             visibleSections['contact-info']
               ? 'opacity-100 scale-100'
               : 'opacity-0 scale-95'
           }`}
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 xs:gap-4 text-center">
-            <div className="hover:bg-blue-50 p-2.5 xs:p-3 rounded transition touch-manipulation">
-              <p className="text-xs xs:text-sm text-gray-600 mb-1">Email</p>
-              <a href="mailto:jijunnie2113@Gmail.com" className="text-blue-600 font-semibold hover:underline text-xs xs:text-sm break-all">jijunnie2113@Gmail.com</a>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 text-center">
+            <div className="hover:bg-blue-50 p-3 rounded transition">
+              <p className="text-sm text-gray-600">Email</p>
+              <a href="mailto:jijunnie2113@Gmail.com" className="text-blue-600 font-semibold hover:underline">jijunnie2113@Gmail.com</a>
             </div>
-            <div className="hover:bg-blue-50 p-2.5 xs:p-3 rounded transition touch-manipulation">
-              <p className="text-xs xs:text-sm text-gray-600 mb-1">Phone</p>
-              <a href="tel:+17546104078" className="text-gray-900 font-semibold text-xs xs:text-sm">(754) 610-4078</a>
+            <div className="hover:bg-blue-50 p-3 rounded transition">
+              <p className="text-sm text-gray-600">Phone</p>
+              <p className="text-gray-900 font-semibold">(754) 610-4078</p>
             </div>
-            <div className="hover:bg-blue-50 p-2.5 xs:p-3 rounded transition touch-manipulation">
-              <p className="text-xs xs:text-sm text-gray-600 mb-1">Location</p>
-              <p className="text-gray-900 font-semibold text-xs xs:text-sm">Gainesville, FL</p>
+            <div className="hover:bg-blue-50 p-3 rounded transition">
+              <p className="text-sm text-gray-600">Location</p>
+              <p className="text-gray-900 font-semibold">Gainesville, FL</p>
             </div>
-            <div className="hover:bg-blue-50 p-2.5 xs:p-3 rounded transition touch-manipulation">
-              <p className="text-xs xs:text-sm text-gray-600 mb-1">LinkedIn</p>
-              <a href="https://linkedin.com/in/jijunnie" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-semibold hover:underline text-xs xs:text-sm break-all">linkedin.com/in/jijunnie</a>
+            <div className="hover:bg-blue-50 p-3 rounded transition">
+              <p className="text-sm text-gray-600">LinkedIn</p>
+              <a href="https://linkedin.com/in/jijunnie" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-semibold hover:underline">linkedin.com/in/jijunnie</a>
             </div>
-            <div className="hover:bg-blue-50 p-2.5 xs:p-3 rounded transition touch-manipulation">
-              <p className="text-xs xs:text-sm text-gray-600 mb-1">GitHub</p>
-              <a href="https://github.com/jijunnie" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-semibold hover:underline text-xs xs:text-sm break-all">github.com/jijunnie</a>
+            <div className="hover:bg-blue-50 p-3 rounded transition">
+              <p className="text-sm text-gray-600">GitHub</p>
+              <a href="https://github.com/jijunnie" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-semibold hover:underline">github.com/jijunnie</a>
             </div>
-            <div className="hover:bg-blue-50 p-2.5 xs:p-3 rounded transition touch-manipulation">
-              <p className="text-xs xs:text-sm text-gray-600 mb-1">Website</p>
-              <a href="https://jijunnie.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-semibold hover:underline text-xs xs:text-sm break-all">jijunnie.com</a>
+            <div className="hover:bg-blue-50 p-3 rounded transition">
+              <p className="text-sm text-gray-600">Website</p>
+              <a href="https://jijunnie.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-semibold hover:underline">jijunnie.com</a>
             </div>
           </div>
         </div>
@@ -265,19 +265,19 @@ export default function Resume() {
               : 'opacity-0 translate-y-10'
           }`}
         >
-          <h3 className="text-2xl xs:text-2.5xl sm:text-3xl font-bold text-gray-900 mb-5 xs:mb-6 sm:mb-8 flex items-center">
-            <span className="bg-indigo-600 text-white w-8 h-8 xs:w-9 xs:h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center mr-2 xs:mr-2.5 sm:mr-3 text-base xs:text-lg sm:text-xl">🎓</span>
+          <h3 className="text-3xl font-bold text-gray-900 mb-8 flex items-center">
+            <span className="bg-indigo-600 text-white w-10 h-10 rounded-full flex items-center justify-center mr-3">🎓</span>
             Education
           </h3>
-          <div className="bg-white rounded-lg shadow-lg p-4 xs:p-5 sm:p-6 border-l-4 border-indigo-600 hover:shadow-xl transition-shadow duration-300">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-3 xs:mb-4 gap-2">
-              <div className="flex-1">
-                <h4 className="text-lg xs:text-xl font-semibold text-gray-900 mb-1">Bachelor's in Industrial & System Engineering</h4>
-                <p className="text-indigo-600 font-medium text-sm xs:text-base">University of Florida - Gainesville, FL</p>
+          <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-indigo-600 hover:shadow-xl transition-shadow duration-300">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h4 className="text-xl font-semibold text-gray-900">Bachelor's in Industrial & System Engineering</h4>
+                <p className="text-indigo-600 font-medium">University of Florida - Gainesville, FL</p>
               </div>
-              <span className="text-gray-600 font-medium text-xs xs:text-sm sm:text-sm sm:ml-4">Aug 2024 - Present</span>
+              <span className="text-gray-600 font-medium text-sm">Aug 2024 - Present</span>
             </div>
-            <div className="space-y-1.5 xs:space-y-2 text-gray-700 text-sm xs:text-base">
+            <div className="space-y-2 text-gray-700">
               <p><strong className="text-indigo-600">GPA:</strong> 3.94/4.00</p>
               <p><strong className="text-indigo-600">Honors:</strong> College of Engineering Dean's List (Fall 2024 - Spring 2025)</p>
               <p><strong className="text-indigo-600">Scholarships:</strong> Herbert Wertheim Engineering Scholarship & UFIC Summer Study Abroad Scholarship</p>
