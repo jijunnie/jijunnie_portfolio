@@ -5765,7 +5765,7 @@ export default function About() {
               marginBottom: `${calculateSpacing(16)}px`
             }}
           >
-            Sport & Teamwork
+            Built by Sport
           </h2>
           <p
             style={{

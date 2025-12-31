@@ -260,18 +260,14 @@ export default function FilledRegions({ onRegionClick, selectedRegion, hoveredRe
         const geometry = regionGeometries.get(region.key);
         if (!geometry) return null;
 
-        // Green for visited regions, blue for selected, gray for others
+        // Blue for selected, gray for others (no green for visited)
         const color = region.isSelected
           ? '#3b82f6' // blue for selected
-          : region.isVisited
-          ? '#059669' // darker green for visited regions
-          : '#4b5563'; // gray for non-visited regions
+          : '#4b5563'; // gray for all non-selected regions
 
         const opacity = region.isSelected
           ? 0.5
-          : region.isVisited
-          ? 0.3 // Higher opacity for visited regions to make green more visible
-          : 0.12; // Lower opacity for non-visited regions
+          : 0.12; // Same opacity for all non-selected regions
 
         // Stable hover handlers with debouncing
         const handlePointerOver = (e) => {
@@ -322,8 +318,8 @@ export default function FilledRegions({ onRegionClick, selectedRegion, hoveredRe
               color={color}
               transparent
               opacity={opacity}
-              emissive={region.isVisited && !region.isSelected ? '#059669' : '#000000'}
-              emissiveIntensity={region.isVisited && !region.isSelected ? 0.3 : 0} // Subtle glow for visited regions
+              emissive="#000000"
+              emissiveIntensity={0}
               side={THREE.DoubleSide}
               // Ensure material is visible and catches pointer events
               depthWrite={false}
