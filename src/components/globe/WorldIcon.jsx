@@ -79,6 +79,9 @@ export default function WorldIcon({ size = 20, className = '' }) {
     }
     return 1024;
   });
+  const [canvasKey, setCanvasKey] = React.useState(0);
+  const canvasRef = React.useRef(null);
+  const containerRef = React.useRef(null);
   
   // Handle window resize for responsive sizing
   React.useEffect(() => {
@@ -89,6 +92,74 @@ export default function WorldIcon({ size = 20, className = '' }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
+  // Handle visibility change and WebGL context loss to ensure globe always renders
+  React.useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Force re-render when tab becomes visible
+        setTimeout(() => {
+          setCanvasKey(prev => prev + 1);
+        }, 100);
+      }
+    };
+    
+    const handleContextLost = (e) => {
+      e.preventDefault();
+      // Force re-render on context loss
+      setCanvasKey(prev => prev + 1);
+    };
+    
+    const handleContextRestored = () => {
+      // Force re-render when context is restored
+      setCanvasKey(prev => prev + 1);
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Find canvas element in the container
+    const findCanvas = () => {
+      if (containerRef.current) {
+        const canvas = containerRef.current.querySelector('canvas');
+        if (canvas) {
+          canvasRef.current = canvas;
+          canvas.addEventListener('webglcontextlost', handleContextLost);
+          canvas.addEventListener('webglcontextrestored', handleContextRestored);
+          return canvas;
+        }
+      }
+      return null;
+    };
+    
+    // Try to find canvas immediately and also after a short delay
+    let canvas = findCanvas();
+    const findCanvasTimeout = setTimeout(() => {
+      canvas = findCanvas();
+    }, 100);
+    
+    // Periodic check to ensure canvas is still rendering
+    const checkInterval = setInterval(() => {
+      if (canvasRef.current) {
+        const gl = canvasRef.current.getContext('webgl') || canvasRef.current.getContext('webgl2');
+        if (!gl || gl.isContextLost()) {
+          setCanvasKey(prev => prev + 1);
+        }
+      } else {
+        // Try to find canvas again if not found
+        findCanvas();
+      }
+    }, 5000); // Check every 5 seconds
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearTimeout(findCanvasTimeout);
+      if (canvasRef.current) {
+        canvasRef.current.removeEventListener('webglcontextlost', handleContextLost);
+        canvasRef.current.removeEventListener('webglcontextrestored', handleContextRestored);
+      }
+      clearInterval(checkInterval);
+    };
+  }, [canvasKey]); // Re-run when canvasKey changes to re-attach listeners
+  
   // Calculate responsive size: base size is responsive to screen size
   // On hover, scale up from 0.8x to 1x using transform for center expansion
   const scaleFactor = screenSize < 640 ? 0.7 : screenSize < 1024 ? 0.85 : 1.0;
@@ -97,6 +168,7 @@ export default function WorldIcon({ size = 20, className = '' }) {
   
   return (
     <div 
+      ref={containerRef}
       className={`relative ${className}`}
       style={{ 
         width: `${baseSize}px`, 
@@ -117,8 +189,24 @@ export default function WorldIcon({ size = 20, className = '' }) {
       onMouseLeave={() => setIsHovered(false)}
     >
       <Canvas
+        key={canvasKey}
         camera={{ position: [0, 0, 2], fov: 50 }}
-        gl={{ antialias: true, alpha: true }}
+        gl={{ 
+          antialias: true, 
+          alpha: true,
+          preserveDrawingBuffer: false,
+          powerPreference: 'high-performance',
+          failIfMajorPerformanceCaveat: false
+        }}
+        onCreated={({ gl, scene, camera }) => {
+          // Ensure WebGL context is properly initialized
+          gl.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          // Store canvas reference
+          const canvas = gl.domElement;
+          if (canvas) {
+            canvasRef.current = canvas;
+          }
+        }}
         style={{ width: '100%', height: '100%', transformOrigin: 'center center' }}
       >
         {/* Bright but soft lighting to avoid white dots */}

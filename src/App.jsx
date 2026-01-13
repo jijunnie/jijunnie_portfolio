@@ -250,10 +250,9 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
         {isMenuOpen && (
           <div className="md:hidden border-t border-gray-200/50 px-3 xs:px-4 py-3 xs:py-4">
             <div className="grid grid-cols-3 gap-2 xs:gap-3">
-              {navItems.map((item) => {
+              {navItems.filter(item => item.path !== '/globe').map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
-                const isGlobe = item.path === '/globe';
                 
                 return (
                   <Link
@@ -266,11 +265,7 @@ function NavBar({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
                         : 'text-gray-600 hover:bg-white/20 hover:text-gray-900 active:bg-white/30'
                     }`}
                   >
-                    {isGlobe ? (
-                      <WorldIcon size={40} className={`xs:w-11 xs:h-11 ${isActive ? 'scale-110' : ''}`} />
-                    ) : (
-                      <Icon size={20} className="xs:w-5 xs:h-5 sm:w-6 sm:h-6" strokeWidth={isActive ? 2.5 : 2} />
-                    )}
+                    <Icon size={20} className="xs:w-5 xs:h-5 sm:w-6 sm:h-6" strokeWidth={isActive ? 2.5 : 2} />
                     <span className="text-[10px] xs:text-xs mt-1 font-medium text-center leading-tight">{item.label}</span>
                   </Link>
                 );

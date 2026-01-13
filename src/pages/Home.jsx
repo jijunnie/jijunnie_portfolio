@@ -572,7 +572,7 @@ IMPORTANT RULES:
               filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1))',
             }}
           >
-            Student at University of Florida
+            Student at the University of Florida
           </p>
         </div>
         
