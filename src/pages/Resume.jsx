@@ -173,7 +173,7 @@ export default function Resume() {
     return () => observer.disconnect();
   }, []);
 
-  const resumePdfUrl = '/JN Resume 2.7.pdf';
+  const resumePdfUrl = '/Jijun Nie Resume.pdf';
 
   return (
     <section className="py-20 px-4 sm:px-6 lg:px-8 min-h-screen bg-blue-50 relative">
@@ -228,7 +228,7 @@ export default function Resume() {
         >
           <a 
             href={resumePdfUrl}
-            download="JN Resume 2.7.pdf"
+            download="Jijun Nie Resume.pdf"
             className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-12 py-4 rounded-lg font-semibold text-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-110"
           >
             📄 Download Full Resume (PDF)
