@@ -312,18 +312,47 @@ export default function Resume() {
                   ))}
                 </ul>
               </div>
-              {/* Web Developer */}
-              <div className="p-4 sm:p-5 md:p-6 border-l-4 border-purple-600 hover:bg-purple-50/30 transition-colors">
+            </div>
+          </div>
+        </div>
+
+        {/* Projects */}
+        <div
+          id="projects"
+          ref={(el) => (sectionRefs.current['projects'] = el)}
+          className={sectionClasses('projects')}
+        >
+          <div className={boxBase}>
+            <div className="p-4 sm:p-5 md:p-6 border-b border-gray-100">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center">
+                <span className="bg-indigo-600 text-white w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center mr-2 text-sm sm:text-base">🚀</span>
+                Projects
+              </h3>
+            </div>
+            <div className="divide-y divide-gray-100">
+              <div className="p-4 sm:p-5 md:p-6 border-l-4 border-indigo-600 hover:bg-indigo-50/30 transition-colors">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1 mb-2 sm:mb-3">
                   <div>
-                    <h4 className="text-base sm:text-lg font-semibold text-gray-900">Web Developer</h4>
-                    <p className="text-purple-600 font-medium text-sm sm:text-base">Independent</p>
+                    <h4 className="text-base sm:text-lg font-semibold text-gray-900">3D AI-Powered Portfolio</h4>
+                    <p className="text-indigo-600 font-medium text-sm sm:text-base">jijunnie.com</p>
                   </div>
-                  <span className="text-gray-600 font-medium text-xs sm:text-sm shrink-0">Oct 2025 – Present</span>
                 </div>
                 <ul className="space-y-1 sm:space-y-2 text-gray-700 text-sm sm:text-base">
-                  {['Designed and built AI-driven web and applications using JavaScript, HTML, CSS, and Three.js', 'Built a creative & interactive 3D AI-powered portfolio (jijunnie.com)', 'Designing a unified, cross-platform commerce web application for demand analysis, supplier identification, and listings'].map((line, i) => (
-                    <li key={i} className="flex items-start"><span className="text-purple-600 mr-2 shrink-0">•</span><span>{line}</span></li>
+                  {['Creative, interactive 3D portfolio built with React, Three.js, and AI chat integration', 'Showcases projects, experience, and personality with responsive design across devices'].map((line, i) => (
+                    <li key={i} className="flex items-start"><span className="text-indigo-600 mr-2 shrink-0">•</span><span>{line}</span></li>
+                  ))}
+                </ul>
+              </div>
+              <div className="p-4 sm:p-5 md:p-6 border-l-4 border-amber-600 hover:bg-amber-50/30 transition-colors">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1 mb-2 sm:mb-3">
+                  <div>
+                    <h4 className="text-base sm:text-lg font-semibold text-gray-900">Unified Commerce Web Application</h4>
+                    <p className="text-amber-600 font-medium text-sm sm:text-base">In development</p>
+                  </div>
+                </div>
+                <ul className="space-y-1 sm:space-y-2 text-gray-700 text-sm sm:text-base">
+                  {['Cross-platform web app aggregating market signals, demand and competition analysis, and supplier identification', 'Single system for listing creation and sales execution'].map((line, i) => (
+                    <li key={i} className="flex items-start"><span className="text-amber-600 mr-2 shrink-0">•</span><span>{line}</span></li>
                   ))}
                 </ul>
               </div>
