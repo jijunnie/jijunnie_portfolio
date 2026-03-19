@@ -524,6 +524,7 @@ function MainApp({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
       <Layout>
         <ContentWrapper>
           <ErrorBoundary>
+            <div className="min-h-screen overflow-x-hidden" style={{ contain: 'layout' }}>
             <Routes>
               <Route path="/" element={<ErrorBoundary><Home /></ErrorBoundary>} />
               <Route path="/about" element={<ErrorBoundary><About /></ErrorBoundary>} />
@@ -533,6 +534,7 @@ function MainApp({ navItems, isMenuOpen, setIsMenuOpen, closeMenus }) {
               <Route path="/globe" element={<ErrorBoundary><Globe /></ErrorBoundary>} />
               <Route path="/contact" element={<ErrorBoundary><Contact /></ErrorBoundary>} />
             </Routes>
+            </div>
           </ErrorBoundary>
         </ContentWrapper>
       </Layout>

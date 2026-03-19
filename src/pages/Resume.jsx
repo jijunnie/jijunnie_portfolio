@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
 // Interactive 3D Background Component
@@ -148,30 +148,6 @@ function InteractiveBackground() {
 }
 
 export default function Resume() {
-  const [visibleSections, setVisibleSections] = useState({});
-  const sectionRefs = useRef({});
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setVisibleSections((prev) => ({
-              ...prev,
-              [entry.target.id]: true,
-            }));
-          }
-        });
-      },
-      { threshold: 0.15 }
-    );
-
-    Object.values(sectionRefs.current).forEach((ref) => {
-      if (ref) observer.observe(ref);
-    });
-
-    return () => observer.disconnect();
-  }, []);
 
   const resumePdfUrl = '/Jijun Nie Resume.pdf';
 
@@ -191,10 +167,7 @@ export default function Resume() {
     { title: 'Google Digital Marketing & E-commerce', date: 'May 2025', skills: ['SEO', 'SEM', 'Email Marketing', 'Social Media', 'Google Analytics', 'E-commerce Strategy'] },
   ];
 
-  const sectionClasses = (id) =>
-    `transition-all duration-700 ${
-      visibleSections[id] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
-    }`;
+  const sectionClasses = () => 'opacity-100 translate-y-0';
 
   const boxBase = 'bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden';
 
@@ -203,11 +176,7 @@ export default function Resume() {
       <InteractiveBackground />
       <div className="max-w-4xl mx-auto relative z-10 space-y-6 sm:space-y-8 md:space-y-10">
         {/* Header */}
-        <div
-          id="header"
-          ref={(el) => (sectionRefs.current['header'] = el)}
-          className={sectionClasses('header')}
-        >
+        <div id="header" className={sectionClasses('header')}>
           <div className="text-center">
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-2 sm:mb-4">My Resume</h2>
             <div className="w-16 sm:w-24 h-0.5 sm:h-1 bg-blue-600 mx-auto mb-4 sm:mb-6" />
@@ -216,11 +185,7 @@ export default function Resume() {
         </div>
 
         {/* Contact – single responsive box */}
-        <div
-          id="contact-info"
-          ref={(el) => (sectionRefs.current['contact-info'] = el)}
-          className={sectionClasses('contact-info')}
-        >
+        <div id="contact-info" className={sectionClasses('contact-info')}>
           <div className={`${boxBase} p-4 sm:p-5 md:p-6`}>
             <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4 flex items-center">
               <span className="bg-blue-600 text-white w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center mr-2 text-sm sm:text-base">📬</span>
@@ -242,11 +207,7 @@ export default function Resume() {
         </div>
 
         {/* Education */}
-        <div
-          id="education"
-          ref={(el) => (sectionRefs.current['education'] = el)}
-          className={sectionClasses('education')}
-        >
+        <div id="education" className={sectionClasses('education')}>
           <div className={`${boxBase} p-4 sm:p-5 md:p-6 border-l-4 border-indigo-600`}>
             <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4 flex items-center">
               <span className="bg-indigo-600 text-white w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center mr-2 text-sm sm:text-base">🎓</span>
@@ -269,11 +230,7 @@ export default function Resume() {
         </div>
 
         {/* Professional Experience */}
-        <div
-          id="experience"
-          ref={(el) => (sectionRefs.current['experience'] = el)}
-          className={sectionClasses('experience')}
-        >
+        <div id="experience" className={sectionClasses('experience')}>
           <div className={boxBase}>
             <div className="p-4 sm:p-5 md:p-6 border-b border-gray-100">
               <h3 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center">
@@ -317,11 +274,7 @@ export default function Resume() {
         </div>
 
         {/* Projects */}
-        <div
-          id="projects"
-          ref={(el) => (sectionRefs.current['projects'] = el)}
-          className={sectionClasses('projects')}
-        >
+        <div id="projects" className={sectionClasses('projects')}>
           <div className={boxBase}>
             <div className="p-4 sm:p-5 md:p-6 border-b border-gray-100">
               <h3 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center">
@@ -361,11 +314,7 @@ export default function Resume() {
         </div>
 
         {/* Leadership */}
-        <div
-          id="leadership"
-          ref={(el) => (sectionRefs.current['leadership'] = el)}
-          className={sectionClasses('leadership')}
-        >
+        <div id="leadership" className={sectionClasses('leadership')}>
           <div className={boxBase}>
             <div className="p-4 sm:p-5 md:p-6 border-b border-gray-100">
               <h3 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center">
@@ -407,11 +356,7 @@ export default function Resume() {
         </div>
 
         {/* Certifications */}
-        <div
-          id="certifications"
-          ref={(el) => (sectionRefs.current['certifications'] = el)}
-          className={sectionClasses('certifications')}
-        >
+        <div id="certifications" className={sectionClasses('certifications')}>
           <div className={`${boxBase} p-4 sm:p-5 md:p-6`}>
             <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4 flex items-center">
               <span className="bg-blue-600 text-white w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center mr-2 text-sm sm:text-base">🏆</span>
@@ -436,11 +381,7 @@ export default function Resume() {
         </div>
 
         {/* Technical Skills */}
-        <div
-          id="skills"
-          ref={(el) => (sectionRefs.current['skills'] = el)}
-          className={sectionClasses('skills')}
-        >
+        <div id="skills" className={sectionClasses('skills')}>
           <div className={`${boxBase} p-4 sm:p-5 md:p-6`}>
             <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4 flex items-center">
               <span className="bg-teal-600 text-white w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center mr-2 text-sm sm:text-base">💻</span>
@@ -468,11 +409,7 @@ export default function Resume() {
         </div>
 
         {/* Download */}
-        <div
-          id="download"
-          ref={(el) => (sectionRefs.current['download'] = el)}
-          className={sectionClasses('download')}
-        >
+        <div id="download" className={sectionClasses('download')}>
           <div className="text-center">
             <a
               href={resumePdfUrl}

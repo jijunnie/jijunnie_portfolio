@@ -555,16 +555,19 @@ IMPORTANT RULES:
            </Suspense>
          </div>
         
-         {/* Subtitle with 3D effect - Responsive */}
-         <div className={`subtitle-container mb-6 sm:mb-8 px-4 transition-all duration-[4000ms] ease-in-out ${
-          showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-         }`}
-        style={{
-           transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
-          textShadow: '0 5px 15px rgba(100, 116, 139, 0.2)',
-           position: 'relative',
-           zIndex: 1,
-        }}>
+         {/* Subtitle with 3D effect - Responsive; min-height prevents layout shift on reveal */}
+         <div
+          className={`subtitle-container mb-6 sm:mb-8 px-4 transition-all duration-500 ease-out ${
+            showSubtitle ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+          style={{
+            minHeight: '2.5rem',
+            transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+            textShadow: '0 5px 15px rgba(100, 116, 139, 0.2)',
+            position: 'relative',
+            zIndex: 1,
+          }}
+        >
           <p 
             className="subtitle-text text-lg sm:text-xl md:text-xl lg:text-xl text-gray-600 font-medium"
             style={{
@@ -676,9 +679,7 @@ IMPORTANT RULES:
       {/* Chat Input - Fixed at bottom */}
       {showChatInput && (
         <div className="fixed bottom-0 left-0 right-0 z-20 px-4 pb-6 sm:pb-8">
-          <div className={`max-w-2xl mx-auto transition-all duration-500 ${
-            showChatInput ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-          }`}>
+          <div className="max-w-2xl mx-auto transition-all duration-500 ease-out opacity-100 translate-y-0">
             <div className="flex space-x-2 sm:space-x-3">
               <div className="flex-1 relative">
                 <input

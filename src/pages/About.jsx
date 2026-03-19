@@ -2194,7 +2194,7 @@ export default function About() {
     const fadeOffset = sectionConfig.fadeOffset; // Use unified fadeOffset
     const fadeInStart = sectionStart - fadeOffset;
     if (scrollProgress >= fadeInStart) {
-      const timer = setTimeout(() => {
+      const timer = requestAnimationFrame(() => {
         try {
           setHasAnimated(true);
           setIsAnimating(true);
@@ -2206,9 +2206,9 @@ export default function About() {
             animationTimerRef.current = null;
           }, 2700);
         } catch (error) {}
-      }, 100);
+      });
       return () => {
-        clearTimeout(timer);
+        cancelAnimationFrame(timer);
       };
     }
   }, [scrollProgress, hasAnimated, windowSize.width]);
